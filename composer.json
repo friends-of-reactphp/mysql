@@ -1,0 +1,11 @@
+{
+    "name": "react/mysql",
+    "description": "mysql client for phpreact.",
+    "license": "None",
+    "require": {
+        "php": ">=5.4.0",
+        "react/react": "0.3.*"
+    },
+    "repositories": [
+    ]
+}
