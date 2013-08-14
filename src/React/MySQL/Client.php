@@ -10,24 +10,30 @@ class Client {
 	private $connector;
 	private $secureConnector;
 	private $params;
+	private $request;
 	
 	public function __construct(LoopInterface $loop, ConnectorInterface $connector, ConnectorInterface $secureConnector, $params) {
 		$this->loop = $loop;
 		$this->connector = $connector;
 		$this->secureConnector = $secureConnector;
-		$this->params = $params;
+		$this->request = new Request($loop, $connector);
 	}
 	
 	
 	
-	public function auth($username, $password) {
-		
-		$request = new Request($this->loop, $this->connector, $this->params);
-		$request->write('fff');
-		return $request;
+	public function auth(array $options) {
+		return $this->request->auth($options);
 	}
 	
 	public function query($sql) {
+		return $this->request->query($sql);
+	}
+	
+	public function execute($sql) {
+		
+	}
+	
+	public function lastInsertId() {
 		
 	}
 }

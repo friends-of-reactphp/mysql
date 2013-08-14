@@ -3,8 +3,8 @@
 namespace React\MySQL;
 
 use React\EventLoop\LoopInterface;
-use React\SocketClient\Connector;
 use React\SocketClient\SecureConnector;
+use React\SocketClient\Connector;
 use React\Dns\Resolver\Resolver;
 
 class Factory 
