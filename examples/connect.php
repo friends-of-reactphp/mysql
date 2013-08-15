@@ -6,20 +6,36 @@ $resolver = (new React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop);
 $factory = new React\MySQL\Factory();
 $client = $factory->create($loop, $resolver, []);
 $promise = $client->auth([
-	'user' => 'root',
-	'password' => 'sdyxzsdyxz',
+	'user' => 'test',
+	'password' => 'test',
 	'dbname' => 'cspider',
 ]);
-$promise->then(function ($options){
+$promise->then(function ($options) use ($client){
+	printf("------------- CONNECTED---------------\n");
 	var_dump($options);
-}, function ($error) {
-	var_dump($error->getMessage());
+	
+	$client->query('select * from link limit 2')
+		->then(function ($data) use ($client){
+			printf("------------ DATA --------------\n");
+			var_dump($data);
+			
+			
+		}, function ($reason) {
+			printf("ERROR:%d %s\n", $reason->getCode(), $reason->getMessage());
+		});
+	
+	
+}, function ($reason) {
+	printf("ERROR:%d %s\n", $reason->getCode(), $reason->getMessage());
 });
-$client->query('USE `test`')
-	->then(function ($data) {
-		var_dump($data);
-	}, function ($reason) {
-		var_dump($reason);
-	});
+
+$loop->addTimer(1, function () use ($client){
+	$client->execute('USE `cspdider`')
+		->then(function(){
+			var_dump('success');
+		}, function($reason){
+			var_dump($reason->getMessage());
+		});
+});
 
 $loop->run();

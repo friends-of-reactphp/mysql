@@ -30,7 +30,7 @@ class Client {
 	}
 	
 	public function execute($sql) {
-		
+		return $this->request->execute($sql);
 	}
 	
 	public function lastInsertId() {

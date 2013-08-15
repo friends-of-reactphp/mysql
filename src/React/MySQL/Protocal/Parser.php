@@ -24,6 +24,8 @@ class Parser extends EventEmitter{
 	protected $password = '';
 	protected $dbname   = '';
 	
+	protected $callback;
+	
 	protected $state = 0;
 	
 	protected $phase = 0;
@@ -85,7 +87,7 @@ class Parser extends EventEmitter{
 	
 	public function parse($data, $stream) {
 		$this->buffer .= $data;
-		var_dump($data);
+		//var_dump($data);
 packet:
 		if ($this->state === self::STATE_STANDBY) {
 			if ($this->getBufferLen() < 4) {
@@ -145,10 +147,10 @@ packet:
 field:
 			if ($fieldCount === 0xFF) { 
 				//error packet
-				$u = unpack('v', $this->readBuffer(2));
-				$this->errno = $u[1];
+				$u             = unpack('v', $this->readBuffer(2));
+				$this->errno   = $u[1];
 				$state = $this->readBuffer(6);
-				$this->errmsg = $this->readBuffer($this->pctSize - $len + $this->getBufferLen());
+				$this->errmsg  = $this->readBuffer($this->pctSize - $len + $this->getBufferLen());
 				printf("Error Packet:%d %s\n", $this->errno, $this->errmsg);
 				$this->onError();
 				
@@ -157,11 +159,18 @@ field:
 				printf("Ok Packet\n");
 				if ($this->phase === self::PHASE_AUTH_SENT) {
 					$this->phase = self::PHASE_HANDSHAKED;
-					$this->emit('connected', array($this->connectOptions));
 					if ($this->dbname != '') {
-						$this->query(sprintf('USE `%s`', $this->dbname));
+						$this->query(sprintf('USE `%s`', $this->dbname), function (){
+							$this->emit('connected', array($this->connectOptions));
+						});
+					}else {
+						$this->emit('connected', array($this->connectOptions));
 					}
 				}
+				if ($this->callback) {
+					call_user_func($this->callback, 'SUCCESS: Ok packet');
+				}
+				
 				$this->affectedRows = $this->parseEncodedBinary();
 				$this->insertId     = $this->parseEncodedBinary();
 				
@@ -173,21 +182,26 @@ field:
 				
 				$this->message      = $this->readBuffer($this->pctSize - $len + $this->getBufferLen());
 				
-				$this->onResultDone();
+				$this->onSuccess();
 				
 			}elseif ($fieldCount === 0xFE) { //EOF Packet
 				printf("EOF Packet\n");
 				if ($this->rsState === self::RS_STATE_ROW) {
-					//result done
+					printf("result done\n");
+					
+					$this->onResultDone();
 				}else {
 					++ $this->rsState;
 				}
 			}else { //Data packet
 				printf("Data Packet\n");
+				
+				$this->prependInput(chr($fieldCount));
+				
 				if ($this->rsState === self::RS_STATE_HEADER) {
 					printf("Header packet of Data packet\n");
 					$extra = $this->parseEncodedBinary();
-					
+					//var_dump($extra);
 					$this->rsState = self::RS_STATE_FIELD;
 				}elseif ($this->rsState === self::RS_STATE_FIELD) {
 					printf("Field packet of Data packet\n");
@@ -217,7 +231,7 @@ field:
 					printf("Row packet of Data packet\n");
 					$row = [];
 					for ($i = 0, $nf = sizeof($this->resultFields); $i < $nf; ++$i) {
-						$row[$this->resultFields[$i]]['name'] = $this->parseEncodedString();
+						$row[$this->resultFields[$i]['name']] = $this->parseEncodedString();
 					}
 					$this->resultRows[] = $row;
 				}
@@ -234,9 +248,15 @@ field:
 	}
 	
 	protected function onResultDone() {
+		//var_dump($this->listeners('results'));
+		$this->emit('results', array($this->resultRows));
 		$this->rsState      = self::RS_STATE_HEADER;
-		$this->resultRows   = [];
-		$this->resultFields = [];
+		$this->resultRows   = $this->resultRows = [];
+	}
+	
+	
+	protected function onSuccess() {
+		$this->emit('success');
 	}
 	
 	public function readBuffer($len, $emit = 0) {
@@ -258,7 +278,11 @@ field:
 			return $p - $this->bufferParsed;
 		}
 		return false;
-		
+	}
+	
+	public function prependInput($str) {
+		$this->buffer = $str . substr($this->buffer, $this->bufferParsed);
+		$this->bufferParsed = 0;
 	}
 	
 	public function auth() {
@@ -371,6 +395,7 @@ field:
 		if ($this->phase != self::PHASE_HANDSHAKED) {
 			return false;
 		}
+		$this->callback = $callback;
 		$this->seq = 0;
 		$this->sentPacket(chr($cmd) . $q);
 		return true;

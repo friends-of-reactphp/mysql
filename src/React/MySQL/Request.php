@@ -58,8 +58,8 @@ class Request extends EventEmitter implements WritableStreamInterface {
 				$parser = $that->parser = new Protocal\Parser($stream);
 				
 				$parser->setOptions($options);
-				$parser->on('error', $errorHandler);
-				$parser->on('connected', $connectedHandler);
+				$parser->once('error', $errorHandler);
+				$parser->once('connected', $connectedHandler);
 				
 			}, $errorHandler);
 		
@@ -76,24 +76,49 @@ class Request extends EventEmitter implements WritableStreamInterface {
 	public function query($sql) {
 		$deferred = new Deferred();
 		$that     = $this;
+		$parser   = $this->parser;
 		
-		$this->parser->query($sql, function ($data) use ($deferred){
-			if ($data instanceof Exception) {
-				$deferred->reject($data);
-			}else {
-				$deferred->resolve($data);
-			}
-		});
+		$errorHandler    = function ($reason) use ($deferred) {
+			$deferred->reject($reason);
+		};
+		
+		$resultsHandler  = function ($results) use ($deferred) {
+			$deferred->resolve($results);
+		};
+		
+		$parser->on('results', $resultsHandler);
+		$parser->once('error', $errorHandler);
+		
+		$this->parser->query($sql);
+		
 		return $deferred->promise();
 	}
 	
 	public function execute($sql) {
+		$deferred = new Deferred();
+		$that     = $this;
+		$parser   = $this->parser;
 		
+		$errorHandler    = function ($reason) use ($deferred) {
+			$deferred->reject($reason);
+		};
+		
+		$resultsHandler  = function () use ($deferred) {
+			$deferred->resolve();
+		};
+		
+		$parser->once('success', $resultsHandler);
+		$parser->once('error', $errorHandler);
+		
+		$this->parser->query($sql);
+
+		return $deferred->promise();
 	}
 	
 	public function selectDb($dbname) {
-		
+		return $this->query(sprinf('USE `%s`', $dbname));
 	}
+	
 	
 	public function setParam($name, $value) {
 		$this->params[$name] = $value;
