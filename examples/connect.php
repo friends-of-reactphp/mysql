@@ -37,5 +37,12 @@ $loop->addTimer(1, function () use ($client){
 			var_dump($reason->getMessage());
 		});
 });
-
+$loop->addPeriodicTimer(2, function () use ($client){
+	$client->ping()
+		->then(function (){
+			var_dump('ping success');
+		}, function($reason){
+			var_dump($reason->getMessage());
+		});
+});
 $loop->run();

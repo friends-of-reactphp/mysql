@@ -8,6 +8,7 @@ use React\EventLoop\LoopInterface;
 use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
 use React\Promise\Deferred;
+use React\MySQL\Protocal\Constants;
 
 
 class Request extends EventEmitter implements WritableStreamInterface {
@@ -25,6 +26,9 @@ class Request extends EventEmitter implements WritableStreamInterface {
 	
 	private $stream;
 	private $buffer;
+	/**
+	 * @var Protocal\Parser
+	 */
 	public $parser;
 	
 	public function __construct(LoopInterface $loop, ConnectorInterface $connector) {
@@ -58,6 +62,7 @@ class Request extends EventEmitter implements WritableStreamInterface {
 				$parser = $that->parser = new Protocal\Parser($stream);
 				
 				$parser->setOptions($options);
+				$parser->on('close', array($that, 'handleClose'));
 				$parser->once('error', $errorHandler);
 				$parser->once('connected', $connectedHandler);
 				
@@ -74,51 +79,48 @@ class Request extends EventEmitter implements WritableStreamInterface {
 	 * @return \React\Promise\DeferredPromise
 	 */
 	public function query($sql) {
-		$deferred = new Deferred();
-		$that     = $this;
-		$parser   = $this->parser;
-		
-		$errorHandler    = function ($reason) use ($deferred) {
-			$deferred->reject($reason);
-		};
-		
-		$resultsHandler  = function ($results) use ($deferred) {
-			$deferred->resolve($results);
-		};
-		
-		$parser->on('results', $resultsHandler);
-		$parser->once('error', $errorHandler);
-		
-		$this->parser->query($sql);
-		
-		return $deferred->promise();
+		return $this->doCommand(Constants::COM_QUERY, $sql);
 	}
 	
 	public function execute($sql) {
-		$deferred = new Deferred();
-		$that     = $this;
-		$parser   = $this->parser;
-		
-		$errorHandler    = function ($reason) use ($deferred) {
-			$deferred->reject($reason);
-		};
-		
-		$resultsHandler  = function () use ($deferred) {
-			$deferred->resolve();
-		};
-		
-		$parser->once('success', $resultsHandler);
-		$parser->once('error', $errorHandler);
-		
-		$this->parser->query($sql);
-
-		return $deferred->promise();
+		return $this->doCommand(Constants::COM_QUERY, $sql);
+	}
+	
+	public function ping() {
+		return $this->doCommand(Constants::COM_PING, '');
 	}
 	
 	public function selectDb($dbname) {
 		return $this->query(sprinf('USE `%s`', $dbname));
 	}
 	
+	
+	protected function doCommand($cmd, $q = '') {
+		$deferred = new Deferred();
+		if ($this->state === self::STATE_END) {
+			$deferred->reject(new Exception('Connection is closed'));
+			return $deferred->promise();
+		}
+		$parser   = $this->parser;
+		
+		$errorHandler    = function ($reason) use ($deferred) {
+			$deferred->reject($reason);
+		};
+		
+		$successHandler  = function () use ($deferred) {
+			$deferred->resolve();
+		};
+		$resultsHandler  = function ($results) use ($deferred) {
+			$deferred->resolve($results);
+		};
+		$parser->once('success', $successHandler);
+		$parser->once('error', $errorHandler);
+		$parser->once('results', $resultsHandler);
+		
+		$parser->command($cmd, $q);
+		
+		return $deferred->promise();
+	}
 	
 	public function setParam($name, $value) {
 		$this->params[$name] = $value;
@@ -147,7 +149,9 @@ class Request extends EventEmitter implements WritableStreamInterface {
 		$this->state = self::STATE_WRITING;
 	}
 	
-	public function handleDrain() {
+	public function handleClose() {
+		$this->state = self::STATE_END;
+		var_dump('connection is closed');
 	}
 	
 	public function handleData($data) {

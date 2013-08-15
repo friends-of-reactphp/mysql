@@ -33,6 +33,10 @@ class Client {
 		return $this->request->execute($sql);
 	}
 	
+	public function ping() {
+		return $this->request->ping();
+	}
+	
 	public function lastInsertId() {
 		
 	}

@@ -74,6 +74,7 @@ class Parser extends EventEmitter{
 	public function __construct($stream) {
 		$this->stream = $stream;
 		$stream->on('data', array($this, 'parse'));
+		$stream->on('close', array($this, 'onClose'));
 	}
 
 	public function setOptions($options) {
@@ -257,6 +258,10 @@ field:
 	
 	protected function onSuccess() {
 		$this->emit('success');
+	}
+	
+	protected function onClose() {
+		$this->emit('close');
 	}
 	
 	public function readBuffer($len, $emit = 0) {
