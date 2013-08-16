@@ -6,8 +6,10 @@ class Query {
 	
 	private $sql;
 	
+	private $builtSql;
+	
 	private $params;
-
+	
 	private $escapeChars = array(
 			"\0"   => "\\0",
 			"\r"   => "\\r",
@@ -28,7 +30,8 @@ class Query {
 	 * @return \React\MySQL\Query
 	 */
 	public function params() {
-		$this->params = func_get_args();
+		$this->params   = func_get_args();
+		$this->builtSql = null;
 		return $this;
 	}
 	
@@ -43,19 +46,71 @@ class Query {
 		return array($val, strlen($val));
 	}
 	
+	protected function buildSql() {
+		$names    = array();
+		$inName   = false;
+		$currName = '';
+		$currIdx  = 0;
+		$sql      = $this->sql;
+		$len      = strlen($sql);
+		$i        = 0;
+		do {
+			$c    = $sql[$i];
+			if ($c === '?') {
+				$names[$i] = $c;
+			}elseif ($c === ':') {
+				$currName .= $c;
+				$currIdx  = $i;
+				$inName   = true;
+			}elseif ($c === ' ') {
+				$inName   = false;
+				if ($currName) {
+					$names[$currIdx] = $currName;
+					$currName = '';
+				}
+			}else {
+				if ($inName) {
+					$currName .= $c;
+				}
+			}
+		}while (++ $i < $len);
+		
+		if ($inName) {
+			$names[$currIdx] = $currName;
+		}
+		
+		$namedMarks = $unnamedMarks = array();
+		foreach ($this->params as $arg) {
+			if (is_array($arg)) {
+				$namedMarks += $arg;
+			}else {
+				$unnamedMarks[] = $arg;
+			}
+		}
+		
+		$offset = 0;
+		foreach ($names as $idx => $value) {
+			if ($value === '?') {
+				$replacement = array_shift($unnamedMarks);
+			}else {
+				$replacement = $namedMarks[$value];
+			}
+			list($arg, $len) = $this->getEscapedStringAndLen($replacement);
+			$sql = substr_replace($sql, $arg, $idx + $offset, strlen($value));
+			$offset += $len - strlen($value);
+		}
+		return $sql;
+	}
+	
 	/**
 	 * Get the constructed and escaped sql string.
 	 * 
 	 * @return string
 	 */
 	public function getSql() {
-		$sql = $this->sql;
-		$pos = strpos($sql, '?');
-		foreach ($this->params as $arg) {
-			list($arg, $len) = $this->getEscapedStringAndLen($arg);
-			$sql = substr_replace($sql, $arg, $pos, 1);
-			$pos = strpos($sql, '?', $pos + $len);
+		if ($this->builtSql === null) {
+			$this->builtSql = $this->buildSql();
 		}
-		return $sql;
+		return $this->builtSql;
 	}
 }
