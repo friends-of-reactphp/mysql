@@ -22,4 +22,10 @@
             <directory>./src/</directory>
         </whitelist>
     </filter>
+    <php>
+    	<var name="db_dsn" value="mysql:dbname=test;host=localhost"/>
+    	<var name="db_user" value="test" />
+    	<var name="db_passwd" value="test" />
+    	<var name="db_dbname" value="test" />
+    </php>
 </phpunit>

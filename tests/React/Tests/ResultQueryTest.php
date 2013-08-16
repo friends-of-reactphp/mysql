@@ -1,8 +1,11 @@
 <?php
 
-namespace React\MySQL;
+namespace React\Tests;
 
-class ResultQueryTest extends \PHPUnit_Framework_TestCase {
+class ResultQueryTest extends BaseTestCase {
+	
+	protected static $pdo;
+	protected $conn;
 	
 	public function testSimpleSelect() {
 		$loop = \React\EventLoop\Factory::create();
