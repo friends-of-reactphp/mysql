@@ -21,10 +21,14 @@ class Executor extends EventEmitter {
 	
 	public function enqueue($command) {
 		$this->queue->enqueue($command);
-		return $comand;
+		return $command;
 	}
 	
 	public function dequeue() {
 		return $this->queue->dequeue();
+	}
+	
+	public function getConn() {
+		return $this->client;
 	}
 }

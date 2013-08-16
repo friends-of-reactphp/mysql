@@ -8,9 +8,9 @@ class Command extends EventEmitter {
 	
 	private $executor;
 	
-	private $cmd;
+	public  $cmd;
 	
-	private $q;
+	public  $query;
 	
 	/**
 	 * Construtor.
@@ -18,14 +18,20 @@ class Command extends EventEmitter {
 	 * @param integer $cmd
 	 * @param string $q
 	 */
-	public function __construct($executor, $cmd, $q = '') {
+	public function __construct($executor, $cmd, $query = '') {
 		$this->executor = $executor;
 		$this->cmd      = $cmd;
-		$this->q        = $q;
+		$this->query    = $query;
 	}
 	
-	public function execute() {
-		$this->executor->append($this);
-		return $this;
+	public function getSql() {
+		if ($this->query instanceof Query) {
+			return $this->query->getSql();
+		}
+		return $this->query;
+	}
+	
+	public function getConn() {
+		return $this->executor->getConn();
 	}
 }

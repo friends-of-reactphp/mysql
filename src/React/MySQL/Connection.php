@@ -15,11 +15,11 @@ use React\SocketClient\Connector;
 class Connection extends EventEmitter implements WritableStreamInterface {
 
 	const STATE_INIT                = 0;
-	const STATE_CONNECTING          = 1;
-	const STATE_CONNECT_FAILED      = 2;
-	const STATE_CONNECTED           = 3;
-	const STATE_AUTHENTICATED       = 4;
-	const STATE_AUTHENTICATE_FAILED = 5;
+	const STATE_CONNECT_FAILED      = 1;
+	const STATE_AUTHENTICATE_FAILED = 2;
+	const STATE_CONNECTING          = 3;
+	const STATE_CONNECTED           = 4;
+	const STATE_AUTHENTICATED       = 5;
 	const STATE_DISCONNECTING       = 6;
 	const STATE_DISCONNECTED        = 7;
 	const STATE_END                 = 8;
@@ -99,7 +99,26 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 	 * @return \React\Promise\DeferredPromise
 	 */
 	public function query($sql) {
-		return $this->doCommand(Constants::COM_QUERY, $sql);
+		$numArgs = func_num_args();
+		if ($numArgs === 0) {
+			throw new \InvalidArgumentException('Required at least 1 argument');
+		}
+		
+		$command = new Command($this->executor, Constants::COM_QUERY, $sql);
+		$query = $this->_doCommand($command);
+		if ($numArgs === 1) {
+			return $command;
+		}
+		
+		$func = func_get_arg(1);
+		$that = $this;
+		
+		$command->on('results', function ($rows) use($func, $that){
+			$func(null, $rows, $that);
+		});
+		$command->on('error', function ($err) use ($func, $that){
+			$func($err, null, $that);
+		});
 	}
 	
 	public function execute($sql) {
@@ -225,6 +244,10 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 	
 	
 	protected function _doCommand(Command $command) {
-		return $this->executor->enqueue($command);
+		if ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
+			return $this->executor->enqueue($command);
+		}else {
+			throw Exception("Cann't send command");
+		}
 	}
 }

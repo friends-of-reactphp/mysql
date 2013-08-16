@@ -24,6 +24,11 @@ class Parser extends EventEmitter{
 	protected $passwd = '';
 	protected $dbname   = '';
 	
+	/**
+	 * @var \React\MySQL\Command
+	 */
+	protected $currCommand;
+	
 	protected $callback;
 	
 	protected $state = 0;
@@ -67,11 +72,11 @@ class Parser extends EventEmitter{
 	protected $connectOptions;
 	
 	/**
-	 * @var React\Stream\Stream
+	 * @var \React\Stream\Stream
 	 */
 	protected $stream;
 	/**
-	 * @var React\MySQL\Executor
+	 * @var \React\MySQL\Executor
 	 */
 	protected $executor;
 	
@@ -161,6 +166,7 @@ field:
 				printf("Error Packet:%d %s\n", $this->errno, $this->errmsg);
 				$this->onError();
 				
+				$this->nextRequest();
 				
 			}elseif ($fieldCount === 0x00) { //OK Packet Empty
 				printf("Ok Packet\n");
@@ -190,6 +196,7 @@ field:
 				$this->message      = $this->readBuffer($this->pctSize - $len + $this->getBufferLen());
 				
 				$this->onSuccess();
+				$this->nextRequest();
 				
 			}elseif ($fieldCount === 0xFE) { //EOF Packet
 				printf("EOF Packet\n");
@@ -197,6 +204,7 @@ field:
 					printf("result done\n");
 					
 					$this->onResultDone();
+					$this->nextRequest();
 				}else {
 					++ $this->rsState;
 				}
@@ -250,6 +258,7 @@ field:
 	
 	protected function onError() {
 		$this->emit('error', [new Exception($this->errmsg, $this->errno)]);
+		$this->currCommand && $this->currCommand->emit('error', [new Exception($this->errmsg, $this->errno)]);
 		$this->errmsg = '';
 		$this->errno  = 0;
 	}
@@ -257,6 +266,8 @@ field:
 	protected function onResultDone() {
 		//var_dump($this->listeners('results'));
 		$this->emit('results', array($this->resultRows));
+		$this->currCommand && $this->currCommand->emit('results', array($this->resultRows));
+		
 		$this->rsState      = self::RS_STATE_HEADER;
 		$this->resultRows   = $this->resultRows = [];
 	}
@@ -264,6 +275,7 @@ field:
 	
 	protected function onSuccess() {
 		$this->emit('success');
+		$this->currCommand && $this->currCommand->emit('success');
 	}
 	
 	protected function onClose() {
@@ -409,6 +421,18 @@ field:
 		$this->callback = $callback;
 		$this->seq = 0;
 		$this->sentPacket(chr($cmd) . $q);
+		return true;
+	}
+	
+	protected function nextRequest() {
+		if ($this->phase != self::PHASE_HANDSHAKED) {
+			return false;
+		}
+		if (!$this->executor->isIdle()) {
+			$this->currCommand = $command = $this->executor->dequeue();
+			$this->seq = 0;
+			$this->sentPacket(chr($command->cmd) . $command->getSql());
+		}
 		return true;
 	}
 }
