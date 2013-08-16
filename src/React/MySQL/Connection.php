@@ -14,14 +14,15 @@ use React\SocketClient\Connector;
 
 class Connection extends EventEmitter implements WritableStreamInterface {
 
-	const STATE_INIT           = 0;
-	const STATE_CONNECTING     = 1;
-	const STATE_CONNECT_FIELD  = 2;
-	const STATE_CONNECTED      = 3;
-	const STATE_AUTHENTICATED  = 4;
-	const STATE_DISCONNECTING  = 5;
-	const STATE_DISCONNECTED   = 6;
-	const STATE_END            = 7;
+	const STATE_INIT                = 0;
+	const STATE_CONNECTING          = 1;
+	const STATE_CONNECT_FAILED      = 2;
+	const STATE_CONNECTED           = 3;
+	const STATE_AUTHENTICATED       = 4;
+	const STATE_AUTHENTICATE_FAILED = 5;
+	const STATE_DISCONNECTING       = 6;
+	const STATE_DISCONNECTED        = 7;
+	const STATE_END                 = 8;
 	
 	private $loop;
 	
@@ -168,20 +169,6 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		$this->state = self::STATE_WRITING;
 	}
 	
-	public function handleClose($err) {
-		$this->state = self::STATE_END;
-		var_dump('connection is closed');
-	}
-	
-	public function handleData($data) {
-		$this->buffer .= $data;
-		var_dump($this->buffer);
-	}
-	
-	public function handleConnected($connectOptions) {
-		$this->state = self::STATE_CONNECTED;
-		printf("INFO: <Connection> connected\n");
-	}
 	
 	public function end($data = null) {
 		
@@ -191,6 +178,13 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		
 	}
 	
+	/**
+	 * Connnect to mysql server.
+	 * 
+	 * @param callable $callback
+	 * 
+	 * @throws \Exception
+	 */
 	public function connect() {
 		$this->state = self::STATE_CONNECTING;
 		$options     = $this->options;
@@ -199,14 +193,16 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		$args        = func_get_args();
 		
 		if (count($args) > 0) {
-			$closeHandler = function () use ($args){
+			$closeHandler = function () use ($args, $that){
 				$args[0]();
 			};
-			$errorHandler = function ($reason) use ($args){
-				$args[0]($reason);
+			$errorHandler = function ($reason) use ($args, $that){
+				$that->state = $that::STATE_AUTHENTICATE_FAILED;
+				$args[0]($reason, $that);
 			};
-			$connectedHandler = function () use ($args) {
-				$args[0](null);
+			$connectedHandler = function () use ($args, $that) {
+				$that->state = $that::STATE_AUTHENTICATED;
+				$args[0](null, $that);
 			};
 			
 			$this->connector
@@ -214,7 +210,7 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 				->then(function ($stream) use (&$streamRef, $that, $options, $closeHandler, $errorHandler, $connectedHandler){
 					$streamRef = $stream;
 					
-					$parser = $that->parser = new Protocal\Parser($stream);
+					$parser = $that->parser = new Protocal\Parser($stream, $that->executor);
 					
 					$parser->setOptions($options);
 					//$parser->on('close', $closeHandler);
@@ -225,5 +221,10 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		}else {
 			throw new \Exception('Not Implemented');
 		}
+	}
+	
+	
+	protected function _doCommand(Command $command) {
+		return $this->executor->enqueue($command);
 	}
 }

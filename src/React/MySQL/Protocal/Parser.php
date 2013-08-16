@@ -70,9 +70,15 @@ class Parser extends EventEmitter{
 	 * @var React\Stream\Stream
 	 */
 	protected $stream;
+	/**
+	 * @var React\MySQL\Executor
+	 */
+	protected $executor;
 	
-	public function __construct($stream) {
-		$this->stream = $stream;
+	public function __construct($stream, $executor) {
+		$this->stream   = $stream;
+		$this->executor = $executor;
+		
 		$stream->on('data', array($this, 'parse'));
 		$stream->on('close', array($this, 'onClose'));
 	}

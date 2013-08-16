@@ -17,8 +17,9 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase {
 		$conn = new Connection($loop, array('passwd' => 'invalidpass') + $this->connectOptions );
 		$that = $this;
 		
-		$conn->connect(function ($err) use($that){
+		$conn->connect(function ($err, $conn) use($that){
 			$that->assertEquals("Access denied for user 'test'@'localhost' (using password: YES)", $err->getMessage());
+			$that->assertInstanceOf('React\MySQL\Connection', $conn);
 		});
 		$loop->run();
 	}
@@ -29,8 +30,9 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase {
 		$conn = new Connection($loop, $this->connectOptions );
 		$that = $this;
 		
-		$conn->connect(function ($err) use($that, $loop){
+		$conn->connect(function ($err, $conn) use($that, $loop){
 			$that->assertEquals(null, $err);
+			$that->assertInstanceOf('React\MySQL\Connection', $conn);
 			$loop->stop();
 		});
 		$loop->run();
