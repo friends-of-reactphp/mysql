@@ -21,7 +21,7 @@ class Parser extends EventEmitter{
 	const STATE_BODY    = 1;
 	
 	protected $user     = 'root';
-	protected $password = '';
+	protected $passwd = '';
 	protected $dbname   = '';
 	
 	protected $callback;
@@ -310,7 +310,7 @@ field:
 		$packet = pack('VVc', $clientFlags, $this->maxPacketSize, $this->charsetNumber)
 				. "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
 				. $this->user . "\x00"
-				. $this->getAuthToken($this->scramble, $this->password)
+				. $this->getAuthToken($this->scramble, $this->passwd)
 				. '';
 		
 		$this->sentPacket($packet);

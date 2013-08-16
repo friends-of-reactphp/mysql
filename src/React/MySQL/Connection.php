@@ -9,31 +9,50 @@ use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
 use React\Promise\Deferred;
 use React\MySQL\Protocal\Constants;
+use React\SocketClient\Connector;
 
 
-class Request extends EventEmitter implements WritableStreamInterface {
+class Connection extends EventEmitter implements WritableStreamInterface {
 
-	const STATE_INIT    = 0;
-	const STATE_WRITING = 1;
-	const STATE_WRITEN  = 2;
-	const STATE_END     = 3;
+	const STATE_INIT           = 0;
+	const STATE_CONNECTING     = 1;
+	const STATE_CONNECT_FIELD  = 2;
+	const STATE_CONNECTED      = 3;
+	const STATE_AUTHENTICATED  = 4;
+	const STATE_DISCONNECTING  = 5;
+	const STATE_DISCONNECTED   = 6;
+	const STATE_END            = 7;
 	
 	private $loop;
+	
 	private $connector;
-	private $params;
+	
+	private $options = array(
+		'host'   => '127.0.0.1',
+		'port'   => 3306,
+		'user'   => 'root',
+		'passwd' => '',
+		'dbname' => '',		
+	);
+	
+	private $executor;
 	
 	private $state = self::STATE_INIT;
 	
 	private $stream;
+	
 	private $buffer;
 	/**
 	 * @var Protocal\Parser
 	 */
 	public $parser;
 	
-	public function __construct(LoopInterface $loop, ConnectorInterface $connector) {
-		$this->loop = $loop;
-		$this->connector = $connector;
+	public function __construct(LoopInterface $loop, array $connectOptions = array()) {
+		$this->loop       = $loop;
+		$resolver         = (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop);
+		$this->connector  = new Connector($loop, $resolver);;
+		$this->executor   = new Executor($this);
+		$this->options    = $connectOptions + $this->options;
 	}
 	
 	/**
@@ -149,7 +168,7 @@ class Request extends EventEmitter implements WritableStreamInterface {
 		$this->state = self::STATE_WRITING;
 	}
 	
-	public function handleClose() {
+	public function handleClose($err) {
 		$this->state = self::STATE_END;
 		var_dump('connection is closed');
 	}
@@ -160,7 +179,8 @@ class Request extends EventEmitter implements WritableStreamInterface {
 	}
 	
 	public function handleConnected($connectOptions) {
-		var_dump($connectOptions);
+		$this->state = self::STATE_CONNECTED;
+		printf("INFO: <Connection> connected\n");
 	}
 	
 	public function end($data = null) {
@@ -171,8 +191,39 @@ class Request extends EventEmitter implements WritableStreamInterface {
 		
 	}
 	
-	protected function connect() {
-		return $this->connector
-			->create($this->getParam('host', '127.0.0.1'), $this->getParam('port', 3306));
+	public function connect() {
+		$this->state = self::STATE_CONNECTING;
+		$options     = $this->options;
+		$that        = $this;
+		$streamRef   = $this->stream;
+		$args        = func_get_args();
+		
+		if (count($args) > 0) {
+			$closeHandler = function () use ($args){
+				$args[0]();
+			};
+			$errorHandler = function ($reason) use ($args){
+				$args[0]($reason);
+			};
+			$connectedHandler = function () use ($args) {
+				$args[0](null);
+			};
+			
+			$this->connector
+				->create($this->options['host'], $this->options['port'])
+				->then(function ($stream) use (&$streamRef, $that, $options, $closeHandler, $errorHandler, $connectedHandler){
+					$streamRef = $stream;
+					
+					$parser = $that->parser = new Protocal\Parser($stream);
+					
+					$parser->setOptions($options);
+					//$parser->on('close', $closeHandler);
+					$parser->on('error', $errorHandler);
+					$parser->on('connected', $connectedHandler);
+					
+				}, $closeHandler);
+		}else {
+			throw new \Exception('Not Implemented');
+		}
 	}
 }
