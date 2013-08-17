@@ -8,6 +8,10 @@ use React\Stream\Stream;
 use React\Promise\Deferred;
 use React\MySQL\Protocal\Constants;
 use React\SocketClient\Connector;
+use React\MySQL\Commands\AuthenticateCommand;
+use React\MySQL\Commands\PingCommand;
+use React\MySQL\Commands\QueryCommand;
+use React\MySQL\Commands\QuitCommand;
 
 
 class Connection extends EventEmitter {
@@ -67,7 +71,8 @@ class Connection extends EventEmitter {
 			throw new \InvalidArgumentException('Required at least 1 argument');
 		}
 		
-		$command = new Command($this->executor, Constants::COM_QUERY, $sql);
+		$command = new QueryCommand($this->executor);
+		$command->setState('query', $sql);
 		$query = $this->_doCommand($command);
 		if ($numArgs === 1) {
 			return $command;
@@ -91,7 +96,7 @@ class Connection extends EventEmitter {
 		if (!is_callable($callback)) {
 			throw new \InvalidArgumentException('Callback is not a valid callable');
 		}
-		$this->_doCommand($this->createCommand(Constants::COM_PING))
+		$this->_doCommand(new PingCommand($this->executor))
 			->on('error', function ($reason) use ($callback){
 				$callback($reason, $this);
 			})
@@ -102,6 +107,10 @@ class Connection extends EventEmitter {
 	
 	public function selectDb($dbname) {
 		return $this->query(sprinf('USE `%s`', $dbname));
+	}
+	
+	public function listFields() {
+		
 	}
 	
 	public function setOption($name, $value) {
@@ -124,7 +133,7 @@ class Connection extends EventEmitter {
 	 * Close the connection.
 	 */
 	public function close($callback = null) {
-		$this->_doCommand($this->createCommand(Constants::COM_QUIT))
+		$this->_doCommand(new QuitCommand($this->executor))
 			->on('success', function () use ($callback) {
 				$this->state = self::STATE_CLOSED;
 				if ($callback) {
@@ -170,7 +179,7 @@ class Connection extends EventEmitter {
 					
 					$parser->setOptions($options);
 					
-					$command = $this->_doCommand($this->createCommand(Constants::COM_INIT_AUTHENTICATE));
+					$command = $this->_doCommand(new AuthenticateCommand($this->executor));
 					$command->on('authenticated', $connectedHandler);
 					$command->on('error', $errorHandler);
 					
@@ -186,17 +195,13 @@ class Connection extends EventEmitter {
 	
 	
 	protected function _doCommand(Command $command) {
-		if ($command->cmd === Constants::COM_INIT_AUTHENTICATE){
+		if ($command->equals(Command::INIT_AUTHENTICATE)){
 			return $this->executor->undequeue($command);
 		}elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
 			return $this->executor->enqueue($command);
 		}else {
 			throw new Exception("Cann't send command");
 		}
-	}
-	
-	public function createCommand($cmd, $query = '') {
-		return new Command($this->executor, $cmd, $query);
 	}
 	
 	public function getServerOptions() {

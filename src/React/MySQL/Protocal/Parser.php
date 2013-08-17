@@ -5,6 +5,7 @@ namespace React\MySQL\Protocal;
 
 use Evenement\EventEmitter;
 use React\MySQL\Exception;
+use React\MySQL\Command;
 
 class Parser extends EventEmitter{
 	
@@ -21,7 +22,7 @@ class Parser extends EventEmitter{
 	const STATE_BODY    = 1;
 	
 	protected $user     = 'root';
-	protected $passwd = '';
+	protected $passwd   = '';
 	protected $dbname   = '';
 	
 	/**
@@ -89,7 +90,6 @@ class Parser extends EventEmitter{
 	public function start() {
 		$this->stream->on('data', array($this, 'parse'));
 		$this->stream->on('close', array($this, 'onClose'));
-		
 	}
 	
 	public function debug($message) {
@@ -260,8 +260,6 @@ field:
 	}
 	
 	protected function onError() {
-		if ($this->currCommand->cmd == Constants::COM_QUIT) {
-		}
 		$this->currCommand->emit('error', [new Exception($this->errmsg, $this->errno)]);
 		$this->errmsg = '';
 		$this->errno  = 0;
@@ -286,7 +284,7 @@ field:
 	
 	protected function onClose() {
 		$this->emit('close');
-		if ($this->currCommand->cmd == Constants::COM_QUIT) {
+		if ($this->currCommand->equals(Command::QUIT)) {
 			$this->currCommand->emit('success');
 		}
 	}
@@ -437,11 +435,11 @@ field:
 		}
 		if (!$this->executor->isIdle()) {
 			$this->currCommand = $command = $this->executor->dequeue();
-			if ($command->cmd === Constants::COM_INIT_AUTHENTICATE) {
+			if ($command->equals(Command::INIT_AUTHENTICATE)) {
 				$this->authenticate();
 			}else {
 				$this->seq = 0;
-				$this->sendPacket(chr($command->cmd) . $command->getSql());
+				$this->sendPacket(chr($command->getId()) . $command->getSql());
 			}
 		}
 		return true;
