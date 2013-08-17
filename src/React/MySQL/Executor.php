@@ -8,7 +8,7 @@ class Executor extends EventEmitter {
 	
 	private $client;
 	
-	private $queue;
+	public $queue;
 	
 	public function __construct($client) {
 		$this->client = $client;
@@ -26,6 +26,11 @@ class Executor extends EventEmitter {
 	
 	public function dequeue() {
 		return $this->queue->dequeue();
+	}
+	
+	public function undequeue($command) {
+		$this->queue->unshift($command);
+		return $command;
 	}
 	
 	public function getConn() {

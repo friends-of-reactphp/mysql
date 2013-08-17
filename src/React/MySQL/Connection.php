@@ -36,6 +36,8 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		'dbname' => '',		
 	);
 	
+	private $serverOptions;
+	
 	private $executor;
 	
 	private $state = self::STATE_INIT;
@@ -54,42 +56,6 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		$this->connector  = new Connector($loop, $resolver);;
 		$this->executor   = new Executor($this);
 		$this->options    = $connectOptions + $this->options;
-	}
-	
-	/**
-	 * Authentication.
-	 * 
-	 * @param array $options
-	 * @return \React\Promise\DeferredPromise
-	 */
-	public function auth(array $options) {
-		$deferred         = new Deferred();
-		$that             = $this;
-		$streamRef        = &$this->stream;
-		
-		$errorHandler     = function ($reason) use ($deferred) {
-			$deferred->reject($reason);
-		};
-		
-		$connectedHandler = function ($options) use ($deferred) {
-			$deferred->resolve($options);
-		};
-		
-		$this->connect()
-			->then(function ($stream) use (&$streamRef, $that, $options, $errorHandler, $connectedHandler){
-				$streamRef = $stream;
-				
-				$parser = $that->parser = new Protocal\Parser($stream);
-				
-				$parser->setOptions($options);
-				$parser->on('close', array($that, 'handleClose'));
-				$parser->once('error', $errorHandler);
-				$parser->once('connected', $connectedHandler);
-				
-			}, $errorHandler);
-		
-		
-		return $deferred->promise();
 	}
 	
 	/**
@@ -131,34 +97,6 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 	
 	public function selectDb($dbname) {
 		return $this->query(sprinf('USE `%s`', $dbname));
-	}
-	
-	
-	protected function doCommand($cmd, $q = '') {
-		$deferred = new Deferred();
-		if ($this->state === self::STATE_END) {
-			$deferred->reject(new Exception('Connection is closed'));
-			return $deferred->promise();
-		}
-		$parser   = $this->parser;
-		
-		$errorHandler    = function ($reason) use ($deferred) {
-			$deferred->reject($reason);
-		};
-		
-		$successHandler  = function () use ($deferred) {
-			$deferred->resolve();
-		};
-		$resultsHandler  = function ($results) use ($deferred) {
-			$deferred->resolve($results);
-		};
-		$parser->once('success', $successHandler);
-		$parser->once('error', $errorHandler);
-		$parser->once('results', $resultsHandler);
-		
-		$parser->command($cmd, $q);
-		
-		return $deferred->promise();
 	}
 	
 	public function setParam($name, $value) {
@@ -219,8 +157,9 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 				$that->state = $that::STATE_AUTHENTICATE_FAILED;
 				$args[0]($reason, $that);
 			};
-			$connectedHandler = function () use ($args, $that) {
+			$connectedHandler = function ($serverOptions) use ($args, $that) {
 				$that->state = $that::STATE_AUTHENTICATED;
+				$that->serverOptions = $serverOptions;
 				$args[0](null, $that);
 			};
 			
@@ -232,9 +171,14 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 					$parser = $that->parser = new Protocal\Parser($stream, $that->executor);
 					
 					$parser->setOptions($options);
+					
+					$command = $that->_doCommand($that->createCommand(Constants::COM_INIT_AUTHENTICATE));
+					$command->on('authenticated', $connectedHandler);
+					$command->on('error', $errorHandler);
+					
 					//$parser->on('close', $closeHandler);
-					$parser->on('error', $errorHandler);
-					$parser->on('connected', $connectedHandler);
+					$parser->start();
+					
 					
 				}, $closeHandler);
 		}else {
@@ -244,10 +188,20 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 	
 	
 	protected function _doCommand(Command $command) {
-		if ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
+		if ($command->cmd === Constants::COM_INIT_AUTHENTICATE){
+			return $this->executor->undequeue($command);
+		}elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
 			return $this->executor->enqueue($command);
 		}else {
 			throw Exception("Cann't send command");
 		}
+	}
+	
+	public function createCommand($cmd, $query = '') {
+		return new Command($this->executor, $cmd, $query);
+	}
+	
+	public function getServerOptions() {
+		return $this->serverOptions;
 	}
 }

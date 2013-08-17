@@ -193,6 +193,12 @@ class Constants {
 	 */
 	const COM_STMT_FETCH = 0x1c;
 	
+	/**
+	 * Authenticate after the connection is established, only for this project.
+	 */
+	const COM_INIT_AUTHENTICATE = 0xf1;
+	
+	
 	const FIELD_TYPE_DECIMAL     = 0x00;
 	const FIELD_TYPE_TINY        = 0x01;
 	const FIELD_TYPE_SHORT       = 0x02;
