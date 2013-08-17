@@ -29,8 +29,8 @@ class Parser extends EventEmitter{
 	 */
 	protected $currCommand;
 	
-	protected $callback;
-	
+	protected $debug = false;
+		
 	protected $state = 0;
 	
 	protected $phase = 0;
@@ -93,9 +93,11 @@ class Parser extends EventEmitter{
 	}
 	
 	public function debug($message) {
-		$bt = debug_backtrace();
-		$caller = array_shift($bt);
-		printf("[DEBUG] <%s:%d> %s\n", $caller['class'], $caller['line'], $message);
+		if ($this->debug) {
+			$bt = debug_backtrace();
+			$caller = array_shift($bt);
+			printf("[DEBUG] <%s:%d> %s\n", $caller['class'], $caller['line'], $message);
+		}
 	}
 	
 	public function setOptions($options) {
@@ -249,6 +251,7 @@ field:
 						$row[$this->resultFields[$i]['name']] = $this->parseEncodedString();
 					}
 					$this->resultRows[] = $row;
+					$this->currCommand->emit('result', array($row));
 				}
 			}
 		}
@@ -257,6 +260,8 @@ field:
 	}
 	
 	protected function onError() {
+		if ($this->currCommand->cmd == Constants::COM_QUIT) {
+		}
 		$this->currCommand->emit('error', [new Exception($this->errmsg, $this->errno)]);
 		$this->errmsg = '';
 		$this->errno  = 0;
@@ -264,18 +269,26 @@ field:
 	
 	protected function onResultDone() {
 		$this->currCommand->emit('results', array($this->resultRows));
-		
+		$this->currCommand->emit('end');
 		$this->rsState      = self::RS_STATE_HEADER;
 		$this->resultRows   = $this->resultRows = [];
 	}
 	
 	
 	protected function onSuccess() {
-		$this->currCommand && $this->currCommand->emit('success');
+		$this->currCommand->emit('success', array(array(
+			'affectedRows' => $this->affectedRows,
+			'insertId'     => $this->insertId,
+			'warnCount'    => $this->warnCount,
+			'message'  => $this->message,
+		)));
 	}
 	
 	protected function onClose() {
 		$this->emit('close');
+		if ($this->currCommand->cmd == Constants::COM_QUIT) {
+			$this->currCommand->emit('success');
+		}
 	}
 	
 	

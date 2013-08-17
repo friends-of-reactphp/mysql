@@ -2,8 +2,6 @@
 
 namespace React\MySQL;
 
-use Evenement\EventEmitter;
-use React\Stream\WritableStreamInterface;
 use React\EventLoop\LoopInterface;
 use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
@@ -12,7 +10,7 @@ use React\MySQL\Protocal\Constants;
 use React\SocketClient\Connector;
 
 
-class Connection extends EventEmitter implements WritableStreamInterface {
+class Connection extends EventEmitter {
 
 	const STATE_INIT                = 0;
 	const STATE_CONNECT_FAILED      = 1;
@@ -20,21 +18,20 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 	const STATE_CONNECTING          = 3;
 	const STATE_CONNECTED           = 4;
 	const STATE_AUTHENTICATED       = 5;
-	const STATE_DISCONNECTING       = 6;
-	const STATE_DISCONNECTED        = 7;
-	const STATE_END                 = 8;
+	const STATE_CLOSEING            = 6;
+	const STATE_CLOSED              = 7;
 	
 	private $loop;
 	
 	private $connector;
 	
-	private $options = array(
+	private $options = [
 		'host'   => '127.0.0.1',
 		'port'   => 3306,
 		'user'   => 'root',
 		'passwd' => '',
 		'dbname' => '',		
-	);
+	];
 	
 	private $serverOptions;
 	
@@ -62,7 +59,7 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 	 * Do a async query.
 	 * 
 	 * @param string $sql
-	 * @return \React\Promise\DeferredPromise
+	 * @return \React\MySQL\Command
 	 */
 	public function query($sql) {
 		$numArgs = func_num_args();
@@ -79,60 +76,62 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		$func = func_get_arg(1);
 		$that = $this;
 		
-		$command->on('results', function ($rows) use($func, $that){
-			$func(null, $rows, $that);
+		$command->on('results', function ($rows) use($func){
+			$func(null, $rows, $this);
 		});
-		$command->on('error', function ($err) use ($func, $that){
-			$func($err, null, $that);
+		$command->on('error', function ($err) use ($func){
+			$func($err, null, $this);
+		});
+		$command->on('success', function ($data) use ($func) {
+			$func(null, $data, $this);
 		});
 	}
 	
-	public function execute($sql) {
-		return $this->doCommand(Constants::COM_QUERY, $sql);
-	}
-	
-	public function ping() {
-		return $this->doCommand(Constants::COM_PING, '');
+	public function ping($callback) {
+		if (!is_callable($callback)) {
+			throw new \InvalidArgumentException('Callback is not a valid callable');
+		}
+		$this->_doCommand($this->createCommand(Constants::COM_PING))
+			->on('error', function ($reason) use ($callback){
+				$callback($reason, $this);
+			})
+			->on('success', function () use ($callback){
+				$callback(null, $this);
+			});
 	}
 	
 	public function selectDb($dbname) {
 		return $this->query(sprinf('USE `%s`', $dbname));
 	}
 	
-	public function setParam($name, $value) {
-		$this->params[$name] = $value;
+	public function setOption($name, $value) {
+		$this->options[$name] = $value;
 		return $this;
 	}
 	
-	public function getParam($name, $default = null) {
-		if (isset($this->params[$name])) {
-			return $this->params[$name];
+	public function getOption($name, $default = null) {
+		if (isset($this->options[$name])) {
+			return $this->options[$name];
 		}
 		return $default;
 	}
 	
-	public function isWritable() {
-		return self::STATE_END > $this->state;
+	public function getState() {
+		return $this->state;
 	}
 	
-	public function write($data) {
-		if (!$this->isWritable()) {
-			
-			return;
-		}
-		if (self::STATE_WRITING <= $this->state) {
-			throw new \LogicException('Data already written.');
-		}
-		$this->state = self::STATE_WRITING;
-	}
-	
-	
-	public function end($data = null) {
-		
-	}
-	
-	public function close() {
-		
+	/**
+	 * Close the connection.
+	 */
+	public function close($callback = null) {
+		$this->_doCommand($this->createCommand(Constants::COM_QUIT))
+			->on('success', function () use ($callback) {
+				$this->state = self::STATE_CLOSED;
+				if ($callback) {
+					$callback($this);
+				}
+			});
+		$this->state = self::STATE_CLOSEING;
 	}
 	
 	/**
@@ -145,34 +144,33 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 	public function connect() {
 		$this->state = self::STATE_CONNECTING;
 		$options     = $this->options;
-		$that        = $this;
 		$streamRef   = $this->stream;
 		$args        = func_get_args();
 		
 		if (count($args) > 0) {
-			$closeHandler = function () use ($args, $that){
+			$closeHandler = function () use ($args){
 				$args[0]();
 			};
-			$errorHandler = function ($reason) use ($args, $that){
-				$that->state = $that::STATE_AUTHENTICATE_FAILED;
-				$args[0]($reason, $that);
+			$errorHandler = function ($reason) use ($args){
+				$this->state = self::STATE_AUTHENTICATE_FAILED;
+				$args[0]($reason, $this);
 			};
-			$connectedHandler = function ($serverOptions) use ($args, $that) {
-				$that->state = $that::STATE_AUTHENTICATED;
-				$that->serverOptions = $serverOptions;
-				$args[0](null, $that);
+			$connectedHandler = function ($serverOptions) use ($args) {
+				$this->state = self::STATE_AUTHENTICATED;
+				$this->serverOptions = $serverOptions;
+				$args[0](null, $this);
 			};
 			
 			$this->connector
 				->create($this->options['host'], $this->options['port'])
-				->then(function ($stream) use (&$streamRef, $that, $options, $closeHandler, $errorHandler, $connectedHandler){
+				->then(function ($stream) use (&$streamRef, $options, $closeHandler, $errorHandler, $connectedHandler){
 					$streamRef = $stream;
 					
-					$parser = $that->parser = new Protocal\Parser($stream, $that->executor);
+					$parser = $this->parser = new Protocal\Parser($stream, $this->executor);
 					
 					$parser->setOptions($options);
 					
-					$command = $that->_doCommand($that->createCommand(Constants::COM_INIT_AUTHENTICATE));
+					$command = $this->_doCommand($this->createCommand(Constants::COM_INIT_AUTHENTICATE));
 					$command->on('authenticated', $connectedHandler);
 					$command->on('error', $errorHandler);
 					
@@ -193,7 +191,7 @@ class Connection extends EventEmitter implements WritableStreamInterface {
 		}elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
 			return $this->executor->enqueue($command);
 		}else {
-			throw Exception("Cann't send command");
+			throw new Exception("Cann't send command");
 		}
 	}
 	

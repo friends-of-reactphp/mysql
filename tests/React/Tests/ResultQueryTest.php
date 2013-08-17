@@ -4,9 +4,6 @@ namespace React\Tests;
 
 class ResultQueryTest extends BaseTestCase {
 	
-	protected static $pdo;
-	protected $conn;
-	
 	public function testSimpleSelect() {
 		$loop = \React\EventLoop\Factory::create();
 		
@@ -32,6 +29,30 @@ class ResultQueryTest extends BaseTestCase {
 			$that->assertEquals("Table 'test.invalid_table' doesn't exist", $err->getMessage());
 			$loop->stop();
 		});
+		$loop->run();
+	}
+	
+	public function testEventSelect() {
+		$loop = \React\EventLoop\Factory::create();
+		
+		$connection = new \React\MySQL\Connection($loop, array(
+			'dbname' => 'test',
+			'user'   => 'test',
+			'passwd' => 'test',
+		));
+		
+		$connection->connect(function (){});
+		$that  = $this;
+		$command = $connection->query('select * from book');
+		$command->on('results', function ($results) use ($that) {
+			$that->assertEquals(2, count($results));
+		});
+		$command->on('result', function ($result) use ($that){
+				$that->assertArrayHasKey('id', $result);
+			})
+			->on('end', function () use ($loop){
+				$loop->stop();
+			});
 		$loop->run();
 	}
 }
