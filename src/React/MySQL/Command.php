@@ -2,8 +2,6 @@
 
 namespace React\MySQL;
 
-use Evenement\EventEmitter;
-
 class Command extends EventEmitter {
 	
 	private $executor;
