@@ -5,6 +5,7 @@ namespace React\MySQL\Protocal;
 
 use Evenement\EventEmitter;
 use React\MySQL\Exception;
+use React\MySQL\Command;
 
 class Parser extends EventEmitter{
 	
@@ -21,7 +22,7 @@ class Parser extends EventEmitter{
 	const STATE_BODY    = 1;
 	
 	protected $user     = 'root';
-	protected $passwd = '';
+	protected $passwd   = '';
 	protected $dbname   = '';
 	
 	/**
@@ -29,8 +30,8 @@ class Parser extends EventEmitter{
 	 */
 	protected $currCommand;
 	
-	protected $callback;
-	
+	protected $debug = false;
+		
 	protected $state = 0;
 	
 	protected $phase = 0;
@@ -89,13 +90,14 @@ class Parser extends EventEmitter{
 	public function start() {
 		$this->stream->on('data', array($this, 'parse'));
 		$this->stream->on('close', array($this, 'onClose'));
-		
 	}
 	
 	public function debug($message) {
-		$bt = debug_backtrace();
-		$caller = array_shift($bt);
-		printf("[DEBUG] <%s:%d> %s\n", $caller['class'], $caller['line'], $message);
+		if ($this->debug) {
+			$bt = debug_backtrace();
+			$caller = array_shift($bt);
+			printf("[DEBUG] <%s:%d> %s\n", $caller['class'], $caller['line'], $message);
+		}
 	}
 	
 	public function setOptions($options) {
@@ -249,6 +251,7 @@ field:
 						$row[$this->resultFields[$i]['name']] = $this->parseEncodedString();
 					}
 					$this->resultRows[] = $row;
+					$this->currCommand->emit('result', array($row));
 				}
 			}
 		}
@@ -264,18 +267,26 @@ field:
 	
 	protected function onResultDone() {
 		$this->currCommand->emit('results', array($this->resultRows));
-		
+		$this->currCommand->emit('end');
 		$this->rsState      = self::RS_STATE_HEADER;
 		$this->resultRows   = $this->resultRows = [];
 	}
 	
 	
 	protected function onSuccess() {
-		$this->currCommand && $this->currCommand->emit('success');
+		$this->currCommand->emit('success', array(array(
+			'affectedRows' => $this->affectedRows,
+			'insertId'     => $this->insertId,
+			'warnCount'    => $this->warnCount,
+			'message'  => $this->message,
+		)));
 	}
 	
 	protected function onClose() {
 		$this->emit('close');
+		if ($this->currCommand->equals(Command::QUIT)) {
+			$this->currCommand->emit('success');
+		}
 	}
 	
 	
@@ -424,11 +435,11 @@ field:
 		}
 		if (!$this->executor->isIdle()) {
 			$this->currCommand = $command = $this->executor->dequeue();
-			if ($command->cmd === Constants::COM_INIT_AUTHENTICATE) {
+			if ($command->equals(Command::INIT_AUTHENTICATE)) {
 				$this->authenticate();
 			}else {
 				$this->seq = 0;
-				$this->sendPacket(chr($command->cmd) . $command->getSql());
+				$this->sendPacket(chr($command->getId()) . $command->getSql());
 			}
 		}
 		return true;

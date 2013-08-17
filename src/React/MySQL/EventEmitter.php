@@ -12,7 +12,7 @@ class EventEmitter extends \Evenement\EventEmitter {
 		if (!isset($this->listeners[$event])) {
 			$this->listeners[$event] = array();
 		}
-		
+
 		$this->listeners[$event][] = $listener;
 		return $this;
 	}
