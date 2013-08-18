@@ -14,19 +14,20 @@ class ResultQueryTest extends BaseTestCase {
 		));
 		
 		$connection->connect(function (){});
-		$that  = $this;
-		$connection->query('select * from book', function ($err, $rows, $conn) use ($that, $loop){
-			$that->assertEquals(null, $err);
-			$that->assertEquals(2, count($rows));
+		$connection->query('select * from book', function ($command, $conn) use ($loop){
+			$this->assertEquals(false, $command->hasError());
+			$this->assertEquals(2, count($command->resultRows));
+			$this->assertInstanceOf('React\MySQL\Connection', $conn);
 			$loop->stop();
 		});
 		$loop->run();
 		
 		$connection->connect(function (){});
 		
-		$connection->query('select * from invalid_table', function ($err, $rows, $conn) use ($that, $loop){
-			$that->assertEquals(null, $rows);
-			$that->assertEquals("Table 'test.invalid_table' doesn't exist", $err->getMessage());
+		$connection->query('select * from invalid_table', function ($command, $conn) use ($loop){
+			$this->assertEquals(true, $command->hasError());
+			$this->assertEquals("Table 'test.invalid_table' doesn't exist", $command->getError()->getMessage());
+			
 			$loop->stop();
 		});
 		$loop->run();
@@ -42,15 +43,21 @@ class ResultQueryTest extends BaseTestCase {
 		));
 		
 		$connection->connect(function (){});
-		$that  = $this;
+
 		$command = $connection->query('select * from book');
-		$command->on('results', function ($results) use ($that) {
-			$that->assertEquals(2, count($results));
+		$command->on('results', function ($results, $command, $conn) {
+			$this->assertEquals(2, count($results));
+			$this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
+			$this->assertInstanceOf('React\MySQL\Connection', $conn);
 		});
-		$command->on('result', function ($result) use ($that){
-				$that->assertArrayHasKey('id', $result);
+		$command->on('result', function ($result, $command, $conn) {
+				$this->assertArrayHasKey('id', $result);
+				$this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
+				$this->assertInstanceOf('React\MySQL\Connection', $conn);
 			})
-			->on('end', function () use ($loop){
+			->on('end', function ($command, $conn) use ($loop){
+				$this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
+				$this->assertInstanceOf('React\MySQL\Connection', $conn);
 				$loop->stop();
 			});
 		$loop->run();

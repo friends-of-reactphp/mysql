@@ -71,7 +71,7 @@ class Connection extends EventEmitter {
 			throw new \InvalidArgumentException('Required at least 1 argument');
 		}
 		
-		$command = new QueryCommand($this->executor);
+		$command = new QueryCommand($this);
 		$command->setState('query', $sql);
 		$query = $this->_doCommand($command);
 		if ($numArgs === 1) {
@@ -81,14 +81,14 @@ class Connection extends EventEmitter {
 		$func = func_get_arg(1);
 		$that = $this;
 		
-		$command->on('results', function ($rows) use($func){
-			$func(null, $rows, $this);
+		$command->on('results', function ($rows, $command) use($func){
+			$func($command, $this);
 		});
-		$command->on('error', function ($err) use ($func){
-			$func($err, null, $this);
+		$command->on('error', function ($err, $command) use ($func){
+			$func($command, $this);
 		});
-		$command->on('success', function ($data) use ($func) {
-			$func(null, $data, $this);
+		$command->on('success', function ($command) use ($func) {
+			$func($command, $this);
 		});
 	}
 	
@@ -96,7 +96,7 @@ class Connection extends EventEmitter {
 		if (!is_callable($callback)) {
 			throw new \InvalidArgumentException('Callback is not a valid callable');
 		}
-		$this->_doCommand(new PingCommand($this->executor))
+		$this->_doCommand(new PingCommand($this))
 			->on('error', function ($reason) use ($callback){
 				$callback($reason, $this);
 			})
@@ -133,7 +133,7 @@ class Connection extends EventEmitter {
 	 * Close the connection.
 	 */
 	public function close($callback = null) {
-		$this->_doCommand(new QuitCommand($this->executor))
+		$this->_doCommand(new QuitCommand($this))
 			->on('success', function () use ($callback) {
 				$this->state = self::STATE_CLOSED;
 				if ($callback) {
@@ -179,7 +179,7 @@ class Connection extends EventEmitter {
 					
 					$parser->setOptions($options);
 					
-					$command = $this->_doCommand(new AuthenticateCommand($this->executor));
+					$command = $this->_doCommand(new AuthenticateCommand($this));
 					$command->on('authenticated', $connectedHandler);
 					$command->on('error', $errorHandler);
 					

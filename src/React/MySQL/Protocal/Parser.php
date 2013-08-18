@@ -251,7 +251,8 @@ field:
 						$row[$this->resultFields[$i]['name']] = $this->parseEncodedString();
 					}
 					$this->resultRows[] = $row;
-					$this->currCommand->emit('result', array($row));
+					$command = $this->currCommand;
+					$command->emit('result', array($row, $command, $command->getConnection()));
 				}
 			}
 		}
@@ -260,26 +261,35 @@ field:
 	}
 	
 	protected function onError() {
-		$this->currCommand->emit('error', [new Exception($this->errmsg, $this->errno)]);
+		$command = $this->currCommand;
+		$error = new Exception($this->errmsg, $this->errno);
+		$command->setError($error);
+		$command->emit('error', array($error, $command, $command->getConnection()));
 		$this->errmsg = '';
 		$this->errno  = 0;
 	}
 	
 	protected function onResultDone() {
-		$this->currCommand->emit('results', array($this->resultRows));
-		$this->currCommand->emit('end');
+		$command =  $this->currCommand;
+		$command->resultRows   = $this->resultRows;
+		$command->resultFields = $this->resultFields;
+		$command->emit('results', array($this->resultRows, $command, $command->getConnection()));
+		$command->emit('end', array($command, $command->getConnection()));
+		
 		$this->rsState      = self::RS_STATE_HEADER;
 		$this->resultRows   = $this->resultRows = [];
 	}
 	
 	
 	protected function onSuccess() {
-		$this->currCommand->emit('success', array(array(
-			'affectedRows' => $this->affectedRows,
-			'insertId'     => $this->insertId,
-			'warnCount'    => $this->warnCount,
-			'message'  => $this->message,
-		)));
+		$command = $this->currCommand;
+		if ($command->equals(Command::QUERY)) {
+			$command->affectedRows = $this->affectedRows;
+			$command->indertId     = $this->insertId;
+			$command->warnCount    = $this->warnCount;
+			$command->message      = $this->message;
+		}
+		$command->emit('success', array($command, $command->getConnection()));
 	}
 	
 	protected function onClose() {

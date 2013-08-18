@@ -36,7 +36,7 @@ class Query {
 	}
 	
 	public function escape($str) {
-		return strtr($str, array($this->escapeChars));
+		return strtr($str, $this->escapeChars);
 	}
 	
 	protected function getEscapedStringAndLen($val) {
