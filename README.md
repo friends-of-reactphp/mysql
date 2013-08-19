@@ -24,6 +24,6 @@ See examples for usage guide.
 
 Thinks for the following projects.
 
-[phpdaemon](https://github.com/kakserpom/phpdaemon) : the mysql protocal implemention based some code of the project.
-[node-mysql](https://raw.github.com/felixge/node-mysql) : take some inspirations from this project for API design.
+* [phpdaemon](https://github.com/kakserpom/phpdaemon): the mysql protocal implemention based some code of the project.
+* [node-mysql](https://raw.github.com/felixge/node-mysql): take some inspirations from this project for API design.
 
