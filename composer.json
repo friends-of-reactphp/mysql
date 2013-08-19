@@ -11,5 +11,5 @@
         "psr-0": {
             "React\\MySQL": "src/"
         }
-    },
+    }
 }
