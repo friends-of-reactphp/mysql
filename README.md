@@ -3,7 +3,7 @@ reactphp-mysql
 
 ## Install
 
-The recommended way to install react is through [composer](http://getcomposer.org).
+The recommended way to install reactphp-mysql is through [composer](http://getcomposer.org).
 
 ```
 {
@@ -18,7 +18,7 @@ The recommended way to install react is through [composer](http://getcomposer.or
 This is a mysql driver for [reactphp](https://github.com/reactphp/react), It is written 
 in pure PHP, implemented the mysql protocal.
 
-See examples for usage guide.
+See examples for usage details.
 
 ## Thinks
 
