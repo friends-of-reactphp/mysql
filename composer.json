@@ -1,6 +1,7 @@
 {
     "name": "react/mysql",
-    "description": "mysql client for phpreact.",
+    "description": "mysql driver for reactphp.",
+    "keywords": ["mysql", "php", "reactphp"],
     "license": "None",
     "require": {
         "php": ">=5.4.0",
@@ -11,6 +12,4 @@
             "React\\MySQL": "src/"
         }
     },
-    "repositories": [
-    ]
 }
