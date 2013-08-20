@@ -81,9 +81,12 @@ class Parser extends EventEmitter{
 	 */
 	protected $executor;
 	
+	protected $queue;
+	
 	public function __construct($stream, $executor) {
 		$this->stream   = $stream;
 		$this->executor = $executor;
+		$this->queue    = new \SplQueue($this);
 	}
 
 	
@@ -176,15 +179,16 @@ field:
 				$state = $this->read(6);
 				$this->errmsg  = $this->read($this->pctSize - $len + $this->length());
 				$this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
-				$this->onError();
 				
 				$this->nextRequest();
-				
+				$this->onError();
 			}elseif ($fieldCount === 0x00) { //OK Packet Empty
 				$this->debug('Ok Packet');
+				
+				$isAuthenticated = false;
 				if ($this->phase === self::PHASE_AUTH_SENT) {
 					$this->phase = self::PHASE_HANDSHAKED;
-					$this->currCommand->emit('authenticated', array($this->connectOptions));
+					$isAuthenticated = true;
 				}
 				
 				$this->affectedRows = $this->parseEncodedBinary();
@@ -198,7 +202,11 @@ field:
 				
 				$this->message      = $this->read($this->pctSize - $len + $this->length());
 				
-				$this->onSuccess();
+				if ($isAuthenticated) {
+					$this->onAuthenticated();
+				}else {
+					$this->onSuccess();
+				}
 				$this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarnCount:%d", $this->affectedRows, $this->insertId, $this->warnCount));
 				$this->nextRequest();
 				
@@ -206,6 +214,7 @@ field:
 				$this->debug('EOF Packet');
 				if ($this->rsState === self::RS_STATE_ROW) {
 					$this->debug('result done');
+					
 					$this->nextRequest();
 					$this->onResultDone();
 				}else {
@@ -254,8 +263,9 @@ field:
 						$row[$this->resultFields[$i]['name']] = $this->parseEncodedString();
 					}
 					$this->resultRows[] = $row;
-					$command = $this->currCommand;
+					$command = $this->queue->dequeue();
 					$command->emit('result', array($row, $command, $command->getConnection()));
+					$this->queue->unshift($command);
 				}
 			}
 		}
@@ -264,7 +274,7 @@ field:
 	}
 	
 	protected function onError() {
-		$command = $this->currCommand;
+		$command = $this->queue->dequeue();
 		$error = new Exception($this->errmsg, $this->errno);
 		$command->setError($error);
 		$command->emit('error', array($error, $command, $command->getConnection()));
@@ -273,7 +283,7 @@ field:
 	}
 	
 	protected function onResultDone() {
-		$command =  $this->currCommand;
+		$command =  $this->queue->dequeue();
 		$command->resultRows   = $this->resultRows;
 		$command->resultFields = $this->resultFields;
 		$command->emit('results', array($this->resultRows, $command, $command->getConnection()));
@@ -285,7 +295,7 @@ field:
 	
 	
 	protected function onSuccess() {
-		$command = $this->currCommand;
+		$command = $this->queue->dequeue();
 		if ($command->equals(Command::QUERY)) {
 			$command->affectedRows = $this->affectedRows;
 			$command->indertId     = $this->insertId;
@@ -295,10 +305,18 @@ field:
 		$command->emit('success', array($command, $command->getConnection()));
 	}
 	
+	protected function onAuthenticated() {
+		$command = $this->queue->dequeue();
+		$command->emit('authenticated', array($this->connectOptions));
+	}
+	
 	protected function onClose() {
 		$this->emit('close');
-		if ($this->currCommand->equals(Command::QUIT)) {
-			$this->currCommand->emit('success');
+		if ($this->queue->count()) {
+			$command = $this->queue->dequeue();
+			if ($command->equals(Command::QUIT)) {
+				$command->emit('success');
+			}
 		}
 	}
 	
@@ -450,7 +468,8 @@ field:
 			return false;
 		}
 		if (!$this->executor->isIdle()) {
-			$this->currCommand = $command = $this->executor->dequeue();
+			$command = $this->executor->dequeue();
+			$this->queue->enqueue($command);
 			if ($command->equals(Command::INIT_AUTHENTICATE)) {
 				$this->authenticate();
 			}else {
