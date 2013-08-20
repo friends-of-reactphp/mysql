@@ -136,6 +136,7 @@ packet:
 			$this->debug(sprintf("Protocal Version: %d", $this->protocalVersion));
 			if ($this->protocalVersion === 0xFF) { //error
 				$fieldCount = $this->protocalVersion;
+				$this->protocalVersion = 0;
 				printf("Error:\n");
 				
 				$this->rsState = self::RS_STATE_HEADER;
@@ -205,12 +206,12 @@ field:
 				$this->debug('EOF Packet');
 				if ($this->rsState === self::RS_STATE_ROW) {
 					$this->debug('result done');
-					
-					$this->onResultDone();
 					$this->nextRequest();
+					$this->onResultDone();
 				}else {
 					++ $this->rsState;
 				}
+				
 			}else { //Data packet
 				$this->debug('Data Packet');
 				$this->prepend(chr($fieldCount));
@@ -237,6 +238,8 @@ field:
 					
 					$u                    = unpack('v', $this->read(4));
 					$field['length']      = $u[1];
+					
+					$field['type']        = ord($this->read(1));
 					
 					$u                    = unpack('v', $this->read(2));
 					$field['flags']       = $u[1];
@@ -277,7 +280,7 @@ field:
 		$command->emit('end', array($command, $command->getConnection()));
 		
 		$this->rsState      = self::RS_STATE_HEADER;
-		$this->resultRows   = $this->resultRows = [];
+		$this->resultRows   = $this->resultFields = [];
 	}
 	
 	
@@ -312,6 +315,9 @@ field:
 	}
 	
 	public function read($len, $skiplen = 0) {
+		if (strlen($this->buffer) - $this->bufferPos - $len - $skiplen < 0) {
+			throw new \LogicException('Logic Error');
+		}
 		$buffer = substr($this->buffer, $this->bufferPos, $len);
 		$this->bufferPos += $len;
 		if ($skiplen) {
@@ -325,7 +331,7 @@ field:
 	}
 	
 	public function length() {
-		return strlen($this->buffer) - $this->bufferPos ;
+		return strlen($this->buffer) - $this->bufferPos;
 	}
 	
 	public function search($what) {
