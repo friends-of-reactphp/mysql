@@ -62,4 +62,34 @@ class ResultQueryTest extends BaseTestCase {
 			});
 		$loop->run();
 	}
+	
+	public function testSelectAfterDelay() {
+		$loop = \React\EventLoop\Factory::create();
+		
+		$connection = new \React\MySQL\Connection($loop, array(
+			'dbname' => 'test',
+			'user'   => 'test',
+			'passwd' => 'test',
+		));
+		
+		$callback = function () use ($connection, $loop){
+			$connection->query('select 1+1', function ($command, $conn) use ($loop){
+				$this->assertEquals(false, $command->hasError());
+				$this->assertEquals([['1+1' => 2]], $command->resultRows);
+				$loop->stop();
+			});
+		};
+		$timeoutCb = function () use ($loop) {
+			$loop->stop();
+			$this->fail('Test timeout');
+		};
+		
+		$connection->connect(function ($err, $conn) use ($callback, $loop, $timeoutCb){
+			$this->assertEquals(null, $err);
+			$loop->addTimer(0.1, $callback);
+			$loop->addTimer(1, $timeoutCb);
+		});
+		
+		$loop->run();
+	}
 }

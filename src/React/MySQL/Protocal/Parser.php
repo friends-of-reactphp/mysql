@@ -87,12 +87,19 @@ class Parser extends EventEmitter{
 		$this->stream   = $stream;
 		$this->executor = $executor;
 		$this->queue    = new \SplQueue($this);
+		$executor->on('new', array($this, 'handleNewCommand'));
 	}
 
 	
 	public function start() {
 		$this->stream->on('data', array($this, 'parse'));
 		$this->stream->on('close', array($this, 'onClose'));
+	}
+	
+	public function handleNewCommand() {
+		if ($this->queue->count() <= 0) {
+			$this->nextRequest();
+		}
 	}
 	
 	public function debug($message) {

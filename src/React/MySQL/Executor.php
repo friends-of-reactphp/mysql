@@ -19,6 +19,7 @@ class Executor extends EventEmitter {
 	
 	public function enqueue($command) {
 		$this->queue->enqueue($command);
+		$this->emit('new');
 		return $command;
 	}
 	
