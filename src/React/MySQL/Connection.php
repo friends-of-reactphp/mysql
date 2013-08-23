@@ -157,9 +157,6 @@ class Connection extends EventEmitter {
 		$args        = func_get_args();
 		
 		if (count($args) > 0) {
-			$closeHandler = function () use ($args){
-				$args[0]();
-			};
 			$errorHandler = function ($reason) use ($args){
 				$this->state = self::STATE_AUTHENTICATE_FAILED;
 				$args[0]($reason, $this);
@@ -172,7 +169,7 @@ class Connection extends EventEmitter {
 			
 			$this->connector
 				->create($this->options['host'], $this->options['port'])
-				->then(function ($stream) use (&$streamRef, $options, $closeHandler, $errorHandler, $connectedHandler){
+				->then(function ($stream) use (&$streamRef, $options, $errorHandler, $connectedHandler){
 					$streamRef = $stream;
 					
 					$parser = $this->parser = new Protocal\Parser($stream, $this->executor);
@@ -187,7 +184,7 @@ class Connection extends EventEmitter {
 					$parser->start();
 					
 					
-				}, $closeHandler);
+				}, $errorHandler);
 		}else {
 			throw new \Exception('Not Implemented');
 		}
