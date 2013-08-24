@@ -8,7 +8,7 @@ class Query {
 	
 	private $builtSql;
 	
-	private $params;
+	private $params = [];
 	
 	private $escapeChars = array(
 			"\0"   => "\\0",
@@ -32,6 +32,12 @@ class Query {
 	public function bindParams() {
 		$this->builtSql = null;
 		$this->params   = func_get_args();
+		return $this;
+	}
+	
+	public function bindParamsFromArray(array $params) {
+		$this->builtSql = null;
+		$this->params   = $params;
 		return $this;
 	}
 	

@@ -32,10 +32,12 @@ class QueryCommand extends Command {
 	}
 	
 	public function getSql() {
-		$query = $this->getState('query');
+		$query = $this->query;
+		
 		if ($query instanceof Query) {
 			return $query->getSql();
 		}
+		
 		return $query;
 	}
 	

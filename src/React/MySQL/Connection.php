@@ -63,32 +63,44 @@ class Connection extends EventEmitter {
 	 * Do a async query.
 	 * 
 	 * @param string $sql
-	 * @return \React\MySQL\Command
+	 * @param mixed ...
+	 * @param callable $callback
+	 * @return \React\MySQL\Command|NULL
 	 */
-	public function query($sql) {
+	public function query() {
 		$numArgs = func_num_args();
+		
 		if ($numArgs === 0) {
 			throw new \InvalidArgumentException('Required at least 1 argument');
 		}
 		
+		$args = func_get_args();
+		$query = new Query(array_shift($args));
+		
+		$callback = array_pop($args);
+		
 		$command = new QueryCommand($this);
-		$command->setState('query', $sql);
-		$query = $this->_doCommand($command);
-		if ($numArgs === 1) {
-			return $command;
+		$command->setQuery($query);
+		
+		if (!is_callable($callback)) {
+			if ($callback != null) {
+				$args[] = $callback;
+			}
+			$query->bindParamsFromArray($args);
+			return $this->_doCommand($command);
 		}
 		
-		$func = func_get_arg(1);
-		$that = $this;
+		$query->bindParamsFromArray($args);
+		$this->_doCommand($command);
 		
-		$command->on('results', function ($rows, $command) use($func){
-			$func($command, $this);
+		$command->on('results', function ($rows, $command) use($callback){
+			$callback($command, $this);
 		});
-		$command->on('error', function ($err, $command) use ($func){
-			$func($command, $this);
+		$command->on('error', function ($err, $command) use ($callback){
+			$callback($command, $this);
 		});
-		$command->on('success', function ($command) use ($func) {
-			$func($command, $this);
+		$command->on('success', function ($command) use ($callback) {
+			$callback($command, $this);
 		});
 	}
 	
