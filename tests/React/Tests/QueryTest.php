@@ -24,4 +24,10 @@ class QueryTest extends \PHPUnit_Framework_TestCase {
 		$this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
 		*/
 	}
+	
+	public function testEscapeChars() {
+		$query = new Query('');
+		$str = "\x00\t\n'%_\\";
+		$this->assertEquals("\\0\\t\\n\\'\\%\\_\\\\", $query->escape($str));
+	}
 }

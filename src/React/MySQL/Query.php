@@ -11,12 +11,17 @@ class Query {
 	private $params = [];
 	
 	private $escapeChars = array(
-			"\0"   => "\\0",
+			"\x00"   => "\\0",
 			"\r"   => "\\r",
 			"\n"   => "\\n",
 			"\t"   => "\\t",
 			"\b"   => "\\b",
-			"\x1a" => "\\Z"
+			"\x1a" => "\\Z",
+			"'"    => "\'",
+			'"'    => '\"',
+			"\\"   => "\\\\",
+			"%"    => "\\%",
+			"_"    => "\\_",
 		);
 	
 	public function __construct($sql) {
