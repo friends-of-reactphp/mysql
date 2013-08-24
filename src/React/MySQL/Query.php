@@ -25,9 +25,22 @@ class Query {
 	
 	/**
 	 * Binding params for the query, mutiple arguments support.
+	 *
+	 * @param mixed $param
+	 * @return \React\MySQL\Query
+	 */
+	public function bindParams() {
+		$this->builtSql = null;
+		$this->params   = func_get_args();
+		return $this;
+	}
+	
+	/**
+	 * Binding params for the query, mutiple arguments support.
 	 * 
 	 * @param mixed $param
 	 * @return \React\MySQL\Query
+	 * @deprecated
 	 */
 	public function params() {
 		$this->params   = func_get_args();
@@ -39,14 +52,54 @@ class Query {
 		return strtr($str, $this->escapeChars);
 	}
 	
-	protected function getEscapedStringAndLen($val) {
-		if (is_string($val)) {
-			$val = "'" . $this->escape($val) . "'";
+	
+	/**
+	 * @param mixed $value
+	 * @return string
+	 */
+	protected function resolveValueForSql($value) {
+		$type = gettype($value);
+		switch ($type) {
+			case 'boolean':
+				$value = (int)$value;
+				break;
+			case 'double':
+			case 'integer':
+				break;
+			case 'string':
+				$value = "'" . $this->escape($value) . "'";
+				break;
+			case 'array':
+				$nvalue = [];
+				foreach ($value as $v) {
+					$nvalue[] = $this->resolveValueForSql($v);
+				}
+				$value = implode(',', $nvalue);
+				break;
+			case 'NULL':
+				$value = 'NULL';
+				break;
+			default:
+				throw new \InvalidArgumentException(sprintf('Not supportted value type of %s.', $type));
+				break;
 		}
-		return array($val, strlen($val));
+		return $value;
 	}
 	
 	protected function buildSql() {
+		$sql = $this->sql;
+		
+		$offset = strpos($sql, '?');
+		foreach ($this->params as $param) {
+			$replacement = $this->resolveValueForSql($param);
+			$sql = substr_replace($sql, $replacement, $offset, 1);
+			$offset = strpos($sql, '?', $offset + strlen($replacement));
+		}
+		if ($offset !== false) {
+			throw new \LogicException('Params not enouth to build sql');
+		}
+ 		return $sql;
+		/*
 		$names    = array();
 		$inName   = false;
 		$currName = '';
@@ -100,6 +153,7 @@ class Query {
 			$offset += $len - strlen($value);
 		}
 		return $sql;
+		*/
 	}
 	
 	/**
