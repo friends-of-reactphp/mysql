@@ -7,7 +7,7 @@ use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
 use React\Promise\Deferred;
 use React\MySQL\Protocal\Constants;
-use React\SocketClient\Connector;
+use React\MySQL\Connector;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
