@@ -12,6 +12,7 @@ use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
+use React\Socket\ConnectionException;
 
 
 class Connection extends EventEmitter {
@@ -184,6 +185,9 @@ class Connection extends EventEmitter {
 				->then(function ($stream) use (&$streamRef, $options, $errorHandler, $connectedHandler){
 					$streamRef = $stream;
 					
+					$stream->on('error', [$this, 'handleConnectionError']);
+					$stream->on('close', [$this, 'handleConnectionClosed']);
+					
 					$parser = $this->parser = new Protocal\Parser($stream, $this->executor);
 					
 					$parser->setOptions($options);
@@ -196,12 +200,22 @@ class Connection extends EventEmitter {
 					$parser->start();
 					
 					
-				}, $errorHandler);
+				}, [$this, 'handleConnectionError']);
 		}else {
 			throw new \Exception('Not Implemented');
 		}
 	}
 	
+	public function handleConnectionError($err) {
+		$this->emit('error', [$err, $this]);
+	}
+	
+	public function handleConnectionClosed() {
+		if ($this->state < self::STATE_CLOSEING) {
+			$this->state = self::STATE_CLOSED;
+			$this->emit('error', [new ConnectionException('mysql server has gone away'), $this]);
+		}
+	}
 	
 	protected function _doCommand(Command $command) {
 		if ($command->equals(Command::INIT_AUTHENTICATE)){
