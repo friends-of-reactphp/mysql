@@ -27,7 +27,13 @@ class QueryTest extends \PHPUnit_Framework_TestCase {
 	
 	public function testEscapeChars() {
 		$query = new Query('');
-		$str = "\x00\t\n'%_\\";
-		$this->assertEquals("\\0\\t\\n\\'\\%\\_\\\\", $query->escape($str));
+		$this->assertEquals('\\\\', $query->escape('\\'));
+		$this->assertEquals('\"', $query->escape('"'));
+		$this->assertEquals("\'", $query->escape("'"));
+		$this->assertEquals("\\n", $query->escape("\n"));
+		$this->assertEquals("\\r", $query->escape("\r"));
+		$this->assertEquals("foo\\0bar", $query->escape("foo" . chr(0) . "bar"));
+		$this->assertEquals("n%3A", $query->escape("n%3A"));
+		//$this->assertEquals('§ä¨ì¥H¤U¤º®e\\\\§ä¨ì¥H¤U¤º®e', $query->escape('§ä¨ì¥H¤U¤º®e\\§ä¨ì¥H¤U¤º®e'));
 	}
 }
