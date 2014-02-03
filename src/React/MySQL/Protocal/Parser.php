@@ -305,7 +305,7 @@ field:
 		$command = $this->queue->dequeue();
 		if ($command->equals(Command::QUERY)) {
 			$command->affectedRows = $this->affectedRows;
-			$command->indertId     = $this->insertId;
+			$command->insertId     = $this->insertId;
 			$command->warnCount    = $this->warnCount;
 			$command->message      = $this->message;
 		}
