@@ -27,8 +27,20 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
 
     public function testConnectWithValidPass()
     {
+        $this->expectOutputString('endclose');
+
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $this->connectOptions );
+
+        $conn->on('end', function ($conn){
+            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+            echo 'end';
+        });
+
+        $conn->on('close', function ($conn){
+            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+            echo 'close';
+        });
 
         $conn->connect(function ($err, $conn) use ($loop) {
             $this->assertEquals(null, $err);

@@ -156,6 +156,8 @@ class Connection extends EventEmitter
         $this->_doCommand(new QuitCommand($this))
             ->on('success', function () use ($callback) {
                 $this->state = self::STATE_CLOSED;
+                $this->emit('end', [$this]);
+                $this->emit('close', [$this]);
                 if ($callback) {
                     $callback($this);
                 }
