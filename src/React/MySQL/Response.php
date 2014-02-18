@@ -2,6 +2,6 @@
 
 namespace React\MySQL;
 
-class Response {
-	
+class Response
+{
 }
