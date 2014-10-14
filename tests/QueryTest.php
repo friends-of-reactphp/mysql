@@ -1,6 +1,6 @@
 <?php
 
-namespace React\Tests\Mysql;
+namespace React\Tests\MySQL;
 
 use React\MySQL\Query;
 
