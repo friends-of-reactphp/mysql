@@ -1,6 +1,6 @@
 <?php
 
-namespace React\Tests;
+namespace React\Tests\Mysql;
 
 use React\MySQL\Connection;
 
