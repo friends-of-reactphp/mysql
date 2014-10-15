@@ -1,6 +1,6 @@
 <?php
 
-namespace React\Tests;
+namespace React\Tests\MySQL;
 
 use React\MySQL\Query;
 
@@ -38,7 +38,6 @@ class NoResultQueryTest extends  BaseTestCase
         ));
 
         $connection->connect(function () {});
-        $that  = $this;
 
         $connection->query("insert into book (`name`) values('foo')", function ($command, $conn) use ($loop) {
             $this->assertEquals(false, $command->hasError());

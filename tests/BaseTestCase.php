@@ -1,6 +1,6 @@
 <?php
 
-namespace React\Tests;
+namespace React\Tests\MySQL;
 
 class BaseTestCase extends \PHPUnit_Extensions_Database_TestCase
 {
