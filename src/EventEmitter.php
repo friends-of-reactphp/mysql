@@ -4,7 +4,7 @@ namespace React\MySQL;
 
 class EventEmitter extends \Evenement\EventEmitter
 {
-    public function on($event, $listener)
+    public function on($event, callable $listener)
     {
         if (!is_callable($listener)) {
             throw new \InvalidArgumentException('The provided listener was not a valid callable.');

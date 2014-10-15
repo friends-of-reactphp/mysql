@@ -5,11 +5,17 @@
     "license": "None",
     "require": {
         "php": ">=5.4.0",
-        "react/react": "0.3.*"
+        "react/socket": "0.4.*",
+        "react/dns": "0.4.*",
+        "react/socket-client": "0.4.*",
+        "react/promise": "~2.0"
+    },
+    "require-dev": {
+        "phpunit/dbunit": ">=1.2"
     },
     "autoload": {
-        "psr-0": {
-            "React\\MySQL": "src/"
+        "psr-4": {
+            "React\\MySQL\\": "src"
         }
     }
 }
