@@ -7,8 +7,7 @@
         "php": ">=5.4.0",
         "react/socket": "0.4.*",
         "react/dns": "0.4.*",
-        "react/socket-client": "0.4.*",
-        "react/promise": "~2.0"
+        "react/socket-client": "0.4.*"
     },
     "require-dev": {
         "phpunit/dbunit": ">=1.2"
