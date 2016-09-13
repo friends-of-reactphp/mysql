@@ -1,5 +1,5 @@
 {
-    "name": "react/mysql",
+    "name": "bixuehujin/reactphp-mysql",
     "description": "mysql driver for reactphp.",
     "keywords": ["mysql", "php", "reactphp"],
     "license": "MIT",
