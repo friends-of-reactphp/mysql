@@ -2,6 +2,8 @@
 
 namespace React\MySQL\Io;
 
+use Evenement\EventEmitter;
+
 /**
  * @internal
  */

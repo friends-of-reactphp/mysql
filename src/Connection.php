@@ -2,18 +2,19 @@
 
 namespace React\MySQL;
 
+use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
-use React\Socket\ConnectionInterface as SocketConnectionInterface;
-use React\Socket\Connector;
-use React\Socket\ConnectorInterface;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
-use React\MySQL\Io\EventEmitter;
 use React\MySQL\Io\Executor;
 use React\MySQL\Io\Parser;
 use React\MySQL\Io\Query;
+use React\Socket\ConnectionInterface as SocketConnectionInterface;
+use React\Socket\Connector;
+use React\Socket\ConnectorInterface;
+
 
 /**
  * Class Connection

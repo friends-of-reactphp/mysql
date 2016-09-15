@@ -2,6 +2,7 @@
 
 namespace React\MySQL\Io;
 
+use Evenement\EventEmitter;
 use React\MySQL\Exception;
 use React\MySQL\Command;
 use React\Stream\DuplexStreamInterface;
@@ -9,7 +10,7 @@ use React\Stream\DuplexStreamInterface;
 /**
  * @internal
  */
-class Parser extends \Evenement\EventEmitter
+class Parser extends EventEmitter
 {
     const PHASE_GOT_INIT   = 1;
     const PHASE_AUTH_SENT  = 2;
