@@ -83,7 +83,7 @@ class Connection extends EventEmitter implements ConnectionInterface
             $connector    = new Connector($loop);
         }
         $this->connector  = $connector;
-        $this->executor   = new Executor($this);
+        $this->executor   = new Executor();
         $this->options    = $connectOptions + $this->options;
     }
 
