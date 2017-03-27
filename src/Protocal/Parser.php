@@ -280,7 +280,7 @@ field:
                 }
             }
         }
-        $this->skip($this->pctSize - $len + $this->length());
+        $this->restBuffer($this->pctSize - $len + $this->length());
         goto packet;
     }
 
@@ -365,6 +365,16 @@ field:
     public function skip($len)
     {
         $this->bufferPos += $len;
+    }
+
+    public function restBuffer($len)
+    {
+        if(strlen($this->buffer) === ($this->bufferPos+$len)){
+            $this->buffer = '';
+        }else{
+            $this->buffer = substr($this->buffer,$this->bufferPos+$len);
+        }
+        $this->bufferPos = 0;
     }
 
     public function length()

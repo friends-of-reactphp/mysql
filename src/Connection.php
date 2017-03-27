@@ -158,7 +158,7 @@ class Connection extends EventEmitter
                 $this->state = self::STATE_CLOSED;
                 $this->emit('end', [$this]);
                 $this->emit('close', [$this]);
-                if ($callback) {
+                if (is_callable($callback)) {
                     $callback($this);
                 }
             });
