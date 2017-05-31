@@ -4,12 +4,11 @@ namespace React\MySQL;
 
 use React\EventLoop\LoopInterface;
 use React\Stream\Stream;
-use React\MySQL\Connector;
+use React\Socket\Connector;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
-use React\Socket\ConnectionException;
 
 class Connection extends EventEmitter
 {
@@ -52,7 +51,7 @@ class Connection extends EventEmitter
     {
         $this->loop       = $loop;
         $resolver         = (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop);
-        $this->connector  = new Connector($loop, $resolver);;
+        $this->connector  = new Connector($loop, ['dns' => $resolver]);
         $this->executor   = new Executor($this);
         $this->options    = $connectOptions + $this->options;
     }
@@ -158,7 +157,7 @@ class Connection extends EventEmitter
                 $this->state = self::STATE_CLOSED;
                 $this->emit('end', [$this]);
                 $this->emit('close', [$this]);
-                if ($callback) {
+                if (is_callable($callback)) {
                     $callback($this);
                 }
             });
@@ -191,7 +190,7 @@ class Connection extends EventEmitter
             };
 
             $this->connector
-                ->create($this->options['host'], $this->options['port'])
+                ->connect($this->options['host'] . ':' . $this->options['port'])
                 ->then(function ($stream) use (&$streamRef, $options, $errorHandler, $connectedHandler) {
                     $streamRef = $stream;
 
@@ -224,7 +223,7 @@ class Connection extends EventEmitter
     {
         if ($this->state < self::STATE_CLOSEING) {
             $this->state = self::STATE_CLOSED;
-            $this->emit('error', [new ConnectionException('mysql server has gone away'), $this]);
+            $this->emit('error', [new \RuntimeException('mysql server has gone away'), $this]);
         }
     }
 
