@@ -121,7 +121,7 @@ class Parser extends EventEmitter
         }
     }
 
-    public function parse($data, $stream)
+    public function parse($data)
     {
         $this->append($data);
 packet:
