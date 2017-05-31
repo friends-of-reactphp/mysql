@@ -4,7 +4,7 @@ namespace React\MySQL;
 
 use React\EventLoop\LoopInterface;
 use React\Stream\Stream;
-use React\MySQL\Connector;
+use React\Socket\Connector;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
@@ -52,7 +52,7 @@ class Connection extends EventEmitter
     {
         $this->loop       = $loop;
         $resolver         = (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop);
-        $this->connector  = new Connector($loop, $resolver);;
+        $this->connector  = new Connector($loop, ['dns' => $resolver]);
         $this->executor   = new Executor($this);
         $this->options    = $connectOptions + $this->options;
     }
@@ -191,7 +191,7 @@ class Connection extends EventEmitter
             };
 
             $this->connector
-                ->create($this->options['host'], $this->options['port'])
+                ->connect($this->options['host'] . ':' . $this->options['port'])
                 ->then(function ($stream) use (&$streamRef, $options, $errorHandler, $connectedHandler) {
                     $streamRef = $stream;
 
