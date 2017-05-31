@@ -9,7 +9,7 @@
         "react/dns": "0.4.*"
     },
     "require-dev": {
-        "phpunit/dbunit": ">=1.2"
+        "phpunit/dbunit": "1.4.*"
     },
     "autoload": {
         "psr-4": {
