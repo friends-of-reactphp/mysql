@@ -9,7 +9,6 @@ use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
-use React\Socket\ConnectionException;
 
 class Connection extends EventEmitter
 {
@@ -224,7 +223,7 @@ class Connection extends EventEmitter
     {
         if ($this->state < self::STATE_CLOSEING) {
             $this->state = self::STATE_CLOSED;
-            $this->emit('error', [new ConnectionException('mysql server has gone away'), $this]);
+            $this->emit('error', [new \RuntimeException('mysql server has gone away'), $this]);
         }
     }
 
