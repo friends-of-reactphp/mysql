@@ -81,7 +81,7 @@ class Connection extends EventEmitter
         $command->setQuery($query);
 
         if (!is_callable($callback)) {
-            if ($callback != null) {
+            if ($numArgs > 1) {
                 $args[] = $callback;
             }
             $query->bindParamsFromArray($args);
