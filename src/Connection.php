@@ -47,11 +47,15 @@ class Connection extends EventEmitter
      */
     public $parser;
 
-    public function __construct(LoopInterface $loop, array $connectOptions = array())
+    public function __construct(LoopInterface $loop, array $connectOptions = array(), Connector $connector = null)
     {
         $this->loop       = $loop;
-        $resolver         = (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop);
-        $this->connector  = new Connector($loop, ['dns' => $resolver]);
+        if (!$connector) {
+            $connector    = new Connector($loop, [
+                'dns' => (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop)
+            ]);
+        }
+        $this->connector  = $connector;
         $this->executor   = new Executor($this);
         $this->options    = $connectOptions + $this->options;
     }
