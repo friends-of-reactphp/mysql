@@ -47,7 +47,7 @@ class Connection extends EventEmitter
      */
     public $parser;
 
-    public function __construct(LoopInterface $loop, array $connectOptions = array(), Connector $connector = null)
+    public function __construct(LoopInterface $loop, array $connectOptions = array(), ConnectorInterface $connector = null)
     {
         $this->loop       = $loop;
         if (!$connector) {
