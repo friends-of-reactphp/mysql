@@ -1,3 +1,4 @@
 .*
 *.lock
 vendor
+phpunit.xml
