@@ -8,13 +8,9 @@ class ResultQueryTest extends BaseTestCase
     {
         $loop = \React\EventLoop\Factory::create();
 
-        $connection = new \React\MySQL\Connection($loop, array(
-            'dbname' => 'test',
-            'user'   => 'test',
-            'passwd' => 'test',
-        ));
-
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
+
         $connection->query('select * from book', function ($command, $conn) use ($loop) {
             $this->assertEquals(false, $command->hasError());
             $this->assertEquals(2, count($command->resultRows));
@@ -38,12 +34,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $loop = \React\EventLoop\Factory::create();
 
-        $connection = new \React\MySQL\Connection($loop, array(
-            'dbname' => 'test',
-            'user'   => 'test',
-            'passwd' => 'test',
-        ));
-
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
         $command = $connection->query('select * from book');
@@ -69,11 +60,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $loop = \React\EventLoop\Factory::create();
 
-        $connection = new \React\MySQL\Connection($loop, array(
-            'dbname' => 'test',
-            'user'   => 'test',
-            'passwd' => 'test',
-        ));
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
 
         $callback = function () use ($connection, $loop) {
             $connection->query('select 1+1', function ($command, $conn) use ($loop) {
