@@ -3,28 +3,34 @@
 namespace React\MySQL;
 
 use React\EventLoop\LoopInterface;
-use React\Stream\Stream;
 use React\Socket\Connector;
+use React\Socket\ConnectionInterface as SocketConnectionInterface;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
 
-class Connection extends EventEmitter
+/**
+ * Class Connection
+ *
+ * @package React\MySQL
+ */
+class Connection extends EventEmitter implements ConnectionInterface
 {
-    const STATE_INIT                = 0;
-    const STATE_CONNECT_FAILED      = 1;
-    const STATE_AUTHENTICATE_FAILED = 2;
-    const STATE_CONNECTING          = 3;
-    const STATE_CONNECTED           = 4;
-    const STATE_AUTHENTICATED       = 5;
-    const STATE_CLOSEING            = 6;
-    const STATE_CLOSED              = 7;
 
+    /**
+     * @var LoopInterface
+     */
     private $loop;
 
+    /**
+     * @var Connector
+     */
     private $connector;
 
+    /**
+     * @var array
+     */
     private $options = [
         'host'   => '127.0.0.1',
         'port'   => 3306,
@@ -33,20 +39,37 @@ class Connection extends EventEmitter
         'dbname' => '',
     ];
 
+    /**
+     * @var array
+     */
     private $serverOptions;
 
+    /**
+     * @var Executor
+     */
     private $executor;
 
+    /**
+     * @var integer
+     */
     private $state = self::STATE_INIT;
 
+    /**
+     * @var SocketConnectionInterface
+     */
     private $stream;
 
-    private $buffer;
     /**
      * @var Protocal\Parser
      */
     public $parser;
 
+    /**
+     * Connection constructor.
+     *
+     * @param LoopInterface $loop           ReactPHP event loop instance.
+     * @param array         $connectOptions MySQL connection options.
+     */
     public function __construct(LoopInterface $loop, array $connectOptions = array())
     {
         $this->loop       = $loop;
@@ -57,37 +80,25 @@ class Connection extends EventEmitter
     }
 
     /**
-     * Do a async query.
-     *
-     * @param  string                    $sql
-     *                                             @param mixed ...
-     * @param  callable                  $callback
-     * @return \React\MySQL\Command|NULL
+     * {@inheritdoc}
      */
-    public function query()
+    public function query($sql, $callback = null, $params = null)
     {
-        $numArgs = func_num_args();
-
-        if ($numArgs === 0) {
-            throw new \InvalidArgumentException('Required at least 1 argument');
-        }
-
-        $args = func_get_args();
-        $query = new Query(array_shift($args));
-
-        $callback = array_pop($args);
+        $query = new Query($sql);
 
         $command = new QueryCommand($this);
         $command->setQuery($query);
 
+        $args = func_get_args();
+        array_shift($args); // Remove $sql parameter.
+
         if (!is_callable($callback)) {
-            if ($numArgs > 1) {
-                $args[] = $callback;
-            }
             $query->bindParamsFromArray($args);
 
             return $this->_doCommand($command);
         }
+
+        array_shift($args); // Remove $callback
 
         $query->bindParamsFromArray($args);
         $this->_doCommand($command);
@@ -101,8 +112,13 @@ class Connection extends EventEmitter
         $command->on('success', function ($command) use ($callback) {
             $callback($command, $this);
         });
+
+        return null;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function ping($callback)
     {
         if (!is_callable($callback)) {
@@ -117,15 +133,24 @@ class Connection extends EventEmitter
             });
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function selectDb($dbname)
     {
-        return $this->query(sprinf('USE `%s`', $dbname));
+        return $this->query(sprintf('USE `%s`', $dbname));
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function listFields()
     {
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function setOption($name, $value)
     {
         $this->options[$name] = $value;
@@ -133,6 +158,9 @@ class Connection extends EventEmitter
         return $this;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getOption($name, $default = null)
     {
         if (isset($this->options[$name])) {
@@ -142,13 +170,16 @@ class Connection extends EventEmitter
         return $default;
     }
 
+    /**
+     * {@inheritdoc}
+     */
     public function getState()
     {
         return $this->state;
     }
 
     /**
-     * Close the connection.
+     * {@inheritdoc}
      */
     public function close($callback = null)
     {
@@ -165,60 +196,69 @@ class Connection extends EventEmitter
     }
 
     /**
-     * Connnect to mysql server.
-     *
-     * @param callable $callback
-     *
-     * @throws \Exception
+     * {@inheritdoc}
      */
-    public function connect()
+    public function connect($callback)
     {
         $this->state = self::STATE_CONNECTING;
         $options     = $this->options;
         $streamRef   = $this->stream;
-        $args        = func_get_args();
 
-        if (count($args) > 0) {
-            $errorHandler = function ($reason) use ($args) {
-                $this->state = self::STATE_AUTHENTICATE_FAILED;
-                $args[0]($reason, $this);
-            };
-            $connectedHandler = function ($serverOptions) use ($args) {
-                $this->state = self::STATE_AUTHENTICATED;
-                $this->serverOptions = $serverOptions;
-                $args[0](null, $this);
-            };
+        $errorHandler = function ($reason) use ($callback) {
+            $this->state = self::STATE_AUTHENTICATE_FAILED;
+            $callback($reason, $this);
+        };
+        $connectedHandler = function ($serverOptions) use ($callback) {
+            $this->state = self::STATE_AUTHENTICATED;
+            $this->serverOptions = $serverOptions;
+            $callback(null, $this);
+        };
 
-            $this->connector
-                ->connect($this->options['host'] . ':' . $this->options['port'])
-                ->then(function ($stream) use (&$streamRef, $options, $errorHandler, $connectedHandler) {
-                    $streamRef = $stream;
+        $this->connector
+            ->connect($this->options['host'] . ':' . $this->options['port'])
+            ->then(function ($stream) use (&$streamRef, $options, $errorHandler, $connectedHandler) {
+                $streamRef = $stream;
 
-                    $stream->on('error', [$this, 'handleConnectionError']);
-                    $stream->on('close', [$this, 'handleConnectionClosed']);
+                $stream->on('error', [$this, 'handleConnectionError']);
+                $stream->on('close', [$this, 'handleConnectionClosed']);
 
-                    $parser = $this->parser = new Protocal\Parser($stream, $this->executor);
+                $parser = $this->parser = new Protocal\Parser($stream, $this->executor);
 
-                    $parser->setOptions($options);
+                $parser->setOptions($options);
 
-                    $command = $this->_doCommand(new AuthenticateCommand($this));
-                    $command->on('authenticated', $connectedHandler);
-                    $command->on('error', $errorHandler);
+                $command = $this->_doCommand(new AuthenticateCommand($this));
+                $command->on('authenticated', $connectedHandler);
+                $command->on('error', $errorHandler);
 
-                    //$parser->on('close', $closeHandler);
-                    $parser->start();
+                //$parser->on('close', $closeHandler);
+                $parser->start();
 
-                }, [$this, 'handleConnectionError']);
-        } else {
-            throw new \Exception('Not Implemented');
-        }
+            }, [$this, 'handleConnectionError']);
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function getServerOptions()
+    {
+        return $this->serverOptions;
+    }
+
+    /**
+     * @param mixed $err Error from socket.
+     *
+     * @return void
+     * @internal
+     */
     public function handleConnectionError($err)
     {
         $this->emit('error', [$err, $this]);
     }
 
+    /**
+     * @return void
+     * @internal
+     */
     public function handleConnectionClosed()
     {
         if ($this->state < self::STATE_CLOSEING) {
@@ -227,6 +267,13 @@ class Connection extends EventEmitter
         }
     }
 
+    /**
+     * @param Command $command The command which should be executed.
+     *
+     * @return CommandInterface
+     *
+     * @throws Exception Cann't send command
+     */
     protected function _doCommand(Command $command)
     {
         if ($command->equals(Command::INIT_AUTHENTICATE)) {
@@ -236,10 +283,5 @@ class Connection extends EventEmitter
         } else {
             throw new Exception("Cann't send command");
         }
-    }
-
-    public function getServerOptions()
-    {
-        return $this->serverOptions;
     }
 }
