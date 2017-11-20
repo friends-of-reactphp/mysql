@@ -4,21 +4,20 @@ namespace React\Tests\MySQL;
 
 use React\MySQL\Connection;
 
-class ConnectionTest extends \PHPUnit_Framework_TestCase
+class ConnectionTest extends BaseTestCase
 {
-    private $connectOptions = array(
-        'dbname' => 'test',
-        'user'   => 'test',
-        'passwd' => 'test'
-    );
 
     public function testConnectWithInvalidPass()
     {
+        $options = $this->getConnectionOptions();
         $loop = \React\EventLoop\Factory::create();
-        $conn = new Connection($loop, array('passwd' => 'invalidpass') + $this->connectOptions );
+        $conn = new Connection($loop, array('passwd' => 'invalidpass') + $options);
 
-        $conn->connect(function ($err, $conn) use ($loop) {
-            $this->assertEquals("Access denied for user 'test'@'localhost' (using password: YES)", $err->getMessage());
+        $conn->connect(function ($err, $conn) use ($loop, $options) {
+            $this->assertEquals(sprintf(
+                "Access denied for user '%s'@'localhost' (using password: YES)",
+                $options['user']
+            ), $err->getMessage());
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
             //$loop->stop();
         });
@@ -30,7 +29,7 @@ class ConnectionTest extends \PHPUnit_Framework_TestCase
         $this->expectOutputString('endclose');
 
         $loop = \React\EventLoop\Factory::create();
-        $conn = new Connection($loop, $this->connectOptions );
+        $conn = new Connection($loop, $this->getConnectionOptions());
 
         $conn->on('end', function ($conn){
             $this->assertInstanceOf('React\MySQL\Connection', $conn);

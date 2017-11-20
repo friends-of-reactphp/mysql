@@ -1,7 +1,7 @@
 book:
   -
     id: 1
-    name: "Advanced PHP Progroming"
+    name: "Advanced PHP Programing"
     isbn: "aaa"
     author: "balabala"
     created: 123
