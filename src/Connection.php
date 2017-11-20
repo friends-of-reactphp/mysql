@@ -3,8 +3,9 @@
 namespace React\MySQL;
 
 use React\EventLoop\LoopInterface;
-use React\Socket\Connector;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
+use React\Socket\Connector;
+use React\Socket\ConnectorInterface;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
@@ -67,14 +68,19 @@ class Connection extends EventEmitter implements ConnectionInterface
     /**
      * Connection constructor.
      *
-     * @param LoopInterface $loop           ReactPHP event loop instance.
-     * @param array         $connectOptions MySQL connection options.
+     * @param LoopInterface      $loop           ReactPHP event loop instance.
+     * @param array              $connectOptions MySQL connection options.
+     * @param ConnectorInterface $connector      (optional) socket sonnector instance.
      */
-    public function __construct(LoopInterface $loop, array $connectOptions = array())
+    public function __construct(LoopInterface $loop, array $connectOptions = array(), ConnectorInterface $connector = null)
     {
         $this->loop       = $loop;
-        $resolver         = (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop);
-        $this->connector  = new Connector($loop, ['dns' => $resolver]);
+        if (!$connector) {
+            $connector    = new Connector($loop, [
+                'dns' => (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop)
+            ]);
+        }
+        $this->connector  = $connector;
         $this->executor   = new Executor($this);
         $this->options    = $connectOptions + $this->options;
     }
