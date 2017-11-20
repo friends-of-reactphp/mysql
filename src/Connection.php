@@ -5,6 +5,7 @@ namespace React\MySQL;
 use React\EventLoop\LoopInterface;
 use React\Stream\Stream;
 use React\Socket\Connector;
+use React\Socket\ConnectorInterface;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
