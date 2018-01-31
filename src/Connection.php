@@ -70,15 +70,13 @@ class Connection extends EventEmitter implements ConnectionInterface
      *
      * @param LoopInterface      $loop           ReactPHP event loop instance.
      * @param array              $connectOptions MySQL connection options.
-     * @param ConnectorInterface $connector      (optional) socket sonnector instance.
+     * @param ConnectorInterface $connector      (optional) socket connector instance.
      */
     public function __construct(LoopInterface $loop, array $connectOptions = array(), ConnectorInterface $connector = null)
     {
         $this->loop       = $loop;
         if (!$connector) {
-            $connector    = new Connector($loop, [
-                'dns' => (new \React\Dns\Resolver\Factory())->createCached('8.8.8.8', $loop)
-            ]);
+            $connector    = new Connector($loop);
         }
         $this->connector  = $connector;
         $this->executor   = new Executor($this);
