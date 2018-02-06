@@ -152,11 +152,6 @@ interface ConnectionInterface
     public function selectDb($dbname);
 
     /**
-     * @return mixed
-     */
-    public function listFields();
-
-    /**
      * Change connection option parameter.
      *
      * @param string $name  Parameter name.

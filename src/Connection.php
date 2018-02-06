@@ -198,13 +198,6 @@ class Connection extends EventEmitter implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function listFields()
-    {
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function setOption($name, $value)
     {
         $this->options[$name] = $value;
