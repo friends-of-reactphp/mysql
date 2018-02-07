@@ -8,7 +8,7 @@ The recommended way to install reactphp-mysql is through [composer](http://getco
 ```
 {
     "require": {
-        "react/mysql": "0.2.*"
+        "bixuehujin/reactphp-mysql": "0.2.*"
     }
 }
 ```
