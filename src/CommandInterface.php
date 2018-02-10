@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL;
+namespace Bixuehujin\React\MySQL;
 
 use Evenement\EventEmitterInterface;
 

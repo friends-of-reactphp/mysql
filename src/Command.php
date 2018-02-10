@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL;
+namespace Bixuehujin\React\MySQL;
 
 abstract class Command extends EventEmitter implements CommandInterface
 {
