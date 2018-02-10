@@ -1,10 +1,10 @@
 <?php
 
-namespace React\MySQL\Protocal;
+namespace Bixuehujin\React\MySQL\Protocal;
 
 use Evenement\EventEmitter;
-use React\MySQL\Exception;
-use React\MySQL\Command;
+use Bixuehujin\React\MySQL\Exception;
+use Bixuehujin\React\MySQL\Command;
 
 class Parser extends EventEmitter
 {

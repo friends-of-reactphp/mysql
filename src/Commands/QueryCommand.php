@@ -1,9 +1,9 @@
 <?php
 
-namespace React\MySQL\Commands;
+namespace Bixuehujin\React\MySQL\Commands;
 
-use React\MySQL\Command;
-use React\MySQL\Query;
+use Bixuehujin\React\MySQL\Command;
+use Bixuehujin\React\MySQL\Query;
 
 class QueryCommand extends Command
 {

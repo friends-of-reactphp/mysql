@@ -1,8 +1,8 @@
 <?php
 
-namespace React\MySQL;
+namespace Bixuehujin\React\MySQL;
 
-use React\MySQL\Commands\QueryCommand;
+use Bixuehujin\React\MySQL\Commands\QueryCommand;
 
 /**
  * Interface ConnectionInterface

@@ -1,8 +1,8 @@
 <?php
 
-namespace React\MySQL\Commands;
+namespace Bixuehujin\React\MySQL\Commands;
 
-use React\MySQL\Command;
+use Bixuehujin\React\MySQL\Command;
 
 class PingCommand extends Command
 {

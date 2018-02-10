@@ -1,15 +1,15 @@
 <?php
 
-namespace React\MySQL;
+namespace Bixuehujin\React\MySQL;
 
 use React\EventLoop\LoopInterface;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
-use React\MySQL\Commands\AuthenticateCommand;
-use React\MySQL\Commands\PingCommand;
-use React\MySQL\Commands\QueryCommand;
-use React\MySQL\Commands\QuitCommand;
+use Bixuehujin\React\MySQL\Commands\AuthenticateCommand;
+use Bixuehujin\React\MySQL\Commands\PingCommand;
+use Bixuehujin\React\MySQL\Commands\QueryCommand;
+use Bixuehujin\React\MySQL\Commands\QuitCommand;
 
 /**
  * Class Connection

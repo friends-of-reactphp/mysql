@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL\Protocal;
+namespace Bixuehujin\React\MySQL\Protocal;
 
 class Constants
 {
