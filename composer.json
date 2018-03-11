@@ -1,7 +1,7 @@
 {
     "name": "react/mysql",
-    "description": "mysql driver for reactphp.",
-    "keywords": ["mysql", "php", "reactphp"],
+    "description": "Async, Promise-based MySQL database client for ReactPHP.",
+    "keywords": ["mysql", "promise", "async", "reactphp"],
     "license": "MIT",
     "require": {
         "php": ">=5.4.0",

@@ -1,24 +1,12 @@
-reactphp-mysql
-===============
+# MySQL
 
-## Install
+Async, [Promise](https://github.com/reactphp/promise)-based MySQL database client
+for [ReactPHP](https://reactphp.org/).
 
-The recommended way to install reactphp-mysql is through [composer](http://getcomposer.org).
-
-```
-{
-    "require": {
-        "react/mysql": "0.2.*"
-    }
-}
-```
-
-## Introduction	
-
-This is a mysql driver for [reactphp](https://github.com/reactphp/react), It is written 
-in pure PHP, implemented the mysql protocol.
-
-See examples for usage details.
+This is a MySQL database driver for [ReactPHP](https://reactphp.org/).
+It implements the MySQL protocol and allows you to access your existing MySQL
+database.
+It is written in pure PHP and does not require any extensions.
 
 ## Usage
 
@@ -61,10 +49,31 @@ $connector = new \React\Socket\Connector($loop, array(
 $connection = new Connection($loop, $options, $connector);
 ```
 
-## Thanks
+## Install
 
-Thanks to the following projects.
+The recommended way to install this library is [through Composer](https://getcomposer.org).
+[New to Composer?](https://getcomposer.org/doc/00-intro.md)
 
-* [phpdaemon](https://github.com/kakserpom/phpdaemon): the mysql protocol implemention based some code of the project.
-* [node-mysql](https://github.com/felixge/node-mysql): take some inspirations from this project for API design.
+This will install the latest supported version:
 
+```bash
+$ composer require react/mysql:^0.2
+```
+
+## License
+
+MIT, see [LICENSE file](LICENSE).
+
+This is a community project now managed by
+[@friends-of-reactphp](https://github.com/friends-of-reactphp).
+The original implementation was created by
+[@bixuehujin](https://github.com/bixuehujin) starting in 2013 and has been
+migrated to [@friends-of-reactphp](https://github.com/friends-of-reactphp) in
+2018 to help with maintenance and upcoming feature development.
+
+The original implementation was made possible thanks to the following projects:
+
+* [phpdaemon](https://github.com/kakserpom/phpdaemon): the MySQL protocol
+  implementation is based on code of this project (with permission).
+* [node-mysql](https://github.com/felixge/node-mysql): the API design is
+  inspired by this project.
