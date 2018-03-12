@@ -11,16 +11,18 @@ class BaseTestCase extends \PHPUnit_Extensions_Database_TestCase
     {
         if ($this->conn === null) {
             if (self::$pdo == null) {
-                self::$pdo = new \PDO($GLOBALS['db_dsn'], $GLOBALS['db_user'], $GLOBALS['db_passwd']);
+                $conf = $this->getConnectionOptions();
+                $dsn = 'mysql:host=' . $conf['host'] . ';port=' . $conf['port'] . ';dbname=' . $conf['dbname'];
+                self::$pdo = new \PDO($dsn, $conf['user'], $conf['passwd']);
             }
 
             self::$pdo->query('
                 CREATE TABLE IF NOT EXISTS `book` (
-                    `id`      INT(11)      NOT NULL,
+                    `id`      INT(11)      NOT NULL AUTO_INCREMENT,
                     `name`    VARCHAR(255) NOT NULL,
-                    `isbn`    VARCHAR(255) NOT NULL,
-                    `author`  VARCHAR(255) NOT NULL,
-                    `created` INT(11)      NOT NULL,
+                    `isbn`    VARCHAR(255) NULL,
+                    `author`  VARCHAR(255) NULL,
+                    `created` INT(11)      NULL,
                     PRIMARY KEY (`id`)
                 )
             ');
@@ -39,9 +41,11 @@ class BaseTestCase extends \PHPUnit_Extensions_Database_TestCase
     protected function getConnectionOptions()
     {
         return [
-            'dbname' => $GLOBALS['db_dbname'],
-            'user'   => $GLOBALS['db_user'],
-            'passwd' => $GLOBALS['db_passwd'],
+            'host'   => getenv('DB_HOST'),
+            'port'   => (int)getenv('DB_PORT'),
+            'dbname' => getenv('DB_DBNAME'),
+            'user'   => getenv('DB_USER'),
+            'passwd' => getenv('DB_PASSWD'),
         ];
     }
 }

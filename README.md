@@ -60,6 +60,36 @@ This will install the latest supported version:
 $ composer require react/mysql:^0.2
 ```
 
+## Tests
+
+To run the test suite, you first need to clone this repo and then install all
+dependencies [through Composer](https://getcomposer.org):
+
+```bash
+$ composer install
+```
+
+The test suite contains a number of functional integration tests that send
+actual test SQL queries against your local database and thus rely on a local
+MySQL test database with appropriate write access.
+The test suite creates and modifies a test table in this database, so make sure
+to not a production database!
+You can change your test database credentials by passing these ENV variables:
+
+```bash
+$ export DB_HOST=localhost
+$ export DB_PORT=3306
+$ export DB_USER=test
+$ export DB_PASSWD=test
+$ export DB_DBNAME=test
+```
+
+To run the test suite, go to the project root and run:
+
+```bash
+$ php vendor/bin/phpunit
+```
+
 ## License
 
 MIT, see [LICENSE file](LICENSE).

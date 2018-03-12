@@ -18,12 +18,20 @@ class ResultQueryTest extends BaseTestCase
             $loop->stop();
         });
         $loop->run();
+    }
 
+    public function testInvalidSelect()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $options = $this->getConnectionOptions();
+        $db = $options['dbname'];
+        $connection = new \React\MySQL\Connection($loop, $options);
         $connection->connect(function () {});
 
-        $connection->query('select * from invalid_table', function ($command, $conn) use ($loop) {
+        $connection->query('select * from invalid_table', function ($command, $conn) use ($loop, $db) {
             $this->assertEquals(true, $command->hasError());
-            $this->assertEquals("Table 'test.invalid_table' doesn't exist", $command->getError()->getMessage());
+            $this->assertEquals("Table '$db.invalid_table' doesn't exist", $command->getError()->getMessage());
 
             $loop->stop();
         });
