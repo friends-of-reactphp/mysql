@@ -1,5 +1,7 @@
 # MySQL
 
+[![Build Status](https://travis-ci.org/friends-of-reactphp/mysql.svg?branch=master)](https://travis-ci.org/friends-of-reactphp/mysql)
+
 Async, [Promise](https://github.com/reactphp/promise)-based MySQL database client
 for [ReactPHP](https://reactphp.org/).
 
@@ -59,6 +61,11 @@ This will install the latest supported version:
 ```bash
 $ composer require react/mysql:^0.2
 ```
+
+This project aims to run on any platform and thus does not require any PHP
+extensions and supports running on legacy PHP 5.4 through current PHP 7+ and
+HHVM.
+It's *highly recommended to use PHP 7+* for this project.
 
 ## Tests
 
