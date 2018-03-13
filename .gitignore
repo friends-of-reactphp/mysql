@@ -1,4 +1,2 @@
-.*
-*.lock
-vendor
-phpunit.xml
+vendor/
+composer.lock

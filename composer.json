@@ -9,11 +9,17 @@
         "react/dns": "0.4.*"
     },
     "require-dev": {
-        "phpunit/dbunit": "1.4.*"
+        "phpunit/dbunit": "1.4.*",
+        "ext-pdo_mysql": "*"
     },
     "autoload": {
         "psr-4": {
             "React\\MySQL\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "React\\Tests\\MySQL\\": "tests"
         }
     }
 }

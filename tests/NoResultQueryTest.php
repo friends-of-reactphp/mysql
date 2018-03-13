@@ -2,19 +2,13 @@
 
 namespace React\Tests\MySQL;
 
-use React\MySQL\Query;
-
 class NoResultQueryTest extends  BaseTestCase
 {
     public function testUpdateSimple()
     {
         $loop = \React\EventLoop\Factory::create();
 
-        $connection = new \React\MySQL\Connection($loop, array(
-            'dbname' => 'test',
-            'user'   => 'test',
-            'passwd' => 'test',
-        ));
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
 
         $connection->connect(function () {});
         $that  = $this;
@@ -31,11 +25,7 @@ class NoResultQueryTest extends  BaseTestCase
     {
         $loop = \React\EventLoop\Factory::create();
 
-        $connection = new \React\MySQL\Connection($loop, array(
-            'dbname' => 'test',
-            'user'   => 'test',
-            'passwd' => 'test',
-        ));
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
 
         $connection->connect(function () {});
 

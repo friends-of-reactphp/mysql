@@ -9,7 +9,7 @@
          processIsolation="false"
          stopOnFailure="false"
          syntaxCheck="false"
-         bootstrap="tests/bootstrap.php"
+         bootstrap="vendor/autoload.php"
 >
     <testsuites>
         <testsuite name="React.MySQL Test Suite">
@@ -23,9 +23,10 @@
         </whitelist>
     </filter>
     <php>
-        <var name="db_dsn" value="mysql:dbname=test;host=localhost"/>
-        <var name="db_user" value="test" />
-        <var name="db_passwd" value="test" />
-        <var name="db_dbname" value="test" />
+        <env name="DB_HOST" value="localhost"/>
+        <env name="DB_PORT" value="3306"/>
+        <env name="DB_USER" value="test" />
+        <env name="DB_PASSWD" value="test" />
+        <env name="DB_DBNAME" value="test" />
     </php>
 </phpunit>
