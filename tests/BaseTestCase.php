@@ -48,4 +48,20 @@ class BaseTestCase extends \PHPUnit_Extensions_Database_TestCase
             'passwd' => getenv('DB_PASSWD'),
         ];
     }
+
+    protected function expectCallableOnce()
+    {
+        $mock = $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        $mock->expects($this->once())->method('__invoke');
+
+        return $mock;
+    }
+
+    protected function expectCallableNever()
+    {
+        $mock = $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        $mock->expects($this->never())->method('__invoke');
+
+        return $mock;
+    }
 }
