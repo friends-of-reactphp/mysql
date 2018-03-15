@@ -3,6 +3,7 @@
 namespace React\Tests\MySQL;
 
 use React\MySQL\Connection;
+use React\MySQL\Exception;
 
 class ConnectionTest extends BaseTestCase
 {
@@ -22,6 +23,139 @@ class ConnectionTest extends BaseTestCase
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
             //$loop->stop();
         });
+        $loop->run();
+    }
+
+    /**
+     * @expectedException React\MySQL\Exception
+     * @expectedExceptionMessage Connection not in idle state
+     */
+    public function testConnectTwiceThrowsExceptionForSecondCall()
+    {
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->connect(function () { });
+        $conn->connect(function () { });
+    }
+
+    /**
+     * @expectedException React\MySQL\Exception
+     * @expectedExceptionMessage Can't send command
+     */
+    public function testCloseWithoutConnectThrows()
+    {
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->close(function () { });
+    }
+
+    /**
+     * @expectedException React\MySQL\Exception
+     * @expectedExceptionMessage Can't send command
+     */
+    public function testQueryWithoutConnectThrows()
+    {
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->query('SELECT 1', function () { });
+    }
+
+    /**
+     * @expectedException React\MySQL\Exception
+     * @expectedExceptionMessage Can't send command
+     */
+    public function testPingWithoutConnectThrows()
+    {
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->ping(function () { });
+    }
+
+    public function testCloseWhileConnectingWillBeQueuedAfterConnection()
+    {
+        $this->expectOutputString('connectedclosed');
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->connect(function ($err) {
+            echo $err ? $err : 'connected';
+        });
+        $conn->close(function () {
+            echo 'closed';
+        });
+
+        $loop->run();
+    }
+
+    public function testPingAndCloseWhileConnectingWillBeQueuedAfterConnection()
+    {
+        $this->expectOutputString('connectedpingclosed');
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->connect(function ($err) {
+            echo $err ? $err : 'connected';
+        });
+        $conn->ping(function ($err) {
+            echo $err ? $err : 'ping';
+        });
+        $conn->close(function () {
+            echo 'closed';
+        });
+
+        $loop->run();
+    }
+
+    public function testPingAfterCloseWhileConnectingThrows()
+    {
+        $this->expectOutputString('connectedclosed');
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->connect(function ($err) {
+            echo $err ? $err : 'connected';
+        });
+        $conn->close(function () {
+            echo 'closed';
+        });
+
+        try {
+            $conn->ping(function ($err) {
+                echo $err ? $err : 'ping';
+            });
+            $this->fail();
+        } catch (Exception $e) {
+            // expected
+        }
+
+        $loop->run();
+    }
+
+    public function testCloseWhileConnectingWithInvalidPassWillNeverFire()
+    {
+        $this->expectOutputString('error');
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, array('passwd' => 'invalidpass') + $options);
+
+        $conn->connect(function ($err) {
+            echo $err ? 'error' : 'connected';
+        });
+        $conn->close(function () {
+            echo 'never';
+        });
+
         $loop->run();
     }
 

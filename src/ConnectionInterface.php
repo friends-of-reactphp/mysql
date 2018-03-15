@@ -33,6 +33,7 @@ interface ConnectionInterface
      *  function (QueryCommand $cmd, ConnectionInterface $conn): void
      *
      * @return QueryCommand|null Return QueryCommand if $callback not specified.
+     * @throws Exception if the connection is not initialized or already closed/closing
      */
     public function query($sql, $callback = null, $params = null);
 
@@ -46,6 +47,7 @@ interface ConnectionInterface
      *  function (\Exception $e = null, ConnectionInterface $conn): void
      *
      * @return void
+     * @throws Exception if the connection is not initialized or already closed/closing
      */
     public function ping($callback);
 
@@ -55,6 +57,7 @@ interface ConnectionInterface
      * @param string $dbname Database name.
      *
      * @return QueryCommand
+     * @throws Exception if the connection is not initialized or already closed/closing
      */
     public function selectDb($dbname);
 
@@ -126,6 +129,7 @@ interface ConnectionInterface
      *  function (ConnectionInterface $conn): void
      *
      * @return void
+     * @throws Exception if the connection is not initialized or already closed/closing
      */
     public function close($callback = null);
 
@@ -138,7 +142,12 @@ interface ConnectionInterface
      *
      *  function (\Exception $e = null, ConnectionInterface $conn): void
      *
+     * This method should be invoked once after the `Connection` is initialized.
+     * You can queue additional `query()`, `ping()` and `close()` calls after
+     * invoking this method without having to await its resolution first.
+     *
      * @return void
+     * @throws Exception if the connection is already initialized, i.e. it MUST NOT be called more than once.
      */
     public function connect($callback);
 }
