@@ -1,5 +1,6 @@
 <?php
-require __DIR__ . '/init.php';
+
+require __DIR__ . '/../vendor/autoload.php';
 
 //create the main loop
 $loop = React\EventLoop\Factory::create();
@@ -10,8 +11,6 @@ $connection = new React\MySQL\Connection($loop, array(
     'user'   => 'test',
     'passwd' => 'test',
 ));
-
-//connecting to mysql server, not required.
 
 $connection->connect(function () {});
 

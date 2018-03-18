@@ -204,6 +204,10 @@ class Connection extends EventEmitter implements ConnectionInterface
      */
     public function connect($callback)
     {
+        if ($this->state !== self::STATE_INIT) {
+            throw new Exception('Connection not in idle state');
+        }
+
         $this->state = self::STATE_CONNECTING;
         $options     = $this->options;
         $streamRef   = $this->stream;
@@ -285,7 +289,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         } elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
             return $this->executor->enqueue($command);
         } else {
-            throw new Exception("Cann't send command");
+            throw new Exception("Can't send command");
         }
     }
 }

@@ -51,6 +51,31 @@ $connector = new \React\Socket\Connector($loop, array(
 $connection = new Connection($loop, $options, $connector);
 ```
 
+#### connect()
+
+The `connect(callable $callback): void` method can be used to
+connect to the MySQL server.
+
+It accepts a `callable $callback` parameter which is the handler that will
+be called when the connection succeeds or fails.
+
+```php
+$connection->connect(function (?Exception $error, $connection) {
+    if ($error) {
+        echo 'Connection failed: ' . $error->getMessage();
+    } else {
+        echo 'Successfully connected';
+    }
+});
+```
+
+This method should be invoked once after the `Connection` is initialized.
+You can queue additional `query()`, `ping()` and `close()` calls after
+invoking this method without having to await its resolution first.
+
+This method throws an `Exception` if the connection is already initialized,
+i.e. it MUST NOT be called more than once.
+
 ## Install
 
 The recommended way to install this library is [through Composer](https://getcomposer.org).
