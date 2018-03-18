@@ -241,7 +241,12 @@ class Connection extends EventEmitter implements ConnectionInterface
                 //$parser->on('close', $closeHandler);
                 $parser->start();
 
-            }, [$this, 'handleConnectionError']);
+            }, function (\Exception $error) use ($callback) {
+                $this->state = self::STATE_CONNECT_FAILED;
+                $error = new \RuntimeException('Unable to connect to database server', 0, $error);
+                $this->handleConnectionError($error);
+                $callback($error, $this);
+            });
     }
 
     /**
@@ -253,7 +258,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     }
 
     /**
-     * @param mixed $err Error from socket.
+     * @param Exception $err Error from socket.
      *
      * @return void
      * @internal
