@@ -107,7 +107,7 @@ The test suite contains a number of functional integration tests that send
 actual test SQL queries against your local database and thus rely on a local
 MySQL test database with appropriate write access.
 The test suite creates and modifies a test table in this database, so make sure
-to not a production database!
+to not use a production database!
 You can change your test database credentials by passing these ENV variables:
 
 ```bash
@@ -116,6 +116,15 @@ $ export DB_PORT=3306
 $ export DB_USER=test
 $ export DB_PASSWD=test
 $ export DB_DBNAME=test
+```
+
+For example, to create an empty test database, you can also use a temporary
+[`mysql` Docker image](https://hub.docker.com/_/mysql/) like this:
+
+```bash
+$ docker run -it --rm --net=host \
+    -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test \
+    -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql
 ```
 
 To run the test suite, go to the project root and run:
