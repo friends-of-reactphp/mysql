@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 (2018-03-26)
+
+*   Feature: Forward compatibility with upcoming ReactPHP components
+    (#37 by @clue)
+
+*   Fix: Consistent `connect()` behavior for all connection states
+    (#36 by @clue)
+
+*   Fix: Report connection error to `connect()` callback
+    (#35 by @clue)
+
 ## 0.3.0 (2018-03-13)
 
 *   This is now a community project managed by @friends-of-reactphp. Thanks to
