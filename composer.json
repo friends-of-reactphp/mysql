@@ -9,8 +9,7 @@
         "react/socket": "^1.0 || ^0.8"
     },
     "require-dev": {
-        "phpunit/dbunit": "1.4.*",
-        "ext-pdo_mysql": "*"
+        "phpunit/phpunit": "^4.8.35"
     },
     "autoload": {
         "psr-4": {

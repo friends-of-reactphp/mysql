@@ -30,12 +30,11 @@ class ConnectionTest extends BaseTestCase
 
         $conn->on('error', $this->expectCallableOnce());
 
-        $conn->connect(function ($err, $conn) use ($loop, $options) {
-            $this->assertEquals(sprintf(
-                "Access denied for user '%s'@'%s' (using password: YES)",
-                $options['user'],
-                $options['host']
-            ), $err->getMessage());
+        $conn->connect(function ($err, $conn) use ($loop) {
+            $this->assertRegExp(
+                "/^Access denied for user '.*?'@'.*?' \(using password: YES\)$/",
+                $err->getMessage()
+            );
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
             $this->assertEquals(Connection::STATE_AUTHENTICATE_FAILED, $conn->getState());
         });
