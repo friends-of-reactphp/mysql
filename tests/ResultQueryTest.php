@@ -4,6 +4,63 @@ namespace React\Tests\MySQL;
 
 class ResultQueryTest extends BaseTestCase
 {
+    public function testSelectStaticText()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $connection->query('select \'foo\'', function ($command, $conn) {
+            $this->assertEquals(false, $command->hasError());
+            $this->assertCount(1, $command->resultRows);
+            $this->assertCount(1, $command->resultRows[0]);
+            $this->assertEquals('foo', reset($command->resultRows[0]));
+            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+        });
+
+        $connection->close();
+        $loop->run();
+    }
+
+    public function testSelectStaticTextWithParamBinding()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $connection->query('select ?', function ($command, $conn) {
+            $this->assertEquals(false, $command->hasError());
+            $this->assertCount(1, $command->resultRows);
+            $this->assertCount(1, $command->resultRows[0]);
+            $this->assertEquals('foo', reset($command->resultRows[0]));
+            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+        }, 'foo');
+
+        $connection->close();
+        $loop->run();
+    }
+
+    public function testSelectStaticTextWithQuestionMark()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $connection->query('select \'hello?\'', function ($command, $conn) {
+            $this->assertEquals(false, $command->hasError());
+            $this->assertCount(1, $command->resultRows);
+            $this->assertCount(1, $command->resultRows[0]);
+            $this->assertEquals('hello?', reset($command->resultRows[0]));
+            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+        });
+
+        $connection->close();
+        $loop->run();
+    }
+
     public function testSimpleSelect()
     {
         $loop = \React\EventLoop\Factory::create();

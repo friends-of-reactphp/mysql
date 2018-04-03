@@ -26,6 +26,41 @@ class QueryTest extends \PHPUnit_Framework_TestCase
         */
     }
 
+    public function testGetSqlReturnsQuestionMarkReplacedWhenBound()
+    {
+        $query = new Query('select ?');
+        $sql   = $query->bindParams('hello')->getSql();
+        $this->assertEquals("select 'hello'", $sql);
+    }
+
+    public function testGetSqlReturnsQuestionMarkReplacedWhenBoundFromLastCall()
+    {
+        $query = new Query('select ?');
+        $sql   = $query->bindParams('foo')->bindParams('bar')->getSql();
+        $this->assertEquals("select 'bar'", $sql);
+    }
+
+    public function testGetSqlReturnsQuestionMarkReplacedWithNullValueWhenBound()
+    {
+        $query = new Query('select ?');
+        $sql   = $query->bindParams(null)->getSql();
+        $this->assertEquals("select NULL", $sql);
+    }
+
+    public function testGetSqlReturnsQuestionMarkReplacedFromBoundWhenBound()
+    {
+        $query = new Query('select CONCAT(?, ?)');
+        $sql   = $query->bindParams('hello??', 'world??')->getSql();
+        $this->assertEquals("select CONCAT('hello??', 'world??')", $sql);
+    }
+
+    public function testGetSqlReturnsQuestionMarksAsIsWhenNotBound()
+    {
+        $query = new Query('select "hello?"');
+        $sql   = $query->getSql();
+        $this->assertEquals("select \"hello?\"", $sql);
+    }
+
     public function testEscapeChars()
     {
         $query = new Query('');

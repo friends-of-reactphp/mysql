@@ -97,14 +97,18 @@ class Connection extends EventEmitter implements ConnectionInterface
         array_shift($args); // Remove $sql parameter.
 
         if (!is_callable($callback)) {
-            $query->bindParamsFromArray($args);
+            if ($args) {
+                $query->bindParamsFromArray($args);
+            }
 
             return $this->_doCommand($command);
         }
 
         array_shift($args); // Remove $callback
 
-        $query->bindParamsFromArray($args);
+        if ($args) {
+            $query->bindParamsFromArray($args);
+        }
         $this->_doCommand($command);
 
         $command->on('results', function ($rows, $command) use ($callback) {

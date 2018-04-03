@@ -26,7 +26,7 @@ class Query
 
     public function __construct($sql)
     {
-        $this->sql = $sql;
+        $this->sql = $this->builtSql = $sql;
     }
 
     /**
