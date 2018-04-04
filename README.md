@@ -2,8 +2,7 @@
 
 [![Build Status](https://travis-ci.org/friends-of-reactphp/mysql.svg?branch=master)](https://travis-ci.org/friends-of-reactphp/mysql)
 
-Async, [Promise](https://github.com/reactphp/promise)-based MySQL database client
-for [ReactPHP](https://reactphp.org/).
+Async MySQL database client for [ReactPHP](https://reactphp.org/).
 
 This is a MySQL database driver for [ReactPHP](https://reactphp.org/).
 It implements the MySQL protocol and allows you to access your existing MySQL
@@ -84,7 +83,7 @@ The recommended way to install this library is [through Composer](https://getcom
 This will install the latest supported version:
 
 ```bash
-$ composer require react/mysql:^0.3.1
+$ composer require react/mysql:^0.3.2
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.

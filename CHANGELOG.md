@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 (2018-04-04)
+
+*   Fix: Fix parameter binding if query contains question marks
+    (#40 by @clue)
+
+*   Improve test suite by simplifying test structure, improve test isolation and remove dbunit
+    (#39 by @clue)
+
 ## 0.3.1 (2018-03-26)
 
 *   Feature: Forward compatibility with upcoming ReactPHP components
