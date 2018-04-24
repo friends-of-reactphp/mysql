@@ -61,6 +61,26 @@ class ResultQueryTest extends BaseTestCase
         $loop->run();
     }
 
+    public function testSelectLongStaticTextWithProperType()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $length = 40000;
+
+        $connection->query('SELECT ?', function ($command, $conn) use ($length) {
+            $this->assertEquals(false, $command->hasError());
+            $this->assertCount(1, $command->resultFields);
+            $this->assertEquals($length * 3, $command->resultFields[0]['length']);
+            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+        }, str_repeat('.', $length));
+
+        $connection->close();
+        $loop->run();
+    }
+
     public function testSimpleSelect()
     {
         $loop = \React\EventLoop\Factory::create();

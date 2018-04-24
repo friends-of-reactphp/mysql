@@ -256,7 +256,7 @@ field:
                     $u                    = unpack('v', $this->read(2));
                     $field['charset']     = $u[1];
 
-                    $u                    = unpack('v', $this->read(4));
+                    $u                    = unpack('V', $this->read(4));
                     $field['length']      = $u[1];
 
                     $field['type']        = ord($this->read(1));
