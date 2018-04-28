@@ -9,55 +9,70 @@ class QueryTest extends \PHPUnit_Framework_TestCase
     public function testBindParams()
     {
         $query = new Query('select * from test where id = ? and name = ?');
-        $sql   = $query->bindParams(100, 'test')->getSql();
+        $sql = $query->bindParams(100, 'test')->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
 
         $query = new Query('select * from test where id in (?) and name = ?');
-        $sql   = $query->bindParams([1, 2], 'test')->getSql();
+        $sql = $query->bindParams([1, 2], 'test')->getSql();
         $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
-        /*
+
+        $query = new Query('select * from test where id in (?) and name = ?');
+        $sql = $query->bindParams([1, 2], 'Iñtërnâtiônàlizætiøn')->getSql();
+        $this->assertEquals("select * from test where id in (1,2) and name = 'Iñtërnâtiônàlizætiøn'", $sql);
+
         $query = new Query('select * from test where id = :id and name = :name');
-        $sql   = $query->params(array(':id' => 100, ':name' => 'test'))->getSql();
+        $sql = $query->bindParams([':id' => 100, ':name' => 'test'])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
 
         $query = new Query('select * from test where id = :id and name = ?');
-        $sql   = $query->params('test', array(':id' => 100))->getSql();
+        $sql = $query->bindParams('test', [':id' => 100])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
-        */
+
+        $query = new Query('select * from test where name = ? or id = :id');
+        $sql = $query->bindParams('test', [':id' => 100])->getSql();
+        $this->assertEquals("select * from test where name = 'test' or id = 100", $sql);
+
+        $query = new Query('select * from test where name = ? or id = :id');
+        $sql = $query->bindParams('test', ['id' => 100])->getSql();
+        $this->assertEquals("select * from test where name = 'test' or id = 100", $sql);
+
+        $query = new Query('select * from test where name = :name or id IN (?)');
+        $sql = $query->bindParams([':name' => 'Iñtërnâtiônàlizætiøn'], [1, 2])->getSql();
+        $this->assertEquals("select * from test where name = 'Iñtërnâtiônàlizætiøn' or id IN (1,2)", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarkReplacedWhenBound()
     {
         $query = new Query('select ?');
-        $sql   = $query->bindParams('hello')->getSql();
+        $sql = $query->bindParams('hello')->getSql();
         $this->assertEquals("select 'hello'", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarkReplacedWhenBoundFromLastCall()
     {
         $query = new Query('select ?');
-        $sql   = $query->bindParams('foo')->bindParams('bar')->getSql();
+        $sql = $query->bindParams('foo')->bindParams('bar')->getSql();
         $this->assertEquals("select 'bar'", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarkReplacedWithNullValueWhenBound()
     {
         $query = new Query('select ?');
-        $sql   = $query->bindParams(null)->getSql();
+        $sql = $query->bindParams(null)->getSql();
         $this->assertEquals("select NULL", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarkReplacedFromBoundWhenBound()
     {
         $query = new Query('select CONCAT(?, ?)');
-        $sql   = $query->bindParams('hello??', 'world??')->getSql();
+        $sql = $query->bindParams('hello??', 'world??')->getSql();
         $this->assertEquals("select CONCAT('hello??', 'world??')", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarksAsIsWhenNotBound()
     {
         $query = new Query('select "hello?"');
-        $sql   = $query->getSql();
+        $sql = $query->getSql();
         $this->assertEquals("select \"hello?\"", $sql);
     }
 
