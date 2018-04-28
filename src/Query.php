@@ -30,7 +30,7 @@ class Query
     }
 
     /**
-     * Binding params for the query, mutiple arguments support.
+     * Binding params for the query, multiple arguments support.
      *
      * @param  mixed              $param
      * @return \React\MySQL\Query
@@ -52,7 +52,7 @@ class Query
     }
 
     /**
-     * Binding params for the query, mutiple arguments support.
+     * Binding params for the query, multiple arguments support.
      *
      * @param  mixed              $param
      * @return \React\MySQL\Query
@@ -99,8 +99,7 @@ class Query
                 $value = 'NULL';
                 break;
             default:
-                throw new \InvalidArgumentException(sprintf('Not supportted value type of %s.', $type));
-                break;
+                throw new \InvalidArgumentException(sprintf('Not supported value type of %s.', $type));
         }
 
         return $value;

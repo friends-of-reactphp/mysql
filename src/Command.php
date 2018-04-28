@@ -126,6 +126,9 @@ abstract class Command extends EventEmitter implements CommandInterface
      */
     const INIT_AUTHENTICATE = 0xf1;
 
+    /**
+     * @var Connection
+     */
     protected $connection;
 
     private $states = [];
@@ -133,10 +136,9 @@ abstract class Command extends EventEmitter implements CommandInterface
     private $error;
 
     /**
-     * Construtor.
+     * Constructor.
      *
-     * @param integer $cmd
-     * @param string  $q
+     * @param Connection $connection
      */
     public function __construct(Connection $connection)
     {

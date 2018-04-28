@@ -5,6 +5,9 @@ namespace React\MySQL\Protocal;
 use Evenement\EventEmitter;
 use React\MySQL\Exception;
 use React\MySQL\Command;
+use React\MySQL\Executor;
+use React\Stream\DuplexStreamInterface;
+use React\Stream\WritableResourceStream;
 
 class Parser extends EventEmitter
 {
@@ -72,9 +75,10 @@ class Parser extends EventEmitter
     protected $connectOptions;
 
     /**
-     * @var \React\Stream\Stream
+     * @var \React\Stream\DuplexStreamInterface
      */
     protected $stream;
+
     /**
      * @var \React\MySQL\Executor
      */
@@ -82,11 +86,11 @@ class Parser extends EventEmitter
 
     protected $queue;
 
-    public function __construct($stream, $executor)
+    public function __construct(DuplexStreamInterface $stream, Executor $executor)
     {
         $this->stream   = $stream;
         $this->executor = $executor;
-        $this->queue    = new \SplQueue($this);
+        $this->queue    = new \SplQueue();
         $executor->on('new', array($this, 'handleNewCommand'));
     }
 
@@ -116,7 +120,7 @@ class Parser extends EventEmitter
     {
         foreach ($options as $option => $value) {
             if (property_exists($this, $option)) {
-                $this->$option = $value;
+                $this->{$option} = $value;
             }
         }
     }
@@ -270,7 +274,7 @@ field:
                 } elseif ($this->rsState === self::RS_STATE_ROW) {
                     $this->debug('Row packet of Data packet');
                     $row = [];
-                    for ($i = 0, $nf = sizeof($this->resultFields); $i < $nf; ++$i) {
+                    for ($i = 0, $nf = count($this->resultFields); $i < $nf; ++$i) {
                         $row[$this->resultFields[$i]['name']] = $this->parseEncodedString();
                     }
                     $this->resultRows[] = $row;
@@ -353,6 +357,7 @@ field:
         if (strlen($this->buffer) - $this->bufferPos - $len - $skiplen < 0) {
             throw new \LogicException('Logic Error');
         }
+
         $buffer = substr($this->buffer, $this->bufferPos, $len);
         $this->bufferPos += $len;
         if ($skiplen) {

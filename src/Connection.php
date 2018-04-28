@@ -75,12 +75,15 @@ class Connection extends EventEmitter implements ConnectionInterface
     public function __construct(LoopInterface $loop, array $connectOptions = array(), ConnectorInterface $connector = null)
     {
         $this->loop       = $loop;
+
         if (!$connector) {
             $connector    = new Connector($loop);
         }
         $this->connector  = $connector;
+
         $this->executor   = new Executor($this);
-        $this->options    = $connectOptions + $this->options;
+
+        $this->options    = array_replace($this->options, $connectOptions);
     }
 
     /**
@@ -262,7 +265,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     }
 
     /**
-     * @param Exception $err Error from socket.
+     * @param \Exception $err Error from socket.
      *
      * @return void
      * @internal
@@ -293,12 +296,14 @@ class Connection extends EventEmitter implements ConnectionInterface
      */
     protected function _doCommand(Command $command)
     {
-        if ($command->equals(Command::INIT_AUTHENTICATE)) {
-            return $this->executor->undequeue($command);
-        } elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
-            return $this->executor->enqueue($command);
-        } else {
-            throw new Exception("Can't send command");
-        }
+      if ($command->equals(Command::INIT_AUTHENTICATE)) {
+          return $this->executor->undequeue($command);
+      }
+
+      if ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
+          return $this->executor->enqueue($command);
+      }
+
+      throw new Exception("Can't send command");
     }
 }

@@ -6,14 +6,16 @@ class Binary
 {
     /**
      * Build structure of labels
-     * @param string Dot-separated labels list
-     * @return \PHPDaemon\Utils\binary
+     *
+     * @param string $q Dot-separated labels list
+     *
+     * @return string
      */
     public static function labels($q)
     {
         $e = explode('.', $q);
         $r = '';
-        for ($i = 0, $s = sizeof($e); $i < $s; ++$i) {
+        for ($i = 0, $s = count($e); $i < $s; ++$i) {
             $r .= chr(strlen($e[$i])) . $e[$i];
         }
         if (binarySubstr($r, -1) !== "\x00") {
@@ -25,7 +27,10 @@ class Binary
 
     /**
      * Parse structure of labels
-     * @param binary
+     * 
+     * @param string $data
+     * @param string $orig
+     *             
      * @return string Dot-separated labels list
      */
     public static function parseLabels(&$data, $orig = null)
@@ -35,11 +40,11 @@ class Binary
             $l = ord($data[0]);
 
             if ($l >= 192) {
-                $pos  = Binary::bytes2int(chr($l - 192) . binarySubstr($data, 1, 1));
+                $pos  = self::bytes2int(chr($l - 192) . binarySubstr($data, 1, 1));
                 $data = binarySubstr($data, 2);
                 $ref  = binarySubstr($orig, $pos);
 
-                return $str . Binary::parseLabels($ref);
+                return $str . self::parseLabels($ref);
             }
 
             $p = substr($data, 1, $l);
@@ -55,11 +60,14 @@ class Binary
 
     /**
      * Build length-value binary snippet
-     * @param string Data
-     * @param [string Number of bytes to encode length. Default is 1
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param string $str Data
+     * @param int $len Number of bytes to encode length. Default is 1
+     * @param bool $lrev
+     *       
+     * @return string
      */
-    public static function LV($str, $len = 1, $lrev = FALSE)
+    public static function LV($str, $len = 1, $lrev = false)
     {
         $l = static::i2b($len, strlen($str));
         if ($lrev) {
@@ -71,8 +79,10 @@ class Binary
 
     /**
      * Build nul-terminated string, with 2-byte of length
-     * @param string Data
-     * @return \PHPDaemon\Utils\binary
+     *
+     * @param string $str Data
+     *                    
+     * @return string
      */
     public static function LVnull($str)
     {
@@ -81,8 +91,10 @@ class Binary
 
     /**
      * Build byte
-     * @param integer Byte number
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param int $int Byte number
+     * 
+     * @return string
      */
     public static function byte($int)
     {
@@ -91,8 +103,10 @@ class Binary
 
     /**
      * Build word (2 bytes) big-endian
-     * @param integer Integer
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param int $int Integer
+     *                
+     * @return string
      */
     public static function word($int)
     {
@@ -101,8 +115,10 @@ class Binary
 
     /**
      * Build word (2 bytes) little-endian
-     * @param integer Integer
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param int $int Integer
+     *
+     * @return string
      */
     public static function wordl($int)
     {
@@ -111,8 +127,10 @@ class Binary
 
     /**
      * Build double word (4 bytes) big-endian
-     * @param integer Integer
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param int $int Integer
+     *                 
+     * @return string
      */
     public static function dword($int)
     {
@@ -121,8 +139,10 @@ class Binary
 
     /**
      * Build double word (4 bytes) little endian
-     * @param integer Integer
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param int $int Integer
+     *                 
+     * @return string
      */
     public static function dwordl($int)
     {
@@ -131,8 +151,10 @@ class Binary
 
     /**
      * Build quadro word (8 bytes) big endian
-     * @param integer Integer
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param int $int Integer
+     *
+     * @return string
      */
     public static function qword($int)
     {
@@ -141,9 +163,11 @@ class Binary
 
     /**
      * Build quadro word (8 bytes) little endian
-     * @param integer Integer
-     * @return \PHPDaemon\Utils\binary
-     */
+     * 
+     * @param int $int Integer
+     *
+     * @return string
+   */
     public static function qwordl($int)
     {
         return strrev(static::qword($int));
@@ -151,8 +175,10 @@ class Binary
 
     /**
      * Parse byte, and remove it
-     * @param &string Data
-     * @return integer
+     * 
+     * @param string $p &Data
+     *        
+     * @return int
      */
     public static function getByte(&$p)
     {
@@ -164,7 +190,9 @@ class Binary
 
     /**
      * Get single-byte character
-     * @param &string Data
+     * 
+     * @param string $p &Data
+     *        
      * @return string
      */
     public static function getChar(&$p)
@@ -177,23 +205,27 @@ class Binary
 
     /**
      * Parse word (2 bytes)
-     * @param &string Data
-     * @param boolean Little endian?
-     * @return integer
+     * 
+     * @param string $p &Data
+     * @param bool $l Little endian?
+     *             
+     * @return int
      */
     public static function getWord(&$p, $l = false)
     {
-        $r = static::bytes2int(binarySubstr($p, 0, 2), !!$l);
+        $r = static::bytes2int(binarySubstr($p, 0, 2), (bool)$l);
         $p = binarySubstr($p, 2);
 
-        return intval($r);
+        return (int)$r;
     }
 
     /**
      * Get word (2 bytes)
-     * @param &string Data
-     * @param boolean Little endian?
-     * @return \PHPDaemon\Utils\binary
+     * 
+     * @param string $p &data
+     * @param bool $l Little endian?
+     *                
+     * @return bool|string
      */
     public static function getStrWord(&$p, $l = false)
     {
@@ -208,37 +240,43 @@ class Binary
 
     /**
      * Get double word (4 bytes)
-     * @param &string Data
-     * @param boolean Little endian?
-     * @return integer
+     * 
+     * @param string $p &Data
+     * @param bool $l Little endian?
+     *             
+     * @return int
      */
     public static function getDWord(&$p, $l = false)
     {
-        $r = static::bytes2int(binarySubstr($p, 0, 4), !!$l);
+        $r = static::bytes2int(binarySubstr($p, 0, 4), (bool)$l);
         $p = binarySubstr($p, 4);
 
-        return intval($r);
+        return (int)$r;
     }
 
     /**
      * Parse quadro word (8 bytes)
-     * @param &string Data
-     * @param boolean Little endian?
-     * @return integer
+     * 
+     * @param string $p &Data
+     * @param bool $l Little endian?
+     *             
+     * @return int
      */
     public static function getQword(&$p, $l = false)
     {
-        $r = static::bytes2int(binarySubstr($p, 0, 8), !!$l);
+        $r = static::bytes2int(binarySubstr($p, 0, 8), (bool)$l);
         $p = binarySubstr($p, 8);
 
-        return intval($r);
+        return (int)$r;
     }
 
     /**
      * Get quadro word (8 bytes)
-     * @param &string Data
-     * @param boolean Little endian?
-     * @return \PHPDaemon\Utils\binary
+     *
+     * @param string $p &data
+     * @param bool $l Little endian?
+     *
+     * @return bool|string
      */
     public static function getStrQWord(&$p, $l = false)
     {
@@ -252,9 +290,11 @@ class Binary
     }
 
     /**
-     * Parse nul-terminated string
-     * @param &string Data
-     * @return \PHPDaemon\Utils\binary
+     * Parse null-terminated string
+     *
+     * @param string $str &Data
+     *
+     * @return bool|string
      */
     public static function getString(&$str)
     {
@@ -270,24 +310,28 @@ class Binary
 
     /**
      * Parse length-value structure
-     * @param &string Data
-     * @param number  Number of length bytes
-     * @param boolean Nul-terminated? Default is false
-     * @param boolean Length is little endian?
+     * 
+     * @param string $p &Data
+     * @param int $l Number of length bytes
+     * @param bool $nul Nul-terminated? Default is false
+     * @param bool $lrev Length is little endian?
+     *                   
      * @return string
      */
     public static function getLV(&$p, $l = 1, $nul = false, $lrev = false)
     {
-        $s = static::b2i(binarySubstr($p, 0, $l), !!$lrev);
+        $s = static::b2i(binarySubstr($p, 0, $l), (bool)$lrev);
         $p = binarySubstr($p, $l);
         if ($s == 0) {
             return '';
         }
         $r = '';
         if (strlen($p) < $s) {
+            // TODO? -> "Debug" is not defined
             echo("getLV error: buf length (" . strlen($p) . "): " . Debug::exportBytes($p) . ", must be >= string length (" . $s . ")\n");
         } elseif ($nul) {
             if ($p{$s - 1} != "\x00") {
+                // TODO? -> "Debug" is not defined
                 echo("getLV error: Wrong end of NUL-string (" . Debug::exportBytes($p{$s - 1}) . "), len " . $s . "\n");
             } else {
                 $d = $s - 1;
@@ -307,16 +351,18 @@ class Binary
 
     /**
      * Converts integer to binary string
-     * @param integer Length
-     * @param integer Integer
-     * @param boolean Optional. Little endian. Default value - false.
+     * 
+     * @param int $len Length
+     * @param int $int Integer
+     * @param bool $l Optional. Little endian. Default value - false.
+     *             
      * @return string Resulting binary string
      */
     public static function int2bytes($len, $int = 0, $l = false)
     {
         $hexstr = dechex($int);
 
-        if ($len === NULL) {
+        if ($len === null) {
             if (strlen($hexstr) % 2) {
                 $hexstr = "0" . $hexstr;
             }
@@ -336,8 +382,10 @@ class Binary
 
     /**
      * Convert array of flags into bit array
-     * @param array   Flags
-     * @param integer Length. Default is 4
+     * 
+     * @param array $flags Flags
+     * @param int $len Length. Default is 4
+     *            
      * @return string
      */
     public static function flags2bitarray($flags, $len = 4)
@@ -360,9 +408,11 @@ class Binary
 
     /**
      * Convert bytes into integer
-     * @param string  Bytes
-     * @param boolean Little endian? Default is false
-     * @return integer
+     * 
+     * @param string $str Bytes
+     * @param bool $l Little endian? Default is false
+     *             
+     * @return int
      */
     public static function bytes2int($str, $l = false)
     {
@@ -388,9 +438,11 @@ class Binary
 
     /**
      * Convert bitmap into bytes
-     * @param string  Bitmap
-     * @param boolean Check length?
-     * @return \PHPDaemon\Utils\binary
+     *
+     * @param string $bitmap Bitmap
+     * @param int $check_len Check length?
+     *
+     * @return string
      */
     public static function bitmap2bytes($bitmap, $check_len = 0)
     {
@@ -408,7 +460,9 @@ class Binary
 
     /**
      * Get bitmap
-     * @param byte
+     *
+     * @param $byte
+     *
      * @return string
      */
     public static function getbitmap($byte)
@@ -417,15 +471,22 @@ class Binary
     }
 }
 
-function binarySubstr($s, $p, $l = NULL)
+/**
+ * @param string $s input string
+ * @param int $p start
+ * @param null|int $l length
+ *
+ * @return bool|string
+ */
+function binarySubstr($s, $p, $l = null)
 {
-    if ($l === NULL) {
+    if ($l === null) {
         $ret = substr($s, $p);
     } else {
         $ret = substr($s, $p, $l);
     }
 
-    if ($ret === FALSE) {
+    if ($ret === false) {
         $ret = '';
     }
 
