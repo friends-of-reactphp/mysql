@@ -41,6 +41,41 @@ class QueryTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals("select * from test where name = 'Iñtërnâtiônàlizætiøn' or id IN (1,2)", $sql);
     }
 
+    public function testBindParamsFromArray()
+    {
+        $query = new Query('select * from test where name = :name or id = ?');
+        $sql = $query->bindParamsFromArray([':name' => 'Iñtërnâtiônàlizætiøn', 2])->getSql();
+        $this->assertEquals("select * from test where name = 'Iñtërnâtiônàlizætiøn' or id = 2", $sql);
+
+        $query = new Query('select * from test where name = ? or id = :id');
+        $sql = $query->bindParamsFromArray(['Iñtërnâtiônàlizætiøn', ':id' => 2])->getSql();
+        $this->assertEquals("select * from test where name = 'Iñtërnâtiônàlizætiøn' or id = 2", $sql);
+
+        $query = new Query('select * from test where name = ? or id = :id');
+        $sql = $query->bindParamsFromArray([':id' => 2])->getSql();
+        $this->assertEquals("select * from test where name = ? or id = 2", $sql);
+
+        $query = new Query('select * from test where name = :name or id = :id');
+        $sql = $query->bindParamsFromArray([':name' => 'Iñtërnâtiônàlizætiøn', ':id' => 2])->getSql();
+        $this->assertEquals("select * from test where name = 'Iñtërnâtiônàlizætiøn' or id = 2", $sql);
+
+        $query = new Query('select * from test where name = :name');
+        $sql = $query->bindParamsFromArray([':name' => 'Iñtërnâtiônàlizætiøn', ':id' => 2])->getSql();
+        $this->assertEquals("select * from test where name = 'Iñtërnâtiônàlizætiøn'", $sql);
+
+        $query = new Query('select * from test where id = :id');
+        $sql = $query->bindParamsFromArray([':name' => 'Iñtërnâtiônàlizætiøn', ':id' => 2])->getSql();
+        $this->assertEquals("select * from test where id = 2", $sql);
+
+        $query = new Query('select * from test where name = :name');
+        $sql = $query->bindParamsFromArray([':name_non' => 'Iñtërnâtiônàlizætiøn', ':id' => 2])->getSql();
+        $this->assertEquals("select * from test where name = :name", $sql);
+
+        $query = new Query('select * from test where id = :id');
+        $sql = $query->bindParamsFromArray([':name' => 'Iñtërnâtiônàlizætiøn', ':id_non' => 2])->getSql();
+        $this->assertEquals("select * from test where id = :id", $sql);
+    }
+
     public function testGetSqlReturnsQuestionMarkReplacedWhenBound()
     {
         $query = new Query('select ?');

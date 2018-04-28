@@ -6,8 +6,6 @@ use Evenement\EventEmitter;
 use React\MySQL\Exception;
 use React\MySQL\Command;
 use React\MySQL\Executor;
-use React\Stream\DuplexStreamInterface;
-use React\Stream\WritableResourceStream;
 
 class Parser extends EventEmitter
 {
@@ -76,6 +74,8 @@ class Parser extends EventEmitter
 
     /**
      * @var \React\Stream\DuplexStreamInterface
+     *
+     * TODO? -> is this really the "DuplexStreamInterface"?
      */
     protected $stream;
 
@@ -84,9 +84,12 @@ class Parser extends EventEmitter
      */
     protected $executor;
 
+    /**
+     * @var \SplQueue
+     */
     protected $queue;
 
-    public function __construct(DuplexStreamInterface $stream, Executor $executor)
+    public function __construct($stream, Executor $executor)
     {
         $this->stream   = $stream;
         $this->executor = $executor;

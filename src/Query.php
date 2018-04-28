@@ -4,13 +4,29 @@ namespace React\MySQL;
 
 class Query
 {
+    /**
+     * @var string
+     */
     private $sql;
 
+    /**
+     * helper, to check if the sql-query is build
+     *
+     * @var null|string
+     */
     private $builtSql;
 
+    /**
+     * @var array
+     */
     private $params = [];
 
-    private $escapeChars = array(
+    /**
+     * @var array
+     */
+    private $paramsByNameTmp = [];
+
+    private $escapeChars = [
         "\x00" => "\\0",
         "\r" => "\\r",
         "\n" => "\\n",
@@ -22,27 +38,41 @@ class Query
         "\\" => "\\\\",
         //"%"    => "\\%",
         //"_"    => "\\_",
-    );
+    ];
 
+    /**
+     * Query constructor.
+     *
+     * @param string $sql
+     */
     public function __construct($sql)
     {
-        $this->sql = $this->builtSql = $sql;
+        $this->sql = $sql;
+        $this->builtSql = $sql;
     }
 
     /**
      * Binding params for the query, multiple arguments support.
      *
-     * @param  mixed $param
-     * @return \React\MySQL\Query
+     * @param mixed $param
+     *
+     * @return $this
      */
     public function bindParams()
     {
         $this->builtSql = null;
-        $this->params = func_get_args();
+        $this->params = \func_get_args();
 
         return $this;
     }
 
+    /**
+     * Binding params for the query, via array as input.
+     *
+     * @param array $params
+     *
+     * @return $this
+     */
     public function bindParamsFromArray(array $params)
     {
         $this->builtSql = null;
@@ -54,30 +84,38 @@ class Query
     /**
      * Binding params for the query, multiple arguments support.
      *
-     * @param  mixed $param
-     * @return \React\MySQL\Query
-     * @deprecated
+     * @param mixed $param
+     *
+     * @return $this
+     *
+     * @deprecated <p>use "bindParams()" or "bindParamsFromArray() instead"</p>
      */
     public function params()
     {
-        $this->params = func_get_args();
         $this->builtSql = null;
+        $this->params = \func_get_args();
 
         return $this;
     }
 
+    /**
+     * @param string $str
+     *
+     * @return string
+     */
     public function escape($str)
     {
-        return strtr($str, $this->escapeChars);
+        return \strtr($str, $this->escapeChars);
     }
 
     /**
-     * @param  mixed $value
-     * @return string
+     * @param mixed $value
+     *
+     * @return mixed
      */
     protected function resolveValueForSql($value)
     {
-        $type = gettype($value);
+        $type = \gettype($value);
         switch ($type) {
             case 'boolean':
                 $value = (int)$value;
@@ -93,13 +131,13 @@ class Query
                 foreach ($value as $v) {
                     $nvalue[] = $this->resolveValueForSql($v);
                 }
-                $value = implode(',', $nvalue);
+                $value = \implode(',', $nvalue);
                 break;
             case 'NULL':
                 $value = 'NULL';
                 break;
             default:
-                throw new \InvalidArgumentException(sprintf('Not supported value type of %s.', $type));
+                throw new \InvalidArgumentException(\sprintf('Not supported value type of %s.', $type));
         }
 
         return $value;
@@ -110,9 +148,8 @@ class Query
         $sql = $this->sql;
 
         if (\count($this->params) > 0) {
-            $parseQueryParams = $this->_parseQueryParams($sql, $this->params);
-            $parseQueryParamsByName = $this->_parseQueryParamsByName($parseQueryParams['sql'], $parseQueryParams['params']);
-            $sql = $parseQueryParamsByName['sql'];
+            $sql = $this->parseQueryParams($sql);
+            $sql = $this->parseQueryParamsByName($sql);
         }
 
         return $sql;
@@ -120,12 +157,15 @@ class Query
 
     /**
      * @param string $sql
-     * @param array $params
      *
-     * @return array <p>with the keys -> 'sql', 'params'</p>
+     * @return string
      */
-    private function _parseQueryParams($sql, array $params = [])
+    private function parseQueryParams($sql)
     {
+        // reset the internal params helper
+        $this->paramsByNameTmp = $this->params;
+
+        $params = $this->params;
         $offset = \strpos($sql, '?');
 
         // is there anything to parse?
@@ -134,24 +174,25 @@ class Query
             ||
             \count($params) === 0
         ) {
-            return ['sql' => $sql, 'params' => $params];
+            return $sql;
         }
 
         foreach ($params as $key => $param) {
-            // use this only for not named parameters
-            if (!is_int($key)) {
-                continue;
-            }
-            if (is_array($param) && count($param) > 0) {
-                foreach ($param as $paramInnerKey => $paramInnerValue) {
-                    if (!is_int($paramInnerKey)) {
-                        continue 2;
-                    }
-                }
-            }
 
             if ($offset === false) {
                 continue;
+            }
+
+            // use this only for not named parameters
+            if (!\is_int($key)) {
+                continue;
+            }
+            if (\is_array($param) && \count($param) > 0) {
+                foreach ($param as $paramInnerKey => $paramInnerValue) {
+                    if (!\is_int($paramInnerKey)) {
+                        continue 2;
+                    }
+                }
             }
 
             $replacement = $this->resolveValueForSql($param);
@@ -160,35 +201,48 @@ class Query
             $offset = \strpos($sql, '?', $offset + \strlen((string)$replacement));
         }
 
-        return ['sql' => $sql, 'params' => $params];
+        $this->paramsByNameTmp = $params;
+
+        return $sql;
     }
 
     /**
      * Returns the SQL by replacing :placeholders with SQL-escaped values.
      *
      * @param mixed $sql <p>The SQL string.</p>
-     * @param array $params <p>An array of key-value bindings.</p>
      *
-     * @return array <p>with the keys -> 'sql', 'params'</p>
+     * @return string
      */
-    public function _parseQueryParamsByName($sql, array $params = [])
+    private function parseQueryParamsByName($sql)
     {
+        $params = $this->paramsByNameTmp;
+
         // is there anything to parse?
         if (
             \strpos($sql, ':') === false
             ||
             \count($params) === 0
         ) {
-            return ['sql' => $sql, 'params' => $params];
+            return $sql;
         }
 
-        foreach ($params as $paramsInner) {
+        foreach ($params as $paramsKey => $paramsInner) {
 
+            // use the key from a named parameter
+            if (!\is_int($paramsKey)) {
+                $paramsInner = [$paramsKey => $paramsInner];
+            }
+
+            $paramsInner = (array)$paramsInner;
+
+            // reset
             $offset = null;
             $replacement = null;
+            $name = null;
+
             foreach ($paramsInner as $name => $param) {
                 // use this only for named parameters
-                if (is_int($name)) {
+                if (\is_int($name)) {
                     continue;
                 }
 
@@ -214,12 +268,16 @@ class Query
                 $sql = \substr_replace($sql, $replacement, $offset, \strlen($nameTmp));
             }
 
-            if ($offset === false) {
+            if (
+                $offset === false
+                &&
+                $name !== null
+            ) {
                 unset($params[$name]);
             }
         }
 
-        return ['sql' => $sql, 'params' => $params];
+        return $sql;
     }
 
     /**
