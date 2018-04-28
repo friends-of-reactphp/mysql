@@ -22,7 +22,7 @@ services:
 sudo: false
 
 install:
-  - composer install --no-interaction
+  - travis_retry composer install --no-interaction
 
 before_script:
   - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
