@@ -72,7 +72,6 @@ class Parser extends EventEmitter
 
     protected $rsState = 0;
     protected $pctSize = 0;
-    protected $resultRows = [];
     protected $resultFields = [];
 
     protected $insertId;
@@ -179,7 +178,6 @@ packet:
 
                 $this->rsState = self::RS_STATE_HEADER;
                 $this->resultFields = [];
-                $this->resultRows = [];
                 if ($this->phase === self::PHASE_AUTH_SENT || $this->phase === self::PHASE_GOT_INIT) {
                     $this->phase = self::PHASE_AUTH_ERR;
                 }
@@ -301,7 +299,6 @@ field:
     private function onResultRow($row)
     {
         // $this->debug('row data: ' . json_encode($row));
-        $this->resultRows[] = $row;
         $command = $this->currCommand;
         $command->emit('result', array($row, $command, $command->getConnection()));
     }
@@ -323,13 +320,11 @@ field:
         $command = $this->currCommand;
         $this->currCommand = null;
 
-        $command->resultRows   = $this->resultRows;
         $command->resultFields = $this->resultFields;
-        $command->emit('results', array($this->resultRows, $command, $command->getConnection()));
         $command->emit('end', array($command, $command->getConnection()));
 
         $this->rsState      = self::RS_STATE_HEADER;
-        $this->resultRows   = $this->resultFields = [];
+        $this->resultFields = [];
     }
 
     protected function onSuccess()

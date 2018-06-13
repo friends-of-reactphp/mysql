@@ -496,7 +496,7 @@ class ResultQueryTest extends BaseTestCase
 
     public function testEventSelect()
     {
-        $this->expectOutputString('result.result.results.end.');
+        $this->expectOutputString('result.result.end.');
         $loop = \React\EventLoop\Factory::create();
 
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
@@ -509,12 +509,6 @@ class ResultQueryTest extends BaseTestCase
         $connection->query("insert into book (`name`) values ('bar')");
 
         $command = $connection->query('select * from book');
-        $command->on('results', function ($results, $command, $conn) {
-            $this->assertEquals(2, count($results));
-            $this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
-            echo 'results.';
-        });
         $command->on('result', function ($result, $command, $conn) {
                 $this->assertArrayHasKey('id', $result);
                 $this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);

@@ -116,9 +116,18 @@ class Connection extends EventEmitter implements ConnectionInterface
         }
         $this->_doCommand($command);
 
-        $command->on('results', function ($rows, $command) use ($callback) {
+        // store all result set rows until result set end
+        $rows = array();
+        $command->on('result', function ($row) use (&$rows) {
+            $rows[] = $row;
+        });
+        $command->on('end', function ($command) use ($callback, &$rows) {
+            $command->resultRows = $rows;
+            $rows = array();
             $callback($command, $this);
         });
+
+        // resolve / reject status reply (response without result set)
         $command->on('error', function ($err, $command) use ($callback) {
             $callback($command, $this);
         });
