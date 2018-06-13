@@ -3,6 +3,7 @@
 namespace React\MySQL;
 
 use React\MySQL\Commands\QueryCommand;
+use React\Stream\ReadableStreamInterface;
 
 /**
  * Interface ConnectionInterface
@@ -11,7 +12,6 @@ use React\MySQL\Commands\QueryCommand;
  */
 interface ConnectionInterface
 {
-
     const STATE_INIT                = 0;
     const STATE_CONNECT_FAILED      = 1;
     const STATE_AUTHENTICATE_FAILED = 2;
@@ -22,25 +22,110 @@ interface ConnectionInterface
     const STATE_CLOSED              = 7;
 
     /**
-     * Do a async query.
+     * Performs an async query.
      *
-     * @param string        $sql        MySQL sql statement.
-     * @param callable|null $callback   Query result handler callback.
-     * @param mixed         $params,... Parameters which should bind to query.
+     * If this SQL statement returns a result set (such as from a `SELECT`
+     * statement), this method will buffer everything in memory until the result
+     * set is completed and will then invoke the `$callback` function. This is
+     * the preferred method if you know your result set to not exceed a few
+     * dozens or hundreds of rows. If the size of your result set is either
+     * unknown or known to be too large to fit into memory, you should use the
+     * [`queryStream()`](#querystream) method instead.
      *
-     * $callback signature:
+     * ```php
+     * $connection->query($query, function (QueryCommand $command) {
+     *     if ($command->hasError()) {
+     *         // test whether the query was executed successfully
+     *         // get the error object, instance of Exception.
+     *         $error = $command->getError();
+     *         echo 'Error: ' . $error->getMessage() . PHP_EOL;
+     *     } elseif (isset($command->resultRows)) {
+     *         // this is a response to a SELECT etc. with some rows (0+)
+     *         print_r($command->resultFields);
+     *         print_r($command->resultRows);
+     *         echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
+     *     } else {
+     *         // this is an OK message in response to an UPDATE etc.
+     *         if ($command->insertId !== 0) {
+     *             var_dump('last insert ID', $command->insertId);
+     *         }
+     *         echo 'Query OK, ' . $command->affectedRows . ' row(s) affected' . PHP_EOL;
+     *     }
+     * });
+     * ```
      *
-     *  function (QueryCommand $cmd, ConnectionInterface $conn): void
+     * You can optionally pass any number of `$params` that will be bound to the
+     * query like this:
+     *
+     * ```php
+     * $connection->query('SELECT * FROM user WHERE id > ?', $fn, $id);
+     * ```
      *
      * The given `$sql` parameter MUST contain a single statement. Support
      * for multiple statements is disabled for security reasons because it
      * could allow for possible SQL injection attacks and this API is not
      * suited for exposing multiple possible results.
      *
+     * @param string        $sql        MySQL sql statement.
+     * @param callable|null $callback   Query result handler callback.
+     * @param mixed         $params,... Parameters which should bind to query.
      * @return QueryCommand|null Return QueryCommand if $callback not specified.
      * @throws Exception if the connection is not initialized or already closed/closing
      */
     public function query($sql, $callback = null, $params = null);
+
+    /**
+     * Performs an async query and streams the rows of the result set.
+     *
+     * This method returns a readable stream that will emit each row of the
+     * result set as a `data` event. It will only buffer data to complete a
+     * single row in memory and will not store the whole result set. This allows
+     * you to process result sets of unlimited size that would not otherwise fit
+     * into memory. If you know your result set to not exceed a few dozens or
+     * hundreds of rows, you may want to use the [`query()`](#query) method instead.
+     *
+     * ```php
+     * $stream = $connection->queryStream('SELECT * FROM user');
+     * $stream->on('data', function ($row) {
+     *     echo $row['name'] . PHP_EOL;
+     * });
+     * $stream->on('end', function () {
+     *     echo 'Completed.';
+     * });
+     * ```
+     *
+     * You can optionally pass an array of `$params` that will be bound to the
+     * query like this:
+     *
+     * ```php
+     * $stream = $connection->queryStream('SELECT * FROM user WHERE id > ?', [$id]);
+     * ```
+     *
+     * This method is specifically designed for queries that return a result set
+     * (such as from a `SELECT` or `EXPLAIN` statement). Queries that do not
+     * return a result set (such as a `UPDATE` or `INSERT` statement) will not
+     * emit any `data` events.
+     *
+     * See also [`ReadableStreamInterface`](https://github.com/reactphp/stream#readablestreaminterface)
+     * for more details about how readable streams can be used in ReactPHP. For
+     * example, you can also use its `pipe()` method to forward the result set
+     * rows to a [`WritableStreamInterface`](https://github.com/reactphp/stream#writablestreaminterface)
+     * like this:
+     *
+     * ```php
+     * $connection->queryStream('SELECT * FROM user')->pipe($formatter)->pipe($logger);
+     * ```
+     *
+     * The given `$sql` parameter MUST contain a single statement. Support
+     * for multiple statements is disabled for security reasons because it
+     * could allow for possible SQL injection attacks and this API is not
+     * suited for exposing multiple possible results.
+     *
+     * @param string $sql    SQL statement
+     * @param array  $params Parameters which should be bound to query
+     * @return ReadableStreamInterface
+     */
+    public function queryStream($sql, $params = array());
 
     /**
      * Checks that connection is alive.

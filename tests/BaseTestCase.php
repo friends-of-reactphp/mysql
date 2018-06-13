@@ -40,6 +40,14 @@ SQL;
         return $mock;
     }
 
+    protected function expectCallableOnceWith($value)
+    {
+        $mock = $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        $mock->expects($this->once())->method('__invoke')->with($value);
+
+        return $mock;
+    }
+
     protected function expectCallableNever()
     {
         $mock = $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();

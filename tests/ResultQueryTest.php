@@ -556,4 +556,90 @@ class ResultQueryTest extends BaseTestCase
 
         $loop->run();
     }
+
+    public function testQueryStreamStaticEmptyEmitsSingleRow()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT 1');
+        $stream->on('data', $this->expectCallableOnceWith(array('1' => '1')));
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamBoundVariableEmitsSingleRow()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT ? as value', array('test'));
+        $stream->on('data', $this->expectCallableOnceWith(array('value' => 'test')));
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamZeroRowsEmitsEndWithoutData()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT 1 LIMIT 0');
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamInvalidStatementEmitsError()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT');
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('end', $this->expectCallableNever());
+        $stream->on('error', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamDropStatementEmitsEndWithoutData()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('DROP TABLE IF exists helloworldtest1');
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
 }
