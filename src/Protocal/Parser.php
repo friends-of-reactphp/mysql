@@ -184,7 +184,7 @@ packet:
             $fieldCount = ord($this->read(1));
 field:
             if ($fieldCount === 0xFF) {
-                //error packet
+                // error packet
                 $u             = unpack('v', $this->read(2));
                 $this->errno   = $u[1];
                 $state = $this->read(6);
@@ -193,7 +193,8 @@ field:
 
                 $this->nextRequest();
                 $this->onError();
-            } elseif ($fieldCount === 0x00) { //OK Packet Empty
+            } elseif ($fieldCount === 0x00) {
+                // Empty OK Packet
                 $this->debug('Ok Packet');
 
                 $isAuthenticated = false;
@@ -213,26 +214,39 @@ field:
 
                 $this->message      = $this->read($this->pctSize - $len + $this->length());
 
-                if ($isAuthenticated) {
-                    $this->onAuthenticated();
+                if ($this->rsState === self::RS_STATE_ROW) {
+                    // Empty OK packet during result set => row with only empty strings
+                    $row = array();
+                    foreach ($this->resultFields as $field) {
+                        $row[$field['name']] = '';
+                    }
+                    $this->onResultRow($row);
                 } else {
-                    $this->onSuccess();
+                    // otherwise this terminates a query without a result set (UPDATE, INSERT etc.)
+                    if ($isAuthenticated) {
+                        $this->onAuthenticated();
+                    } else {
+                        $this->onSuccess();
+                    }
+                    $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarnCount:%d", $this->affectedRows, $this->insertId, $this->warnCount));
+                    $this->nextRequest();
                 }
-                $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarnCount:%d", $this->affectedRows, $this->insertId, $this->warnCount));
-                $this->nextRequest();
-
-            } elseif ($fieldCount === 0xFE) { //EOF Packet
+            } elseif ($fieldCount === 0xFE) {
+                // EOF Packet
                 $this->debug('EOF Packet');
                 if ($this->rsState === self::RS_STATE_ROW) {
+                    // finalize this result set (all rows completed)
                     $this->debug('result done');
 
                     $this->nextRequest();
                     $this->onResultDone();
                 } else {
-                    ++ $this->rsState;
+                    // move to next part of result set (header->field->row)
+                    ++$this->rsState;
                 }
 
-            } else { //Data packet
+            } else {
+                // Data packet
                 $this->debug('Data Packet');
                 $this->prepend(chr($fieldCount));
 
@@ -266,22 +280,27 @@ field:
                     $field['decimals']    = ord($this->read(1));
                     //var_dump($field);
                     $this->resultFields[] = $field;
-
                 } elseif ($this->rsState === self::RS_STATE_ROW) {
                     $this->debug('Row packet of Data packet');
                     $row = [];
-                    for ($i = 0, $nf = sizeof($this->resultFields); $i < $nf; ++$i) {
-                        $row[$this->resultFields[$i]['name']] = $this->parseEncodedString();
+                    foreach ($this->resultFields as $field) {
+                        $row[$field['name']] = $this->parseEncodedString();
                     }
-                    $this->resultRows[] = $row;
-                    $command = $this->queue->dequeue();
-                    $command->emit('result', array($row, $command, $command->getConnection()));
-                    $this->queue->unshift($command);
+                    $this->onResultRow($row);
                 }
             }
         }
         $this->restBuffer($this->pctSize - $len + $this->length());
         goto packet;
+    }
+
+    private function onResultRow($row)
+    {
+        // $this->debug('row data: ' . json_encode($row));
+        $this->resultRows[] = $row;
+        $command = $this->queue->dequeue();
+        $command->emit('result', array($row, $command, $command->getConnection()));
+        $this->queue->unshift($command);
     }
 
     protected function onError()

@@ -18,7 +18,7 @@ class ResultQueryTest extends BaseTestCase
 
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
-            $this->assertEquals('foo', reset($command->resultRows[0]));
+            $this->assertSame('foo', reset($command->resultRows[0]));
 
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
         });
@@ -56,10 +56,6 @@ class ResultQueryTest extends BaseTestCase
      */
     public function testSelectStaticValueWillBeReturnedAsIs($value)
     {
-        if ($value === '') {
-            $this->markTestIncomplete();
-        }
-
         $loop = \React\EventLoop\Factory::create();
 
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
@@ -301,8 +297,6 @@ class ResultQueryTest extends BaseTestCase
 
     public function testSelectStaticTextTwoRowsWithEmptyRow()
     {
-        $this->markTestIncomplete();
-
         $loop = \React\EventLoop\Factory::create();
 
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
@@ -369,7 +363,7 @@ class ResultQueryTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testSelectStaticTextTwoColumnsWithEmptyColumn()
+    public function testSelectStaticTextTwoColumnsWithOneEmptyColumn()
     {
         $loop = \React\EventLoop\Factory::create();
 
@@ -384,6 +378,31 @@ class ResultQueryTest extends BaseTestCase
 
             $this->assertSame('foo', reset($command->resultRows[0]));
             $this->assertSame('', next($command->resultRows[0]));
+
+            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+        });
+
+        $connection->close();
+        $loop->run();
+    }
+
+    public function testSelectStaticTextTwoColumnsWithBothEmpty()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $connection->query('select \'\' as `first`, \'\' as `second`', function ($command, $conn) {
+            $this->assertEquals(false, $command->hasError());
+
+            $this->assertCount(1, $command->resultRows);
+            $this->assertCount(2, $command->resultRows[0]);
+            $this->assertSame(array('', ''), array_values($command->resultRows[0]));
+
+            $this->assertCount(2, $command->resultFields);
+            $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
+            $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[1]['type']);
 
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
         });
