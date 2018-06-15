@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 class BaseTestCase extends TestCase
 {
-    protected function getConnectionOptions()
+    protected function getConnectionOptions($debug = false)
     {
         // can be controlled through ENV or by changing defaults in phpunit.xml
         return [
@@ -15,7 +15,7 @@ class BaseTestCase extends TestCase
             'dbname' => getenv('DB_DBNAME'),
             'user'   => getenv('DB_USER'),
             'passwd' => getenv('DB_PASSWD'),
-        ];
+        ] + ($debug ? ['debug' => true] : []);
     }
 
     protected function getDataTable()
