@@ -406,8 +406,6 @@ field:
                 Constants::CLIENT_INTERACTIVE |
                 Constants::CLIENT_TRANSACTIONS |
                 Constants::CLIENT_SECURE_CONNECTION |
-                Constants::CLIENT_MULTI_RESULTS |
-                Constants::CLIENT_MULTI_STATEMENTS |
                 Constants::CLIENT_CONNECT_WITH_DB;
 
         $packet = pack('VVc', $clientFlags, $this->maxPacketSize, $this->charsetNumber)
