@@ -460,7 +460,7 @@ class ResultQueryTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testInvalidSelect()
+    public function testInvalidSelectShouldFail()
     {
         $loop = \React\EventLoop\Factory::create();
 
@@ -472,6 +472,22 @@ class ResultQueryTest extends BaseTestCase
         $connection->query('select * from invalid_table', function ($command, $conn) use ($db) {
             $this->assertEquals(true, $command->hasError());
             $this->assertEquals("Table '$db.invalid_table' doesn't exist", $command->getError()->getMessage());
+        });
+
+        $connection->close();
+        $loop->run();
+    }
+
+    public function testInvalidMultiStatementsShouldFailToPreventSqlInjections()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $connection->query('select 1;select 2;', function ($command, $conn) {
+            $this->assertEquals(true, $command->hasError());
+            $this->assertContains("You have an error in your SQL syntax", $command->getError()->getMessage());
         });
 
         $connection->close();

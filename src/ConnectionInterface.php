@@ -32,6 +32,11 @@ interface ConnectionInterface
      *
      *  function (QueryCommand $cmd, ConnectionInterface $conn): void
      *
+     * The given `$sql` parameter MUST contain a single statement. Support
+     * for multiple statements is disabled for security reasons because it
+     * could allow for possible SQL injection attacks and this API is not
+     * suited for exposing multiple possible results.
+     *
      * @return QueryCommand|null Return QueryCommand if $callback not specified.
      * @throws Exception if the connection is not initialized or already closed/closing
      */
