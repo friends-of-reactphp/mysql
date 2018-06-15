@@ -9,6 +9,49 @@ It implements the MySQL protocol and allows you to access your existing MySQL
 database.
 It is written in pure PHP and does not require any extensions.
 
+**Table of contents**
+
+* [Quickstart example](#quickstart-example)
+* [Usage](#usage)
+  * [Connection](#connection)
+    * [connect()](#connect)
+* [Install](#install)
+* [Tests](#tests)
+* [License](#license)
+
+## Quickstart example
+
+This example runs a simple `SELECT` query and dumps all the records from a `book` table:
+
+```php
+$loop = React\EventLoop\Factory::create();
+
+$connection = new React\MySQL\Connection($loop, array(
+    'dbname' => 'test',
+    'user'   => 'test',
+    'passwd' => 'test',
+));
+
+$connection->connect(function () {});
+
+$connection->query('SELECT * FROM book', function (QueryCommand $command) {
+    if ($command->hasError()) {
+        $error = $command->getError();
+        echo 'Error: ' . $error->getMessage() . PHP_EOL;
+    } else {
+        print_r($command->resultFields);
+        print_r($command->resultRows);
+        echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
+    }
+});
+
+$connection->close();
+
+$loop->run();
+```
+
+See also the [examples](examples).
+
 ## Usage
 
 ### Connection
