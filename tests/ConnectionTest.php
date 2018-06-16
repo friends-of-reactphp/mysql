@@ -4,6 +4,7 @@ namespace React\Tests\MySQL;
 
 use React\MySQL\Connection;
 use React\MySQL\Exception;
+use React\Socket\Server;
 
 class ConnectionTest extends BaseTestCase
 {
@@ -106,6 +107,59 @@ class ConnectionTest extends BaseTestCase
         });
         $conn->close(function () {
             echo 'closed';
+        });
+
+        $loop->run();
+    }
+
+    public function testPingAfterConnectWillEmitErrorWhenServerClosesConnection()
+    {
+        $this->expectOutputString('Connection lost');
+
+        $loop = \React\EventLoop\Factory::create();
+
+        $server = new Server(0, $loop);
+        $server->on('connection', function ($connection) use ($server) {
+            $server->close();
+            $connection->close();
+        });
+
+        $parts = parse_url($server->getAddress());
+        $options = $this->getConnectionOptions();
+        $options['host'] = $parts['host'];
+        $options['port'] = $parts['port'];
+
+        $conn = new Connection($loop, $options);
+
+        $conn->connect(function ($err) {
+            echo $err ? $err->getMessage() : 'OK';
+        });
+
+        $loop->run();
+    }
+
+    public function testConnectWillEmitErrorWhenServerClosesConnection()
+    {
+        $this->expectOutputString('Connection lost');
+
+        $loop = \React\EventLoop\Factory::create();
+
+        $server = new Server(0, $loop);
+        $server->on('connection', function ($connection) use ($server) {
+            $server->close();
+            $connection->close();
+        });
+
+        $parts = parse_url($server->getAddress());
+        $options = $this->getConnectionOptions();
+        $options['host'] = $parts['host'];
+        $options['port'] = $parts['port'];
+
+        $conn = new Connection($loop, $options);
+
+        $conn->connect(function () { });
+        $conn->ping(function ($err) {
+            echo $err ? $err->getMessage() : 'OK';
         });
 
         $loop->run();

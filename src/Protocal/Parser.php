@@ -379,6 +379,12 @@ field:
 
             if ($command->equals(Command::QUIT)) {
                 $command->emit('success');
+            } else {
+                $command->emit('error', array(
+                    new \RuntimeException('Connection lost'),
+                    $command,
+                    $command->getConnection()
+                ));
             }
         }
     }
