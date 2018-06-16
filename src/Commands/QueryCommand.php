@@ -3,7 +3,7 @@
 namespace React\MySQL\Commands;
 
 use React\MySQL\Command;
-use React\MySQL\Query;
+use React\MySQL\Io\Query;
 
 class QueryCommand extends Command
 {

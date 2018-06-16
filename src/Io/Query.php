@@ -1,7 +1,10 @@
 <?php
 
-namespace React\MySQL;
+namespace React\MySQL\Io;
 
+/**
+ * @internal
+ */
 class Query
 {
     private $sql;
@@ -33,7 +36,7 @@ class Query
      * Binding params for the query, mutiple arguments support.
      *
      * @param  mixed              $param
-     * @return \React\MySQL\Query
+     * @return self
      */
     public function bindParams()
     {
@@ -55,7 +58,7 @@ class Query
      * Binding params for the query, mutiple arguments support.
      *
      * @param  mixed              $param
-     * @return \React\MySQL\Query
+     * @return self
      *                                  @deprecated
      */
     public function params()

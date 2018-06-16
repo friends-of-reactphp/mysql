@@ -1,7 +1,10 @@
 <?php
 
-namespace React\MySQL;
+namespace React\MySQL\Io;
 
+/**
+ * @internal
+ */
 class EventEmitter extends \Evenement\EventEmitter
 {
     public function on($event, callable $listener)

@@ -1,7 +1,10 @@
 <?php
 
-namespace React\MySQL;
+namespace React\MySQL\Io;
 
+/**
+ * @internal
+ */
 class Executor extends EventEmitter
 {
     private $client;

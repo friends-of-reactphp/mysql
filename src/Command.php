@@ -2,6 +2,8 @@
 
 namespace React\MySQL;
 
+use React\MySQL\Io\EventEmitter;
+
 abstract class Command extends EventEmitter implements CommandInterface
 {
     /**
