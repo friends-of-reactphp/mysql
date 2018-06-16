@@ -2,9 +2,10 @@
 
 namespace React\MySQL\Commands;
 
-use React\MySQL\Command;
-
-class PingCommand extends Command
+/**
+ * @internal
+ */
+class PingCommand extends AbstractCommand
 {
     public function getId()
     {

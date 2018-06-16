@@ -3,8 +3,8 @@
 namespace React\MySQL\Io;
 
 use Evenement\EventEmitter;
+use React\MySQL\Commands\AbstractCommand;
 use React\MySQL\Exception;
-use React\MySQL\Command;
 use React\Stream\DuplexStreamInterface;
 
 /**
@@ -42,7 +42,7 @@ class Parser extends EventEmitter
      * next command from the `Executor` queue. If no command is outstanding,
      * this will be reset to the `null` state.
      *
-     * @var \React\MySQL\Command|null
+     * @var \React\MySQL\Commands\AbstractCommand|null
      */
     protected $currCommand;
 
@@ -341,7 +341,7 @@ field:
         $command = $this->currCommand;
         $this->currCommand = null;
 
-        if ($command->equals(Command::QUERY)) {
+        if ($command->equals(AbstractCommand::QUERY)) {
             $command->affectedRows = $this->affectedRows;
             $command->insertId     = $this->insertId;
             $command->warnCount    = $this->warnCount;
@@ -365,7 +365,7 @@ field:
             $command = $this->currCommand;
             $this->currCommand = null;
 
-            if ($command->equals(Command::QUIT)) {
+            if ($command->equals(AbstractCommand::QUIT)) {
                 $command->emit('success');
             } else {
                 $command->emit('error', array(
@@ -428,7 +428,7 @@ field:
             $command = $this->executor->dequeue();
             $this->currCommand = $command;
 
-            if ($command->equals(Command::INIT_AUTHENTICATE)) {
+            if ($command->equals(AbstractCommand::INIT_AUTHENTICATE)) {
                 $this->authenticate();
             } else {
                 $this->seq = 0;

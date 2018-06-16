@@ -4,7 +4,9 @@ namespace React\MySQL;
 
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
+use React\MySQL\Commands\AbstractCommand;
 use React\MySQL\Commands\AuthenticateCommand;
+use React\MySQL\Commands\CommandInterface;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
@@ -327,15 +329,13 @@ class Connection extends EventEmitter implements ConnectionInterface
     }
 
     /**
-     * @param Command $command The command which should be executed.
-     *
+     * @param CommandInterface $command The command which should be executed.
      * @return CommandInterface
-     *
-     * @throws Exception Cann't send command
+     * @throws Exception Can't send command
      */
-    protected function _doCommand(Command $command)
+    protected function _doCommand(CommandInterface $command)
     {
-        if ($command->equals(Command::INIT_AUTHENTICATE)) {
+        if ($command->equals(AbstractCommand::INIT_AUTHENTICATE)) {
             return $this->executor->undequeue($command);
         } elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
             return $this->executor->enqueue($command);

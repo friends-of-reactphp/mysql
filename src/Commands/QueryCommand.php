@@ -2,10 +2,12 @@
 
 namespace React\MySQL\Commands;
 
-use React\MySQL\Command;
 use React\MySQL\Io\Query;
 
-class QueryCommand extends Command
+/**
+ * @internal
+ */
+class QueryCommand extends AbstractCommand
 {
     public $query;
     public $fields;
