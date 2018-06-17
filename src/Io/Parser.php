@@ -82,8 +82,7 @@ class Parser extends \Evenement\EventEmitter
     protected $errno = 0;
     protected $errmsg = '';
 
-    protected $buffer = '';
-    protected $bufferPos = 0;
+    private $buffer;
 
     protected $connectOptions;
 
@@ -110,6 +109,7 @@ class Parser extends \Evenement\EventEmitter
         // @deprecated unused, exists for BC only.
         $this->queue    = new \SplQueue();
 
+        $this->buffer   = new Buffer();
         $executor->on('new', array($this, 'handleNewCommand'));
     }
 
@@ -146,20 +146,20 @@ class Parser extends \Evenement\EventEmitter
 
     public function parse($data)
     {
-        $this->append($data);
+        $this->buffer->append($data);
 packet:
         if ($this->state === self::STATE_STANDBY) {
-            if ($this->length() < 4) {
+            if ($this->buffer->length() < 4) {
                 return;
             }
 
-            $this->pctSize = $this->readInt3();
+            $this->pctSize = $this->buffer->readInt3();
             //printf("packet size:%d\n", $this->pctSize);
             $this->state = self::STATE_BODY;
-            $this->seq = $this->readInt1() + 1;
+            $this->seq = $this->buffer->readInt1() + 1;
         }
 
-        $len = $this->length();
+        $len = $this->buffer->length();
         if ($len < $this->pctSize) {
             $this->debug('Buffer not enouth, return');
 
@@ -169,7 +169,7 @@ packet:
         //$this->stream->bufferSize = 4;
         if ($this->phase === 0) {
             $this->phase = self::PHASE_GOT_INIT;
-            $this->protocalVersion = $this->readInt1();
+            $this->protocalVersion = $this->buffer->readInt1();
             $this->debug(sprintf("Protocal Version: %d", $this->protocalVersion));
             if ($this->protocalVersion === 0xFF) { //error
                 $fieldCount = $this->protocalVersion;
@@ -185,7 +185,7 @@ packet:
 
                 goto field;
             }
-            if (($p = $this->search("\x00")) === false) {
+            if (($p = $this->buffer->search("\x00")) === false) {
                 printf("Finish\n");
                 //finish
                 return;
@@ -193,25 +193,25 @@ packet:
 
             $options = &$this->connectOptions;
 
-            $options['serverVersion'] = $this->read($p, 1);
-            $options['threadId']      = $this->readInt4();
-            $this->scramble           = $this->read(8, 1);
-            $options['ServerCaps']    = $this->readInt2();
-            $options['serverLang']    = $this->readInt1();
-            $options['serverStatus']  = $this->readInt2();
-            $this->read(13);
-            $restScramble             = $this->read(12, 1);
+            $options['serverVersion'] = $this->buffer->read($p, 1);
+            $options['threadId']      = $this->buffer->readInt4();
+            $this->scramble           = $this->buffer->read(8, 1);
+            $options['ServerCaps']    = $this->buffer->readInt2();
+            $options['serverLang']    = $this->buffer->readInt1();
+            $options['serverStatus']  = $this->buffer->readInt2();
+            $this->buffer->read(13);
+            $restScramble             = $this->buffer->read(12, 1);
             $this->scramble          .= $restScramble;
 
             $this->nextRequest(true);
         } else {
-            $fieldCount = $this->readInt1();
+            $fieldCount = $this->buffer->readInt1();
 field:
             if ($fieldCount === 0xFF) {
                 // error packet
-                $this->errno   = $this->readInt2();
-                $state = $this->read(6);
-                $this->errmsg  = $this->read($this->pctSize - $len + $this->length());
+                $this->errno   = $this->buffer->readInt2();
+                $state = $this->buffer->read(6);
+                $this->errmsg  = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
                 $this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
 
                 $this->onError();
@@ -226,12 +226,12 @@ field:
                     $isAuthenticated = true;
                 }
 
-                $this->affectedRows = $this->readIntLen();
-                $this->insertId     = $this->readIntLen();
-                $this->serverStatus = $this->readInt2();
-                $this->warnCount    = $this->readInt2();
+                $this->affectedRows = $this->buffer->readIntLen();
+                $this->insertId     = $this->buffer->readIntLen();
+                $this->serverStatus = $this->buffer->readInt2();
+                $this->warnCount    = $this->buffer->readInt2();
 
-                $this->message      = $this->read($this->pctSize - $len + $this->length());
+                $this->message      = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
 
                 if ($this->rsState === self::RS_STATE_ROW) {
                     // Empty OK packet during result set => row with only empty strings
@@ -267,43 +267,43 @@ field:
             } else {
                 // Data packet
                 $this->debug('Data Packet');
-                $this->prepend($this->buildInt1($fieldCount));
+                $this->buffer->prepend($this->buffer->buildInt1($fieldCount));
 
                 if ($this->rsState === self::RS_STATE_HEADER) {
                     $this->debug('Header packet of Data packet');
-                    $extra = $this->readIntLen();
+                    $extra = $this->buffer->readIntLen();
                     //var_dump($extra);
                     $this->rsState = self::RS_STATE_FIELD;
                 } elseif ($this->rsState === self::RS_STATE_FIELD) {
                     $this->debug('Field packet of Data packet');
                     $field = [
-                        'catalog'   => $this->readStringLen(),
-                        'db'        => $this->readStringLen(),
-                        'table'     => $this->readStringLen(),
-                        'org_table' => $this->readStringLen(),
-                        'name'      => $this->readStringLen(),
-                        'org_name'  => $this->readStringLen()
+                        'catalog'   => $this->buffer->readStringLen(),
+                        'db'        => $this->buffer->readStringLen(),
+                        'table'     => $this->buffer->readStringLen(),
+                        'org_table' => $this->buffer->readStringLen(),
+                        'name'      => $this->buffer->readStringLen(),
+                        'org_name'  => $this->buffer->readStringLen()
                     ];
 
-                    $this->skip(1);
-                    $field['charset']     = $this->readInt2();
-                    $field['length']      = $this->readInt4();
-                    $field['type']        = $this->readInt1();
-                    $field['flags']       = $this->readInt2();
-                    $field['decimals']    = $this->readInt1();
+                    $this->buffer->skip(1);
+                    $field['charset']     = $this->buffer->readInt2();
+                    $field['length']      = $this->buffer->readInt4();
+                    $field['type']        = $this->buffer->readInt1();
+                    $field['flags']       = $this->buffer->readInt2();
+                    $field['decimals']    = $this->buffer->readInt1();
                     //var_dump($field);
                     $this->resultFields[] = $field;
                 } elseif ($this->rsState === self::RS_STATE_ROW) {
                     $this->debug('Row packet of Data packet');
                     $row = [];
                     foreach ($this->resultFields as $field) {
-                        $row[$field['name']] = $this->readStringLen();
+                        $row[$field['name']] = $this->buffer->readStringLen();
                     }
                     $this->onResultRow($row);
                 }
             }
         }
-        $this->restBuffer($this->pctSize - $len + $this->length());
+        $this->buffer->restBuffer($this->pctSize - $len + $this->buffer->length());
         goto packet;
     }
 
@@ -382,63 +382,6 @@ field:
         }
     }
 
-    /* begin of buffer operation APIs */
-
-    public function append($str)
-    {
-        $this->buffer .= $str;
-    }
-
-    public function prepend($str)
-    {
-        $this->buffer = $str . substr($this->buffer, $this->bufferPos);
-        $this->bufferPos = 0;
-    }
-
-    public function read($len, $skiplen = 0)
-    {
-        if (strlen($this->buffer) - $this->bufferPos - $len - $skiplen < 0) {
-            throw new \LogicException('Logic Error');
-        }
-        $buffer = substr($this->buffer, $this->bufferPos, $len);
-        $this->bufferPos += $len;
-        if ($skiplen) {
-            $this->bufferPos += $skiplen;
-        }
-
-        return $buffer;
-    }
-
-    public function skip($len)
-    {
-        $this->bufferPos += $len;
-    }
-
-    public function restBuffer($len)
-    {
-        if(strlen($this->buffer) === ($this->bufferPos+$len)){
-            $this->buffer = '';
-        }else{
-            $this->buffer = substr($this->buffer,$this->bufferPos+$len);
-        }
-        $this->bufferPos = 0;
-    }
-
-    public function length()
-    {
-        return strlen($this->buffer) - $this->bufferPos;
-    }
-
-    public function search($what)
-    {
-        if (($p = strpos($this->buffer, $what, $this->bufferPos)) !== false) {
-            return $p - $this->bufferPos;
-        }
-
-        return false;
-    }
-    /* end of buffer operation APIs */
-
     public function authenticate()
     {
         if ($this->phase !== self::PHASE_GOT_INIT) {
@@ -472,177 +415,12 @@ field:
         }
         $token = sha1($scramble . sha1($hash1 = sha1($password, true), true), true) ^ $hash1;
 
-        return $this->buildStringLen($token);
-    }
-
-    /**
-     * Builds length-encoded binary string
-     *
-     * @param string|null $s
-     * @return string Resulting binary string
-     */
-    public function buildStringLen($s)
-    {
-        if ($s === NULL) {
-            // \xFB (251)
-            return "\xFB";
-        }
-
-        $l = strlen($s);
-
-        if ($l <= 250) {
-            // this is the only path that is currently used in fact.
-            return $this->buildInt1($l) . $s;
-        }
-
-        if ($l <= 0xFFFF) {
-            // max 2^16: \xFC (252)
-            return "\xFC" . $this->buildInt2($l) . $s;
-        }
-
-        if ($l <= 0xFFFFFF) {
-            // max 2^24: \xFD (253)
-            return "\xFD" . $this->buildInt3($l) . $s;
-        }
-
-        // max 2^64: \xFE (254)
-        return "\xFE" . $this->buildInt8($l) . $s;
-    }
-
-    /**
-     * Parses length-encoded binary integer
-     *
-     * @return int|null decoded integer 0 to 2^64 or null for special null int
-     */
-    public function readIntLen()
-    {
-        $f = $this->readInt1();
-        if ($f <= 250) {
-            return $f;
-        }
-        if ($f === 251) {
-            return null;
-        }
-        if ($f === 252) {
-            return $this->readInt2();
-        }
-        if ($f === 253) {
-            return $this->readInt3();
-        }
-
-        return $this->readInt8();
-    }
-
-    /**
-     * Parses length-encoded binary string
-     *
-     * @return string|null decoded string or null if length indicates null
-     */
-    public function readStringLen()
-    {
-        $l = $this->readIntLen();
-        if ($l === null) {
-            return $l;
-        }
-
-        return $this->read($l);
-    }
-
-    /**
-     * @return int 1 byte / 8 bit integer (0 to 255)
-     */
-    public function readInt1()
-    {
-        return ord($this->read(1));
-    }
-
-    /**
-     * @return int 2 byte / 16 bit integer (0 to 64 K / 0xFFFF)
-     */
-    public function readInt2()
-    {
-        $v = unpack('v', $this->read(2));
-        return $v[1];
-    }
-
-    /**
-     * @return int 3 byte / 24 bit integer (0 to 16 M / 0xFFFFFF)
-     */
-    public function readInt3()
-    {
-        $v = unpack('V', $this->read(3) . "\0");
-        return $v[1];
-    }
-
-    /**
-     * @return int 4 byte / 32 bit integer (0 to 4 G / 0xFFFFFFFF)
-     */
-    public function readInt4()
-    {
-        $v = unpack('V', $this->read(4));
-        return $v[1];
-    }
-
-    /**
-     * @return int 8 byte / 64 bit integer (0 to 2^64-1)
-     * @codeCoverageIgnore
-     */
-    public function readInt8()
-    {
-        // PHP < 5.6.3 does not support packing 64 bit ints, so use manual bit shifting
-        if (PHP_VERSION_ID < 50603) {
-            $v = unpack('V*', $this->read(8));
-            return $v[1] + ($v[2] << 32);
-        }
-
-        $v = unpack('P', $this->read(8));
-        return $v[1];
-    }
-
-    /**
-     * @param int $int
-     * @return string
-     */
-    public function buildInt1($int)
-    {
-        return chr($int);
-    }
-
-    /**
-     * @param int $int
-     * @return string
-     */
-    public function buildInt2($int)
-    {
-        return pack('v', $int);
-    }
-
-    /**
-     * @param int $int
-     * @return string
-     */
-    public function buildInt3($int)
-    {
-        return substr(pack('V', $int), 0, 3);
-    }
-
-    /**
-     * @param int $int
-     * @return string
-     * @codeCoverageIgnore
-     */
-    public function buildInt8($int)
-    {
-        // PHP < 5.6.3 does not support packing 64 bit ints, so use manual bit shifting
-        if (PHP_VERSION_ID < 50603) {
-            return pack('VV', $int, $int >> 32);
-        }
-        return pack('P', $int);
+        return $this->buffer->buildStringLen($token);
     }
 
     public function sendPacket($packet)
     {
-        return $this->stream->write($this->buildInt3(strlen($packet)) . $this->buildInt1($this->seq++) . $packet);
+        return $this->stream->write($this->buffer->buildInt3(strlen($packet)) . $this->buffer->buildInt1($this->seq++) . $packet);
     }
 
     protected function nextRequest($isHandshake = false)
@@ -659,7 +437,7 @@ field:
                 $this->authenticate();
             } else {
                 $this->seq = 0;
-                $this->sendPacket($this->buildInt1($command->getId()) . $command->getSql());
+                $this->sendPacket($this->buffer->buildInt1($command->getId()) . $command->getSql());
             }
         }
 
