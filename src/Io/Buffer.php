@@ -28,7 +28,7 @@ class Buffer
      */
     public function prepend($str)
     {
-        $this->buffer = $str . substr($this->buffer, $this->bufferPos);
+        $this->buffer = $str . \substr($this->buffer, $this->bufferPos);
         $this->bufferPos = 0;
     }
 
@@ -41,10 +41,21 @@ class Buffer
      */
     public function read($len)
     {
-        if (strlen($this->buffer) - $this->bufferPos - $len < 0) {
-            throw new \LogicException('Not enough data in buffer');
+        // happy path to return empty string for zero length string
+        if ($len === 0) {
+            return '';
         }
-        $buffer = substr($this->buffer, $this->bufferPos, $len);
+
+        // happy path for single byte strings without using substrings
+        if ($len === 1 && isset($this->buffer[$this->bufferPos])) {
+            return $this->buffer[$this->bufferPos++];
+        }
+
+        // ensure buffer size contains $len bytes by checking target buffer position
+        if ($len < 0 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
+            throw new \LogicException('Not enough data in buffer to read ' . $len . ' bytes');
+        }
+        $buffer = \substr($this->buffer, $this->bufferPos, $len);
         $this->bufferPos += $len;
 
         return $buffer;
@@ -70,10 +81,14 @@ class Buffer
 
     public function restBuffer($len)
     {
-        if (strlen($this->buffer) === ($this->bufferPos + $len)) {
+        if ($len !== 0) {
+            $this->skip($len);
+        }
+
+        if (!isset($this->buffer[$this->bufferPos + 1])) {
             $this->buffer = '';
         } else {
-            $this->buffer = substr($this->buffer, $this->bufferPos + $len);
+            $this->buffer = \substr($this->buffer, $this->bufferPos);
         }
         $this->bufferPos = 0;
     }
@@ -85,7 +100,7 @@ class Buffer
      */
     public function length()
     {
-        return strlen($this->buffer) - $this->bufferPos;
+        return \strlen($this->buffer) - $this->bufferPos;
     }
 
     /**
@@ -93,7 +108,7 @@ class Buffer
      */
     public function readInt1()
     {
-        return ord($this->read(1));
+        return \ord($this->read(1));
     }
 
     /**
@@ -101,7 +116,7 @@ class Buffer
      */
     public function readInt2()
     {
-        $v = unpack('v', $this->read(2));
+        $v = \unpack('v', $this->read(2));
         return $v[1];
     }
 
@@ -110,7 +125,7 @@ class Buffer
      */
     public function readInt3()
     {
-        $v = unpack('V', $this->read(3) . "\0");
+        $v = \unpack('V', $this->read(3) . "\0");
         return $v[1];
     }
 
@@ -119,7 +134,7 @@ class Buffer
      */
     public function readInt4()
     {
-        $v = unpack('V', $this->read(4));
+        $v = \unpack('V', $this->read(4));
         return $v[1];
     }
 
@@ -130,12 +145,12 @@ class Buffer
     public function readInt8()
     {
         // PHP < 5.6.3 does not support packing 64 bit ints, so use manual bit shifting
-        if (PHP_VERSION_ID < 50603) {
-            $v = unpack('V*', $this->read(8));
+        if (\PHP_VERSION_ID < 50603) {
+            $v = \unpack('V*', $this->read(8));
             return $v[1] + ($v[2] << 32);
         }
 
-        $v = unpack('P', $this->read(8));
+        $v = \unpack('P', $this->read(8));
         return $v[1];
     }
 
@@ -181,12 +196,12 @@ class Buffer
     /**
      * Reads string until NULL character
      *
-     * @throws \LogicException
      * @return string
+     * @throws \LogicException
      */
     public function readStringNull()
     {
-        $pos = strpos($this->buffer, "\0", $this->bufferPos);
+        $pos = \strpos($this->buffer, "\0", $this->bufferPos);
         if ($pos === false) {
             throw new \LogicException('Missing NULL character');
         }
@@ -203,7 +218,7 @@ class Buffer
      */
     public function buildInt1($int)
     {
-        return chr($int);
+        return \chr($int);
     }
 
     /**
@@ -212,7 +227,7 @@ class Buffer
      */
     public function buildInt2($int)
     {
-        return pack('v', $int);
+        return \pack('v', $int);
     }
 
     /**
@@ -221,7 +236,7 @@ class Buffer
      */
     public function buildInt3($int)
     {
-        return substr(pack('V', $int), 0, 3);
+        return \substr(\pack('V', $int), 0, 3);
     }
 
     /**
@@ -232,10 +247,10 @@ class Buffer
     public function buildInt8($int)
     {
         // PHP < 5.6.3 does not support packing 64 bit ints, so use manual bit shifting
-        if (PHP_VERSION_ID < 50603) {
-            return pack('VV', $int, $int >> 32);
+        if (\PHP_VERSION_ID < 50603) {
+            return \pack('VV', $int, $int >> 32);
         }
-        return pack('P', $int);
+        return \pack('P', $int);
     }
 
     /**
@@ -251,7 +266,7 @@ class Buffer
             return "\xFB";
         }
 
-        $l = strlen($s);
+        $l = \strlen($s);
 
         if ($l <= 250) {
             // this is the only path that is currently used in fact.

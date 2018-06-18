@@ -129,8 +129,8 @@ class Parser extends \Evenement\EventEmitter
     public function debug($message)
     {
         if ($this->debug) {
-            $bt = debug_backtrace();
-            $caller = array_shift($bt);
+            $bt = \debug_backtrace();
+            $caller = \array_shift($bt);
             printf("[DEBUG] <%s:%d> %s\n", $caller['class'], $caller['line'], $message);
         }
     }
@@ -138,7 +138,7 @@ class Parser extends \Evenement\EventEmitter
     public function setOptions($options)
     {
         foreach ($options as $option => $value) {
-            if (property_exists($this, $option)) {
+            if (\property_exists($this, $option)) {
                 $this->$option = $value;
             }
         }
@@ -212,8 +212,8 @@ field:
 
                 $this->onError();
                 $this->nextRequest();
-            } elseif ($fieldCount === 0x00) {
-                // Empty OK Packet
+            } elseif ($fieldCount === 0x00 && $this->rsState !== self::RS_STATE_ROW) {
+                // Empty OK Packet terminates a query without a result set (UPDATE, INSERT etc.)
                 $this->debug('Ok Packet');
 
                 $isAuthenticated = false;
@@ -229,23 +229,13 @@ field:
 
                 $this->message      = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
 
-                if ($this->rsState === self::RS_STATE_ROW) {
-                    // Empty OK packet during result set => row with only empty strings
-                    $row = array();
-                    foreach ($this->resultFields as $field) {
-                        $row[$field['name']] = '';
-                    }
-                    $this->onResultRow($row);
+                if ($isAuthenticated) {
+                    $this->onAuthenticated();
                 } else {
-                    // otherwise this terminates a query without a result set (UPDATE, INSERT etc.)
-                    if ($isAuthenticated) {
-                        $this->onAuthenticated();
-                    } else {
-                        $this->onSuccess();
-                    }
-                    $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarnCount:%d", $this->affectedRows, $this->insertId, $this->warnCount));
-                    $this->nextRequest();
+                    $this->onSuccess();
                 }
+                $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarnCount:%d", $this->affectedRows, $this->insertId, $this->warnCount));
+                $this->nextRequest();
             } elseif ($fieldCount === 0xFE) {
                 // EOF Packet
                 $this->debug('EOF Packet');
@@ -259,7 +249,13 @@ field:
                     // move to next part of result set (header->field->row)
                     ++$this->rsState;
                 }
-
+            } elseif ($fieldCount === 0x00) {
+                // Empty data packet during result set => row with only empty strings
+                $row = array();
+                foreach ($this->resultFields as $field) {
+                    $row[$field['name']] = '';
+                }
+                $this->onResultRow($row);
             } else {
                 // Data packet
                 $this->debug('Data Packet');
@@ -407,14 +403,14 @@ field:
         if ($password === '') {
             return "\x00";
         }
-        $token = sha1($scramble . sha1($hash1 = sha1($password, true), true), true) ^ $hash1;
+        $token = \sha1($scramble . \sha1($hash1 = \sha1($password, true), true), true) ^ $hash1;
 
         return $this->buffer->buildStringLen($token);
     }
 
     public function sendPacket($packet)
     {
-        return $this->stream->write($this->buffer->buildInt3(strlen($packet)) . $this->buffer->buildInt1($this->seq++) . $packet);
+        return $this->stream->write($this->buffer->buildInt3(\strlen($packet)) . $this->buffer->buildInt1($this->seq++) . $packet);
     }
 
     protected function nextRequest($isHandshake = false)
