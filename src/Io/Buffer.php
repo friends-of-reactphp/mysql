@@ -24,6 +24,7 @@ class Buffer
      * prepends some data to start of buffer and resets buffer position to start
      *
      * @param string $str
+     * @return void
      */
     public function prepend($str)
     {
@@ -31,22 +32,39 @@ class Buffer
         $this->bufferPos = 0;
     }
 
-    public function read($len, $skiplen = 0)
+    /**
+     * Reads binary string data with given byte length from buffer
+     *
+     * @param int $len length in bytes, must be positive or zero
+     * @return string
+     * @throws \LogicException
+     */
+    public function read($len)
     {
-        if (strlen($this->buffer) - $this->bufferPos - $len - $skiplen < 0) {
-            throw new \LogicException('Logic Error');
+        if (strlen($this->buffer) - $this->bufferPos - $len < 0) {
+            throw new \LogicException('Not enough data in buffer');
         }
         $buffer = substr($this->buffer, $this->bufferPos, $len);
         $this->bufferPos += $len;
-        if ($skiplen) {
-            $this->bufferPos += $skiplen;
-        }
 
         return $buffer;
     }
 
+    /**
+     * Skips binary string data with given byte length from buffer
+     *
+     * This method can be used instead of `read()` if you do not care about the
+     * bytes that will be skipped.
+     *
+     * @param int $len length in bytes, must be positve and non-zero
+     * @return void
+     * @throws \LogicException
+     */
     public function skip($len)
     {
+        if ($len < 1 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
+            throw new \LogicException('Not enough data in buffer');
+        }
         $this->bufferPos += $len;
     }
 
@@ -58,15 +76,6 @@ class Buffer
             $this->buffer = substr($this->buffer, $this->bufferPos + $len);
         }
         $this->bufferPos = 0;
-    }
-
-    public function search($what)
-    {
-        if (($p = strpos($this->buffer, $what, $this->bufferPos)) !== false) {
-            return $p - $this->bufferPos;
-        }
-
-        return false;
     }
 
     /**
@@ -167,6 +176,25 @@ class Buffer
         }
 
         return $this->read($l);
+    }
+
+    /**
+     * Reads string until NULL character
+     *
+     * @throws \LogicException
+     * @return string
+     */
+    public function readStringNull()
+    {
+        $pos = strpos($this->buffer, "\0", $this->bufferPos);
+        if ($pos === false) {
+            throw new \LogicException('Missing NULL character');
+        }
+
+        $ret = $this->read($pos - $this->bufferPos);
+        ++$this->bufferPos;
+
+        return $ret;
     }
 
     /**

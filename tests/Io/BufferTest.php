@@ -27,22 +27,38 @@ class BufferTest extends \PHPUnit_Framework_TestCase
         $buffer->read(3);
     }
 
-    public function testSearchFindsFirstOccurrence()
+    public function testReadAfterSkipOne()
     {
         $buffer = new Buffer();
 
-        $buffer->append('helle');
+        $buffer->append('hi');
+        $buffer->skip(1);
 
-        $this->assertSame(1, $buffer->search('e'));
+        $this->assertSame('i', $buffer->read(1));
     }
 
-    public function testSearchReturnsFalseIfNotFound()
+    /**
+     * @expectedException LogicException
+     */
+    public function testSkipZeroThrows()
     {
         $buffer = new Buffer();
 
-        $buffer->append('helle');
+        $buffer->append('hi');
 
-        $this->assertFalse($buffer->search('o'));
+        $buffer->skip(0);
+    }
+
+    /**
+     * @expectedException LogicException
+     */
+    public function testSkipBeyondLimitThrows()
+    {
+        $buffer = new Buffer();
+
+        $buffer->append('hi');
+
+        $buffer->skip(3);
     }
 
     public function testParseInt1()
@@ -149,7 +165,7 @@ class BufferTest extends \PHPUnit_Framework_TestCase
         $this->assertSame(17000000, strlen($buffer->readStringLen()));
     }
 
-    public function testParseStringNull()
+    public function testParseStringNullLength()
     {
         $buffer = new Buffer();
 
@@ -158,5 +174,25 @@ class BufferTest extends \PHPUnit_Framework_TestCase
 
         $buffer->append($data);
         $this->assertNull($buffer->readStringLen());
+    }
+
+    public function testParseStringNullCharacterTwice()
+    {
+        $buffer = new Buffer();
+        $buffer->append("hello" . "\x00" . "world" . "\x00");
+
+        $this->assertEquals('hello', $buffer->readStringNull());
+        $this->assertEquals('world', $buffer->readStringNull());
+    }
+
+    /**
+     * @expectedException LogicException
+     */
+    public function testParseStringNullCharacterThrowsIfNullNotFound()
+    {
+        $buffer = new Buffer();
+        $buffer->append("hello");
+
+        $buffer->readStringNull();
     }
 }

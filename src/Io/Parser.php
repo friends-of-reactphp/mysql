@@ -185,23 +185,19 @@ packet:
 
                 goto field;
             }
-            if (($p = $this->buffer->search("\x00")) === false) {
-                printf("Finish\n");
-                //finish
-                return;
-            }
 
             $options = &$this->connectOptions;
 
-            $options['serverVersion'] = $this->buffer->read($p, 1);
+            $options['serverVersion'] = $this->buffer->readStringNull();
             $options['threadId']      = $this->buffer->readInt4();
-            $this->scramble           = $this->buffer->read(8, 1);
+            $this->scramble           = $this->buffer->read(8);
+            $this->buffer->skip(1);
             $options['ServerCaps']    = $this->buffer->readInt2();
             $options['serverLang']    = $this->buffer->readInt1();
             $options['serverStatus']  = $this->buffer->readInt2();
-            $this->buffer->read(13);
-            $restScramble             = $this->buffer->read(12, 1);
-            $this->scramble          .= $restScramble;
+            $this->buffer->skip(13);
+            $this->scramble          .= $this->buffer->read(12);
+            $this->buffer->skip(1);
 
             $this->nextRequest(true);
         } else {
@@ -210,7 +206,7 @@ field:
             if ($fieldCount === 0xFF) {
                 // error packet
                 $this->errno   = $this->buffer->readInt2();
-                $state = $this->buffer->read(6);
+                $this->buffer->skip(6); // state
                 $this->errmsg  = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
                 $this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
 
@@ -271,8 +267,7 @@ field:
 
                 if ($this->rsState === self::RS_STATE_HEADER) {
                     $this->debug('Header packet of Data packet');
-                    $extra = $this->buffer->readIntLen();
-                    //var_dump($extra);
+                    $this->buffer->readIntLen(); // extra
                     $this->rsState = self::RS_STATE_FIELD;
                 } elseif ($this->rsState === self::RS_STATE_FIELD) {
                     $this->debug('Field packet of Data packet');
@@ -291,7 +286,6 @@ field:
                     $field['type']        = $this->buffer->readInt1();
                     $field['flags']       = $this->buffer->readInt2();
                     $field['decimals']    = $this->buffer->readInt1();
-                    //var_dump($field);
                     $this->resultFields[] = $field;
                 } elseif ($this->rsState === self::RS_STATE_ROW) {
                     $this->debug('Row packet of Data packet');
