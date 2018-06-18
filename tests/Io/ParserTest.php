@@ -1,10 +1,10 @@
 <?php
 
-namespace React\Tests\MySQL\Protocal;
+namespace React\Tests\MySQL\Io;
 
 use React\MySQL\Commands\QueryCommand;
-use React\MySQL\Executor;
-use React\MySQL\Protocal\Parser;
+use React\MySQL\Io\Executor;
+use React\MySQL\Io\Parser;
 use React\Stream\ThroughStream;
 use React\Tests\MySQL\BaseTestCase;
 

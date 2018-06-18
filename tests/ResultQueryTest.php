@@ -2,7 +2,7 @@
 
 namespace React\Tests\MySQL;
 
-use React\MySQL\Protocal\Constants;
+use React\MySQL\Io\Constants;
 
 class ResultQueryTest extends BaseTestCase
 {

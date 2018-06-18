@@ -1,7 +1,10 @@
 <?php
 
-namespace React\MySQL\Protocal;
+namespace React\MySQL\Io;
 
+/**
+ * @internal
+ */
 class Constants
 {
     /**

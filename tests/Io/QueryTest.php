@@ -1,8 +1,8 @@
 <?php
 
-namespace React\Tests\MySQL;
+namespace React\Tests\MySQL\Io;
 
-use React\MySQL\Query;
+use React\MySQL\Io\Query;
 
 class QueryTest extends \PHPUnit_Framework_TestCase
 {

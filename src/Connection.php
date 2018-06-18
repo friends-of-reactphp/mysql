@@ -10,6 +10,10 @@ use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
+use React\MySQL\Io\EventEmitter;
+use React\MySQL\Io\Executor;
+use React\MySQL\Io\Parser;
+use React\MySQL\Io\Query;
 
 /**
  * Class Connection
@@ -61,7 +65,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     private $stream;
 
     /**
-     * @var Protocal\Parser
+     * @var Parser
      */
     public $parser;
 
@@ -234,7 +238,7 @@ class Connection extends EventEmitter implements ConnectionInterface
                 $stream->on('error', [$this, 'handleConnectionError']);
                 $stream->on('close', [$this, 'handleConnectionClosed']);
 
-                $parser = $this->parser = new Protocal\Parser($stream, $this->executor);
+                $parser = $this->parser = new Parser($stream, $this->executor);
 
                 $parser->setOptions($options);
 

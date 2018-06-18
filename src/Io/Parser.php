@@ -1,12 +1,15 @@
 <?php
 
-namespace React\MySQL\Protocal;
+namespace React\MySQL\Io;
 
-use Evenement\EventEmitter;
 use React\MySQL\Exception;
 use React\MySQL\Command;
+use React\Stream\DuplexStreamInterface;
 
-class Parser extends EventEmitter
+/**
+ * @internal
+ */
+class Parser extends \Evenement\EventEmitter
 {
     const PHASE_GOT_INIT   = 1;
     const PHASE_AUTH_SENT  = 2;
@@ -85,11 +88,11 @@ class Parser extends EventEmitter
     protected $connectOptions;
 
     /**
-     * @var \React\Stream\Stream
+     * @var \React\Stream\DuplexStreamInterface
      */
     protected $stream;
     /**
-     * @var \React\MySQL\Executor
+     * @var Executor
      */
     protected $executor;
 
@@ -99,7 +102,7 @@ class Parser extends EventEmitter
      */
     protected $queue;
 
-    public function __construct($stream, $executor)
+    public function __construct(DuplexStreamInterface $stream, Executor $executor)
     {
         $this->stream   = $stream;
         $this->executor = $executor;
