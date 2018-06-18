@@ -25,7 +25,20 @@ class Parser extends EventEmitter
     protected $dbname   = '';
 
     /**
-     * @var \React\MySQL\Command
+     * Keeps a reference to the command that is currently being processed.
+     *
+     * The MySQL protocol is inherently sequential, the pending commands will be
+     * stored in an `Executor` queue.
+     *
+     * The MySQL protocol communication starts with the server sending a
+     * handshake message, so the current command will be `null` until it's our
+     * turn.
+     *
+     * Similarly, when one command is finished, it will continue processing the
+     * next command from the `Executor` queue. If no command is outstanding,
+     * this will be reset to the `null` state.
+     *
+     * @var \React\MySQL\Command|null
      */
     protected $currCommand;
 
@@ -80,13 +93,20 @@ class Parser extends EventEmitter
      */
     protected $executor;
 
+    /**
+     * @deprecated
+     * @see self::$currCommand
+     */
     protected $queue;
 
     public function __construct($stream, $executor)
     {
         $this->stream   = $stream;
         $this->executor = $executor;
-        $this->queue    = new \SplQueue($this);
+
+        // @deprecated unused, exists for BC only.
+        $this->queue    = new \SplQueue();
+
         $executor->on('new', array($this, 'handleNewCommand'));
     }
 
@@ -98,7 +118,7 @@ class Parser extends EventEmitter
 
     public function handleNewCommand()
     {
-        if ($this->queue->count() <= 0) {
+        if ($this->currCommand === null) {
             $this->nextRequest();
         }
     }
@@ -191,8 +211,8 @@ field:
                 $this->errmsg  = $this->read($this->pctSize - $len + $this->length());
                 $this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
 
-                $this->nextRequest();
                 $this->onError();
+                $this->nextRequest();
             } elseif ($fieldCount === 0x00) {
                 // Empty OK Packet
                 $this->debug('Ok Packet');
@@ -238,8 +258,8 @@ field:
                     // finalize this result set (all rows completed)
                     $this->debug('result done');
 
-                    $this->nextRequest();
                     $this->onResultDone();
+                    $this->nextRequest();
                 } else {
                     // move to next part of result set (header->field->row)
                     ++$this->rsState;
@@ -298,14 +318,15 @@ field:
     {
         // $this->debug('row data: ' . json_encode($row));
         $this->resultRows[] = $row;
-        $command = $this->queue->dequeue();
+        $command = $this->currCommand;
         $command->emit('result', array($row, $command, $command->getConnection()));
-        $this->queue->unshift($command);
     }
 
     protected function onError()
     {
-        $command = $this->queue->dequeue();
+        $command = $this->currCommand;
+        $this->currCommand = null;
+
         $error = new Exception($this->errmsg, $this->errno);
         $command->setError($error);
         $command->emit('error', array($error, $command, $command->getConnection()));
@@ -315,7 +336,9 @@ field:
 
     protected function onResultDone()
     {
-        $command =  $this->queue->dequeue();
+        $command = $this->currCommand;
+        $this->currCommand = null;
+
         $command->resultRows   = $this->resultRows;
         $command->resultFields = $this->resultFields;
         $command->emit('results', array($this->resultRows, $command, $command->getConnection()));
@@ -327,7 +350,9 @@ field:
 
     protected function onSuccess()
     {
-        $command = $this->queue->dequeue();
+        $command = $this->currCommand;
+        $this->currCommand = null;
+
         if ($command->equals(Command::QUERY)) {
             $command->affectedRows = $this->affectedRows;
             $command->insertId     = $this->insertId;
@@ -339,17 +364,27 @@ field:
 
     protected function onAuthenticated()
     {
-        $command = $this->queue->dequeue();
+        $command = $this->currCommand;
+        $this->currCommand = null;
+
         $command->emit('authenticated', array($this->connectOptions));
     }
 
     protected function onClose()
     {
         $this->emit('close');
-        if ($this->queue->count()) {
-            $command = $this->queue->dequeue();
+        if ($this->currCommand !== null) {
+            $command = $this->currCommand;
+            $this->currCommand = null;
+
             if ($command->equals(Command::QUIT)) {
                 $command->emit('success');
+            } else {
+                $command->emit('error', array(
+                    new \RuntimeException('Connection lost'),
+                    $command,
+                    $command->getConnection()
+                ));
             }
         }
     }
@@ -525,9 +560,11 @@ field:
         if (!$isHandshake && $this->phase != self::PHASE_HANDSHAKED) {
             return false;
         }
+
         if (!$this->executor->isIdle()) {
             $command = $this->executor->dequeue();
-            $this->queue->enqueue($command);
+            $this->currCommand = $command;
+
             if ($command->equals(Command::INIT_AUTHENTICATE)) {
                 $this->authenticate();
             } else {

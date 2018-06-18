@@ -282,6 +282,16 @@ class Connection extends EventEmitter implements ConnectionInterface
             $this->state = self::STATE_CLOSED;
             $this->emit('error', [new \RuntimeException('mysql server has gone away'), $this]);
         }
+
+        // reject all pending commands if connection is closed
+        while (!$this->executor->isIdle()) {
+            $command = $this->executor->dequeue();
+            $command->emit('error', array(
+                new \RuntimeException('Connection lost'),
+                $command,
+                $this
+            ));
+        }
     }
 
     /**
