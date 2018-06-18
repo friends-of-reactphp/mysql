@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.3 (2018-06-18)
+
+*   Fix: Reject pending commands if connection is closed
+    (#52 by @clue)
+
+*   Fix: Do not support multiple statements for security and API reasons
+    (#51 by @clue)
+
+*   Fix: Fix reading empty rows containing only empty string columns 
+    (#46 by @clue)
+
+*   Fix: Report correct field length for fields longer than 16k chars
+    (#42 by @clue)
+
+*   Add quickstart example and interactive CLI example
+    (#45 by @clue)
+
 ## 0.3.2 (2018-04-04)
 
 *   Fix: Fix parameter binding if query contains question marks
