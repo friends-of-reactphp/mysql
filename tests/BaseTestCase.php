@@ -18,6 +18,13 @@ class BaseTestCase extends TestCase
         ] + ($debug ? ['debug' => true] : []);
     }
 
+    protected function getConnectionString($params = array())
+    {
+        $parts = $params + $this->getConnectionOptions();
+
+        return rawurlencode($parts['user']) . ':' . rawurlencode($parts['passwd']) . '@' . $parts['host'] . ':' . $parts['port'] . '/' . rawurlencode($parts['dbname']);
+    }
+
     protected function getDataTable()
     {
         return <<<SQL
