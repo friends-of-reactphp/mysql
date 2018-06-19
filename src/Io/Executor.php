@@ -2,18 +2,17 @@
 
 namespace React\MySQL\Io;
 
+use Evenement\EventEmitter;
+
 /**
  * @internal
  */
 class Executor extends EventEmitter
 {
-    private $client;
-
     public $queue;
 
-    public function __construct($client)
+    public function __construct()
     {
-        $this->client = $client;
         $this->queue = new \SplQueue();
     }
 
@@ -40,10 +39,5 @@ class Executor extends EventEmitter
         $this->queue->unshift($command);
 
         return $command;
-    }
-
-    public function getConn()
-    {
-        return $this->client;
     }
 }
