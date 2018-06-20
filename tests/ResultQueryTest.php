@@ -496,7 +496,7 @@ class ResultQueryTest extends BaseTestCase
 
     public function testEventSelect()
     {
-        $this->expectOutputString('result.result.results.end.');
+        $this->expectOutputString('result.result.end.');
         $loop = \React\EventLoop\Factory::create();
 
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
@@ -509,12 +509,6 @@ class ResultQueryTest extends BaseTestCase
         $connection->query("insert into book (`name`) values ('bar')");
 
         $command = $connection->query('select * from book');
-        $command->on('results', function ($results, $command, $conn) {
-            $this->assertEquals(2, count($results));
-            $this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
-            echo 'results.';
-        });
         $command->on('result', function ($result, $command, $conn) {
                 $this->assertArrayHasKey('id', $result);
                 $this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
@@ -559,6 +553,92 @@ class ResultQueryTest extends BaseTestCase
                 $loop->cancelTimer($timeout);
             });
         });
+
+        $loop->run();
+    }
+
+    public function testQueryStreamStaticEmptyEmitsSingleRow()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT 1');
+        $stream->on('data', $this->expectCallableOnceWith(array('1' => '1')));
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamBoundVariableEmitsSingleRow()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT ? as value', array('test'));
+        $stream->on('data', $this->expectCallableOnceWith(array('value' => 'test')));
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamZeroRowsEmitsEndWithoutData()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT 1 LIMIT 0');
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamInvalidStatementEmitsError()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('SELECT');
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('end', $this->expectCallableNever());
+        $stream->on('error', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamDropStatementEmitsEndWithoutData()
+    {
+        $loop = \React\EventLoop\Factory::create();
+
+        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
+        $connection->connect(function () {});
+
+        $stream = $connection->queryStream('DROP TABLE IF exists helloworldtest1');
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
 
         $loop->run();
     }

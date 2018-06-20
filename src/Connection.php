@@ -14,7 +14,7 @@ use React\MySQL\Io\Query;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
-
+use React\Stream\ThroughStream;
 
 /**
  * Class Connection
@@ -116,17 +116,58 @@ class Connection extends EventEmitter implements ConnectionInterface
         }
         $this->_doCommand($command);
 
-        $command->on('results', function ($rows, $command) use ($callback) {
+        // store all result set rows until result set end
+        $rows = array();
+        $command->on('result', function ($row) use (&$rows) {
+            $rows[] = $row;
+        });
+        $command->on('end', function ($command) use ($callback, &$rows) {
+            $command->resultRows = $rows;
+            $rows = array();
             $callback($command, $this);
         });
+
+        // resolve / reject status reply (response without result set)
         $command->on('error', function ($err, $command) use ($callback) {
             $callback($command, $this);
         });
         $command->on('success', function ($command) use ($callback) {
             $callback($command, $this);
         });
+    }
 
-        return null;
+    public function queryStream($sql, $params = array())
+    {
+        $query = new Query($sql);
+
+        if ($params) {
+            $query->bindParamsFromArray($params);
+        }
+
+        $command = new QueryCommand($this);
+        $command->setQuery($query);
+        $this->_doCommand($command);
+
+        $stream = new ThroughStream();
+
+        // forward result set rows until result set end
+        $command->on('result', function ($row) use ($stream) {
+            $stream->write($row);
+        });
+        $command->on('end', function () use ($stream) {
+            $stream->end();
+        });
+
+        // status reply (response without result set) ends stream without data
+        $command->on('success', function () use ($stream) {
+            $stream->end();
+        });
+        $command->on('error', function ($err) use ($stream) {
+            $stream->emit('error', array($err));
+            $stream->close();
+        });
+
+        return $stream;
     }
 
     /**
