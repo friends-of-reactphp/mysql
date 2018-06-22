@@ -189,14 +189,19 @@ packet:
 
             $options['serverVersion'] = $this->buffer->readStringNull();
             $options['threadId']      = $this->buffer->readInt4();
-            $this->scramble           = $this->buffer->read(8);
-            $this->buffer->skip(1);
-            $options['ServerCaps']    = $this->buffer->readInt2();
+            $this->scramble           = $this->buffer->read(8); // 1st part
+            $this->buffer->skip(1); // filler
+            $options['ServerCaps']    = $this->buffer->readInt2(); // 1st part
             $options['serverLang']    = $this->buffer->readInt1();
             $options['serverStatus']  = $this->buffer->readInt2();
-            $this->buffer->skip(13);
-            $this->scramble          .= $this->buffer->read(12);
+            $options['ServerCaps']   += $this->buffer->readInt2() << 16; // 2nd part
+            $this->buffer->skip(11); // plugin length, 6 + 4 filler
+            $this->scramble          .= $this->buffer->read(12); // 2nd part
             $this->buffer->skip(1);
+
+            if ($this->connectOptions['ServerCaps'] & Constants::CLIENT_PLUGIN_AUTH) {
+                $this->buffer->readStringNull(); // skip authentication plugin name
+            }
 
             $this->nextRequest(true);
         } else {
@@ -237,19 +242,22 @@ field:
                 $this->nextRequest();
             } elseif ($fieldCount === 0xFE) {
                 // EOF Packet
-                $this->debug('EOF Packet');
+                $this->buffer->skip(4); // warn, status
                 if ($this->rsState === self::RS_STATE_ROW) {
                     // finalize this result set (all rows completed)
-                    $this->debug('result done');
+                    $this->debug('Result set done');
 
                     $this->onResultDone();
                     $this->nextRequest();
                 } else {
                     // move to next part of result set (header->field->row)
+                    $this->debug('Result set next part');
                     ++$this->rsState;
                 }
-            } elseif ($fieldCount === 0x00) {
+            } elseif ($fieldCount === 0x00 && $this->pctSize === 1) {
                 // Empty data packet during result set => row with only empty strings
+                $this->debug('Result set empty row data');
+
                 $row = array();
                 foreach ($this->resultFields as $field) {
                     $row[$field['name']] = '';
@@ -257,15 +265,14 @@ field:
                 $this->onResultRow($row);
             } else {
                 // Data packet
-                $this->debug('Data Packet');
                 $this->buffer->prepend($this->buffer->buildInt1($fieldCount));
 
                 if ($this->rsState === self::RS_STATE_HEADER) {
-                    $this->debug('Header packet of Data packet');
+                    $this->debug('Result set header packet');
                     $this->buffer->readIntLen(); // extra
                     $this->rsState = self::RS_STATE_FIELD;
                 } elseif ($this->rsState === self::RS_STATE_FIELD) {
-                    $this->debug('Field packet of Data packet');
+                    $this->debug('Result set field packet');
                     $field = [
                         'catalog'   => $this->buffer->readStringLen(),
                         'db'        => $this->buffer->readStringLen(),
@@ -275,15 +282,16 @@ field:
                         'org_name'  => $this->buffer->readStringLen()
                     ];
 
-                    $this->buffer->skip(1);
+                    $this->buffer->skip(1); // 0xC0
                     $field['charset']     = $this->buffer->readInt2();
                     $field['length']      = $this->buffer->readInt4();
                     $field['type']        = $this->buffer->readInt1();
                     $field['flags']       = $this->buffer->readInt2();
                     $field['decimals']    = $this->buffer->readInt1();
+                    $this->buffer->skip(2); // unused
                     $this->resultFields[] = $field;
                 } elseif ($this->rsState === self::RS_STATE_ROW) {
-                    $this->debug('Row packet of Data packet');
+                    $this->debug('Result set row data');
                     $row = [];
                     foreach ($this->resultFields as $field) {
                         $row[$field['name']] = $this->buffer->readStringLen();
@@ -292,7 +300,8 @@ field:
                 }
             }
         }
-        $this->buffer->restBuffer($this->pctSize - $len + $this->buffer->length());
+
+        $this->buffer->trim();
         goto packet;
     }
 
