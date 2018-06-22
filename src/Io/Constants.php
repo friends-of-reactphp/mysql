@@ -80,6 +80,11 @@ class Constants
      */
     const CLIENT_MULTI_RESULTS = 131072;
 
+    /**
+     * Client supports plugin authentication (1 << 19)
+     */
+    const CLIENT_PLUGIN_AUTH = 524288;
+
     const FIELD_TYPE_DECIMAL     = 0x00;
     const FIELD_TYPE_TINY        = 0x01;
     const FIELD_TYPE_SHORT       = 0x02;

@@ -79,13 +79,17 @@ class Buffer
         $this->bufferPos += $len;
     }
 
-    public function restBuffer($len)
+    /**
+     * Clears all consumed data from the buffer
+     *
+     * This class keeps consumed data in memory for performance reasons and only
+     * advances the internal buffer position until this method is called.
+     *
+     * @return void
+     */
+    public function trim()
     {
-        if ($len !== 0) {
-            $this->skip($len);
-        }
-
-        if (!isset($this->buffer[$this->bufferPos + 1])) {
+        if (!isset($this->buffer[$this->bufferPos])) {
             $this->buffer = '';
         } else {
             $this->buffer = \substr($this->buffer, $this->bufferPos);

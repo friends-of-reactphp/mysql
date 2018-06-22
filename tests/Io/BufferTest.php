@@ -61,6 +61,23 @@ class BufferTest extends \PHPUnit_Framework_TestCase
         $buffer->skip(3);
     }
 
+    public function testTrimEmptyIsNoop()
+    {
+        $buffer = new Buffer();
+        $buffer->trim();
+
+        $this->assertSame(0, $buffer->length());
+    }
+
+    public function testTrimDoesNotChangeLength()
+    {
+        $buffer = new Buffer();
+        $buffer->append('a');
+        $buffer->trim();
+
+        $this->assertSame(1, $buffer->length());
+    }
+
     public function testParseInt1()
     {
         $buffer = new Buffer();
