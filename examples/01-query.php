@@ -17,13 +17,8 @@ $connection = new React\MySQL\Connection($loop, array(
 $connection->connect(function () {});
 
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
-$connection->query($query, function (QueryCommand $command) {
-    if ($command->hasError()) {
-        // test whether the query was executed successfully
-        // get the error object, instance of Exception.
-        $error = $command->getError();
-        echo 'Error: ' . $error->getMessage() . PHP_EOL;
-    } elseif (isset($command->resultRows)) {
+$connection->query($query)->then(function (QueryCommand $command) {
+    if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)
         print_r($command->resultFields);
         print_r($command->resultRows);
@@ -35,6 +30,9 @@ $connection->query($query, function (QueryCommand $command) {
         }
         echo 'Query OK, ' . $command->affectedRows . ' row(s) affected' . PHP_EOL;
     }
+}, function (Exception $error) {
+    // the query was not executed successfully
+    echo 'Error: ' . $error->getMessage() . PHP_EOL;
 });
 
 $connection->close();

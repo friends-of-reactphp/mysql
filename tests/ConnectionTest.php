@@ -69,17 +69,19 @@ class ConnectionTest extends BaseTestCase
         $conn->close(function () { });
     }
 
-    /**
-     * @expectedException React\MySQL\Exception
-     * @expectedExceptionMessage Can't send command
-     */
-    public function testQueryWithoutConnectThrows()
+    public function testQueryWithoutConnectRejects()
     {
         $options = $this->getConnectionOptions();
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $options);
 
-        $conn->query('SELECT 1', function () { });
+        $conn->query('SELECT 1')->then(
+            $this->expectCallableNever(),
+            function (\Exception $error) {
+                $this->assertInstanceOf('React\MySQL\Exception', $error);
+                $this->assertSame('Can\'t send command', $error->getMessage());
+            }
+        );
     }
 
     /**

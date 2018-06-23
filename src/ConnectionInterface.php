@@ -2,8 +2,8 @@
 
 namespace React\MySQL;
 
-use React\MySQL\Commands\QueryCommand;
 use React\Stream\ReadableStreamInterface;
+use React\Promise\PromiseInterface;
 
 /**
  * Interface ConnectionInterface
@@ -24,22 +24,28 @@ interface ConnectionInterface
     /**
      * Performs an async query.
      *
+     * This method returns a promise that will resolve with a `QueryCommand` on
+     * success or will reject with an `Exception` on error. The MySQL protocol
+     * is inherently sequential, so that all queries will be performed in order
+     * and outstanding queries will be put into a queue to be executed once the
+     * previous queries are completed.
+     *
+     * ```php
+     * $connection->query('CREATE TABLE test ...');
+     * $connection->query('INSERT INTO test (id) VALUES (1)');
+     * ```
+     *
      * If this SQL statement returns a result set (such as from a `SELECT`
      * statement), this method will buffer everything in memory until the result
-     * set is completed and will then invoke the `$callback` function. This is
+     * set is completed and will then resolve the resulting promise. This is
      * the preferred method if you know your result set to not exceed a few
      * dozens or hundreds of rows. If the size of your result set is either
      * unknown or known to be too large to fit into memory, you should use the
      * [`queryStream()`](#querystream) method instead.
      *
      * ```php
-     * $connection->query($query, function (QueryCommand $command) {
-     *     if ($command->hasError()) {
-     *         // test whether the query was executed successfully
-     *         // get the error object, instance of Exception.
-     *         $error = $command->getError();
-     *         echo 'Error: ' . $error->getMessage() . PHP_EOL;
-     *     } elseif (isset($command->resultRows)) {
+     * $connection->query($query)->then(function (QueryCommand $command) {
+     *     if (isset($command->resultRows)) {
      *         // this is a response to a SELECT etc. with some rows (0+)
      *         print_r($command->resultFields);
      *         print_r($command->resultRows);
@@ -51,14 +57,17 @@ interface ConnectionInterface
      *         }
      *         echo 'Query OK, ' . $command->affectedRows . ' row(s) affected' . PHP_EOL;
      *     }
+     * }, function (Exception $error) {
+     *     // the query was not executed successfully
+     *     echo 'Error: ' . $error->getMessage() . PHP_EOL;
      * });
      * ```
      *
-     * You can optionally pass any number of `$params` that will be bound to the
+     * You can optionally pass an array of `$params` that will be bound to the
      * query like this:
      *
      * ```php
-     * $connection->query('SELECT * FROM user WHERE id > ?', $fn, $id);
+     * $connection->query('SELECT * FROM user WHERE id > ?', [$id]);
      * ```
      *
      * The given `$sql` parameter MUST contain a single statement. Support
@@ -66,13 +75,11 @@ interface ConnectionInterface
      * could allow for possible SQL injection attacks and this API is not
      * suited for exposing multiple possible results.
      *
-     * @param string        $sql        MySQL sql statement.
-     * @param callable|null $callback   Query result handler callback.
-     * @param mixed         $params,... Parameters which should bind to query.
-     * @return QueryCommand|null Return QueryCommand if $callback not specified.
-     * @throws Exception if the connection is not initialized or already closed/closing
+     * @param string $sql    SQL statement
+     * @param array  $params Parameters which should be bound to query
+     * @return PromiseInterface Returns a Promise<QueryCommand,Exception>
      */
-    public function query($sql, $callback = null, $params = null);
+    public function query($sql, array $params = array());
 
     /**
      * Performs an async query and streams the rows of the result set.

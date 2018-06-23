@@ -36,16 +36,16 @@ $connection = new React\MySQL\Connection($loop, array(
 
 $connection->connect(function () {});
 
-$connection->query('SELECT * FROM book', function (QueryCommand $command) {
-    if ($command->hasError()) {
-        $error = $command->getError();
-        echo 'Error: ' . $error->getMessage() . PHP_EOL;
-    } else {
+$connection->query('SELECT * FROM book')->then(
+    function (QueryCommand $command) {
         print_r($command->resultFields);
         print_r($command->resultRows);
         echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
+    },
+    function (Exception $error) {
+        echo 'Error: ' . $error->getMessage() . PHP_EOL;
     }
-});
+);
 
 $connection->close();
 
@@ -122,25 +122,31 @@ i.e. it MUST NOT be called more than once.
 
 #### query()
 
-The `query(string $query, callable|null $callback, mixed ...$params): QueryCommand|null` method can be used to
+The `query(string $query, array $params = array()): PromiseInterface` method can be used to
 perform an async query.
+
+This method returns a promise that will resolve with a `QueryCommand` on
+success or will reject with an `Exception` on error. The MySQL protocol
+is inherently sequential, so that all queries will be performed in order
+and outstanding queries will be put into a queue to be executed once the
+previous queries are completed.
+
+```php
+$connection->query('CREATE TABLE test ...');
+$connection->query('INSERT INTO test (id) VALUES (1)');
+```
 
 If this SQL statement returns a result set (such as from a `SELECT`
 statement), this method will buffer everything in memory until the result
-set is completed and will then invoke the `$callback` function. This is
+set is completed and will then resolve the resulting promise. This is
 the preferred method if you know your result set to not exceed a few
 dozens or hundreds of rows. If the size of your result set is either
 unknown or known to be too large to fit into memory, you should use the
 [`queryStream()`](#querystream) method instead.
 
 ```php
-$connection->query($query, function (QueryCommand $command) {
-    if ($command->hasError()) {
-        // test whether the query was executed successfully
-        // get the error object, instance of Exception.
-        $error = $command->getError();
-        echo 'Error: ' . $error->getMessage() . PHP_EOL;
-    } elseif (isset($command->resultRows)) {
+$connection->query($query)->then(function (QueryCommand $command) {
+    if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)
         print_r($command->resultFields);
         print_r($command->resultRows);
@@ -152,14 +158,17 @@ $connection->query($query, function (QueryCommand $command) {
         }
         echo 'Query OK, ' . $command->affectedRows . ' row(s) affected' . PHP_EOL;
     }
+}, function (Exception $error) {
+    // the query was not executed successfully
+    echo 'Error: ' . $error->getMessage() . PHP_EOL;
 });
 ```
 
-You can optionally pass any number of `$params` that will be bound to the
+You can optionally pass an array of `$params` that will be bound to the
 query like this:
 
 ```php
-$connection->query('SELECT * FROM user WHERE id > ?', $fn, $id);
+$connection->query('SELECT * FROM user WHERE id > ?', [$id]);
 ```
 
 The given `$sql` parameter MUST contain a single statement. Support

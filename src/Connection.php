@@ -11,6 +11,7 @@ use React\MySQL\Commands\QuitCommand;
 use React\MySQL\Io\Executor;
 use React\MySQL\Io\Parser;
 use React\MySQL\Io\Query;
+use React\Promise\Deferred;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
@@ -91,55 +92,49 @@ class Connection extends EventEmitter implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function query($sql, $callback = null, $params = null)
+    public function query($sql, array $params = array())
     {
         $query = new Query($sql);
+        if ($params) {
+            $query->bindParamsFromArray($params);
+        }
 
         $command = new QueryCommand($this);
         $command->setQuery($query);
-
-        $args = func_get_args();
-        array_shift($args); // Remove $sql parameter.
-
-        if (!is_callable($callback)) {
-            if ($args) {
-                $query->bindParamsFromArray($args);
-            }
-
-            return $this->_doCommand($command);
+        try {
+            $this->_doCommand($command);
+        } catch (\Exception $e) {
+            return \React\Promise\reject($e);
         }
 
-        array_shift($args); // Remove $callback
-
-        if ($args) {
-            $query->bindParamsFromArray($args);
-        }
-        $this->_doCommand($command);
+        $deferred = new Deferred();
 
         // store all result set rows until result set end
         $rows = array();
         $command->on('result', function ($row) use (&$rows) {
             $rows[] = $row;
         });
-        $command->on('end', function ($command) use ($callback, &$rows) {
+        $command->on('end', function ($command) use ($deferred, &$rows) {
             $command->resultRows = $rows;
             $rows = array();
-            $callback($command, $this);
+
+            $deferred->resolve($command);
         });
 
         // resolve / reject status reply (response without result set)
-        $command->on('error', function ($err, $command) use ($callback) {
-            $callback($command, $this);
+        $command->on('error', function ($error) use ($deferred) {
+            $deferred->reject($error);
         });
-        $command->on('success', function ($command) use ($callback) {
-            $callback($command, $this);
+        $command->on('success', function (QueryCommand $command) use ($deferred) {
+            $deferred->resolve($command);
         });
+
+        return $deferred->promise();
     }
 
     public function queryStream($sql, $params = array())
     {
         $query = new Query($sql);
-
         if ($params) {
             $query->bindParamsFromArray($params);
         }
