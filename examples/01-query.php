@@ -1,6 +1,6 @@
 <?php
 
-use React\MySQL\Commands\QueryCommand;
+use React\MySQL\QueryResult;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -17,7 +17,7 @@ $connection = new React\MySQL\Connection($loop, array(
 $connection->connect(function () {});
 
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
-$connection->query($query)->then(function (QueryCommand $command) {
+$connection->query($query)->then(function (QueryResult $command) {
     if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)
         print_r($command->resultFields);

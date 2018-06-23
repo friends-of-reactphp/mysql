@@ -1,7 +1,7 @@
 <?php
 
-use React\MySQL\Commands\QueryCommand;
 use React\MySQL\ConnectionInterface;
+use React\MySQL\QueryResult;
 use React\Stream\ReadableResourceStream;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -43,7 +43,7 @@ $stdin->on('data', function ($line) use ($connection) {
     }
 
     $time = microtime(true);
-    $connection->query($query)->then(function (QueryCommand $command) use ($time) {
+    $connection->query($query)->then(function (QueryResult $command) use ($time) {
         if (isset($command->resultRows)) {
             // this is a response to a SELECT etc. with some rows (0+)
             echo implode("\t", array_column($command->resultFields, 'name')) . PHP_EOL;

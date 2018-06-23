@@ -115,10 +115,12 @@ class Connection extends EventEmitter implements ConnectionInterface
             $rows[] = $row;
         });
         $command->on('end', function ($command) use ($deferred, &$rows) {
-            $command->resultRows = $rows;
+            $result = new QueryResult();
+            $result->resultFields = $command->resultFields;
+            $result->resultRows = $rows;
             $rows = array();
 
-            $deferred->resolve($command);
+            $deferred->resolve($result);
         });
 
         // resolve / reject status reply (response without result set)
@@ -126,7 +128,11 @@ class Connection extends EventEmitter implements ConnectionInterface
             $deferred->reject($error);
         });
         $command->on('success', function (QueryCommand $command) use ($deferred) {
-            $deferred->resolve($command);
+            $result = new QueryResult();
+            $result->affectedRows = $command->affectedRows;
+            $result->insertId = $command->insertId;
+
+            $deferred->resolve($result);
         });
 
         return $deferred->promise();

@@ -2,7 +2,7 @@
 
 namespace React\Tests\MySQL;
 
-use React\MySQL\Commands\QueryCommand;
+use React\MySQL\QueryResult;
 
 class NoResultQueryTest extends BaseTestCase
 {
@@ -28,7 +28,7 @@ class NoResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('update book set created=999 where id=999')->then(function (QueryCommand $command) {
+        $connection->query('update book set created=999 where id=999')->then(function (QueryResult $command) {
             $this->assertEquals(0, $command->affectedRows);
         });
 
@@ -43,7 +43,7 @@ class NoResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query("insert into book (`name`) values ('foo')")->then(function (QueryCommand $command) {
+        $connection->query("insert into book (`name`) values ('foo')")->then(function (QueryResult $command) {
             $this->assertEquals(1, $command->affectedRows);
             $this->assertEquals(1, $command->insertId);
         });
@@ -60,7 +60,7 @@ class NoResultQueryTest extends BaseTestCase
         $connection->connect(function () {});
 
         $connection->query("insert into book (`name`) values ('foo')");
-        $connection->query('update book set created=999 where id=1')->then(function (QueryCommand $command) {
+        $connection->query('update book set created=999 where id=1')->then(function (QueryResult $command) {
             $this->assertEquals(1, $command->affectedRows);
         });
 
