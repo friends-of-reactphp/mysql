@@ -208,17 +208,20 @@ interface ConnectionInterface
     public function getState();
 
     /**
-     * Close the connection.
+     * Quits (soft-close) the connection.
      *
-     * @param callable|null $callback A callback which should be run after
-     *                                connection successfully closed.
+     * This method returns a promise that will resolve with a boolean `true` on
+     * success or will reject with an `Exception` on error. The MySQL protocol
+     * is inherently sequential, so that all commands will be performed in order
+     * and outstanding commands will be put into a queue to be executed once the
+     * previous commands are completed.
      *
-     * $callback signature:
+     * ```php
+     * $connection->query('CREATE TABLE test ...');
+     * $connection->quit();
+     * ```
      *
-     *  function (ConnectionInterface $conn): void
-     *
-     * @return void
-     * @throws Exception if the connection is not initialized or already closed/closing
+     * @return PromiseInterface Returns a Promise<true,Exception>
      */
-    public function close($callback = null);
+    public function quit();
 }

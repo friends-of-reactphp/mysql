@@ -32,7 +32,7 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
         echo 'Error: ' . $error->getMessage() . PHP_EOL;
     });
 
-    $connection->close();
+    $connection->quit();
 }, 'printf');
 
 $loop->run();

@@ -15,7 +15,7 @@ class NoResultQueryTest extends BaseTestCase
         $connection->query('DROP TABLE IF EXISTS book');
         $connection->query($this->getDataTable());
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -28,7 +28,7 @@ class NoResultQueryTest extends BaseTestCase
             $this->assertEquals(0, $command->affectedRows);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -42,7 +42,7 @@ class NoResultQueryTest extends BaseTestCase
             $this->assertEquals(1, $command->insertId);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -56,7 +56,7 @@ class NoResultQueryTest extends BaseTestCase
             $this->assertEquals(1, $command->affectedRows);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 }

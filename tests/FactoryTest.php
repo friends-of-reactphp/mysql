@@ -106,7 +106,7 @@ class FactoryTest extends BaseTestCase
         $uri = $this->getConnectionString();
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
             echo 'connected.';
-            $connection->close(function ($e) {
+            $connection->quit()->then(function () {
                 echo 'closed.';
             });
         }, 'printf')->then(null, 'printf');
@@ -127,7 +127,7 @@ class FactoryTest extends BaseTestCase
             $connection->ping()->then(function () {
                 echo 'ping.';
             });
-            $connection->close(function ($e) {
+            $connection->quit()->then(function () {
                 echo 'closed.';
             });
         }, 'printf')->then(null, 'printf');
