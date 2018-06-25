@@ -190,21 +190,6 @@ class Connection extends EventEmitter implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function selectDb($dbname)
-    {
-        return $this->query(sprintf('USE `%s`', $dbname));
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function listFields()
-    {
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function setOption($name, $value)
     {
         $this->options[$name] = $value;

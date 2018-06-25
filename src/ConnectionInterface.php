@@ -142,21 +142,6 @@ interface ConnectionInterface
     public function ping($callback);
 
     /**
-     * Select specified database.
-     *
-     * @param string $dbname Database name.
-     *
-     * @return QueryCommand
-     * @throws Exception if the connection is not initialized or already closed/closing
-     */
-    public function selectDb($dbname);
-
-    /**
-     * @return mixed
-     */
-    public function listFields();
-
-    /**
      * Change connection option parameter.
      *
      * @param string $name  Parameter name.
