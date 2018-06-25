@@ -1,8 +1,8 @@
 <?php
 
 use React\MySQL\Commands\QueryCommand;
-use React\Stream\ReadableResourceStream;
 use React\MySQL\ConnectionInterface;
+use React\Stream\ReadableResourceStream;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -43,13 +43,8 @@ $stdin->on('data', function ($line) use ($connection) {
     }
 
     $time = microtime(true);
-    $connection->query($query, function (QueryCommand $command) use ($time) {
-        if ($command->hasError()) {
-            // test whether the query was executed successfully
-            // get the error object, instance of Exception.
-            $error = $command->getError();
-            echo 'Error: ' . $error->getMessage() . PHP_EOL;
-        } elseif (isset($command->resultRows)) {
+    $connection->query($query)->then(function (QueryCommand $command) use ($time) {
+        if (isset($command->resultRows)) {
             // this is a response to a SELECT etc. with some rows (0+)
             echo implode("\t", array_column($command->resultFields, 'name')) . PHP_EOL;
 
@@ -79,6 +74,9 @@ $stdin->on('data', function ($line) use ($connection) {
                 PHP_EOL
             );
         }
+    }, function (Exception $error) {
+        // the query was not executed successfully
+        echo 'Error: ' . $error->getMessage() . PHP_EOL;
     });
 });
 
