@@ -2,8 +2,8 @@
 
 namespace React\MySQL;
 
-use React\Stream\ReadableStreamInterface;
 use React\Promise\PromiseInterface;
+use React\Stream\ReadableStreamInterface;
 
 /**
  * Interface ConnectionInterface
@@ -24,7 +24,7 @@ interface ConnectionInterface
     /**
      * Performs an async query.
      *
-     * This method returns a promise that will resolve with a `QueryCommand` on
+     * This method returns a promise that will resolve with a `QueryResult` on
      * success or will reject with an `Exception` on error. The MySQL protocol
      * is inherently sequential, so that all queries will be performed in order
      * and outstanding queries will be put into a queue to be executed once the
@@ -44,7 +44,7 @@ interface ConnectionInterface
      * [`queryStream()`](#querystream) method instead.
      *
      * ```php
-     * $connection->query($query)->then(function (QueryCommand $command) {
+     * $connection->query($query)->then(function (QueryResult $command) {
      *     if (isset($command->resultRows)) {
      *         // this is a response to a SELECT etc. with some rows (0+)
      *         print_r($command->resultFields);
@@ -77,7 +77,7 @@ interface ConnectionInterface
      *
      * @param string $sql    SQL statement
      * @param array  $params Parameters which should be bound to query
-     * @return PromiseInterface Returns a Promise<QueryCommand,Exception>
+     * @return PromiseInterface Returns a Promise<QueryResult,Exception>
      */
     public function query($sql, array $params = array());
 

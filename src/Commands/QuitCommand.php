@@ -2,9 +2,10 @@
 
 namespace React\MySQL\Commands;
 
-use React\MySQL\Command;
-
-class QuitCommand extends Command
+/**
+ * @internal
+ */
+class QuitCommand extends AbstractCommand
 {
     public function getId()
     {

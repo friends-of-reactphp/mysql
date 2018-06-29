@@ -1,9 +1,12 @@
 <?php
 
-namespace React\MySQL;
+namespace React\MySQL\Commands;
 
 use Evenement\EventEmitterInterface;
 
+/**
+ * @internal
+ */
 interface CommandInterface extends EventEmitterInterface
 {
     public function buildPacket();

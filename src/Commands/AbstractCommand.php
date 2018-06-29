@@ -1,10 +1,14 @@
 <?php
 
-namespace React\MySQL;
+namespace React\MySQL\Commands;
 
 use Evenement\EventEmitter;
+use React\MySQL\ConnectionInterface;
 
-abstract class Command extends EventEmitter implements CommandInterface
+/**
+ * @internal
+ */
+abstract class AbstractCommand extends EventEmitter implements CommandInterface
 {
     /**
      * (none, this is an internal thread state)
@@ -137,8 +141,7 @@ abstract class Command extends EventEmitter implements CommandInterface
     /**
      * Construtor.
      *
-     * @param integer $cmd
-     * @param string  $q
+     * @param ConnectionInterface $connection
      */
     public function __construct(ConnectionInterface $connection)
     {

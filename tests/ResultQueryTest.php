@@ -2,8 +2,8 @@
 
 namespace React\Tests\MySQL;
 
-use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Io\Constants;
+use React\MySQL\QueryResult;
 
 class ResultQueryTest extends BaseTestCase
 {
@@ -14,7 +14,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select \'foo\'')->then(function (QueryCommand $command) {
+        $connection->query('select \'foo\'')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame('foo', reset($command->resultRows[0]));
@@ -62,7 +62,7 @@ class ResultQueryTest extends BaseTestCase
 
         $expected = $value;
 
-        $connection->query('select ?', [$value])->then(function (QueryCommand $command) use ($expected) {
+        $connection->query('select ?', [$value])->then(function (QueryResult $command) use ($expected) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
@@ -82,7 +82,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select ?', [$value])->then(function (QueryCommand $command) use ($expected) {
+        $connection->query('select ?', [$value])->then(function (QueryResult $command) use ($expected) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
@@ -99,7 +99,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select \'hello?\'')->then(function (QueryCommand $command) {
+        $connection->query('select \'hello?\'')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertEquals('hello?', reset($command->resultRows[0]));
@@ -119,7 +119,7 @@ class ResultQueryTest extends BaseTestCase
         $length = 40000;
         $value = str_repeat('.', $length);
 
-        $connection->query('SELECT ?', [$value])->then(function (QueryCommand $command) use ($length) {
+        $connection->query('SELECT ?', [$value])->then(function (QueryResult $command) use ($length) {
             $this->assertCount(1, $command->resultFields);
             $this->assertEquals($length * 3, $command->resultFields[0]['length']);
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
@@ -136,7 +136,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select \'foo\' as ``')->then(function (QueryCommand $command) {
+        $connection->query('select \'foo\' as ``')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame('foo', reset($command->resultRows[0]));
@@ -157,7 +157,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select null')->then(function (QueryCommand $command) {
+        $connection->query('select null')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertNull(reset($command->resultRows[0]));
@@ -177,7 +177,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo" UNION select "bar"')->then(function (QueryCommand $command) {
+        $connection->query('select "foo" UNION select "bar"')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -196,7 +196,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo" UNION select null')->then(function (QueryCommand $command) {
+        $connection->query('select "foo" UNION select null')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -218,7 +218,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select 0 UNION select null')->then(function (QueryCommand $command) {
+        $connection->query('select 0 UNION select null')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -240,7 +240,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo" UNION select 1')->then(function (QueryCommand $command) {
+        $connection->query('select "foo" UNION select 1')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -262,7 +262,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo" UNION select ""')->then(function (QueryCommand $command) {
+        $connection->query('select "foo" UNION select ""')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -281,7 +281,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo" LIMIT 0')->then(function (QueryCommand $command) {
+        $connection->query('select "foo" LIMIT 0')->then(function (QueryResult $command) {
             $this->assertCount(0, $command->resultRows);
 
             $this->assertCount(1, $command->resultFields);
@@ -299,7 +299,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo","bar"')->then(function (QueryCommand $command) {
+        $connection->query('select "foo","bar"')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(2, $command->resultRows[0]);
 
@@ -318,7 +318,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo",""')->then(function (QueryCommand $command) {
+        $connection->query('select "foo",""')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(2, $command->resultRows[0]);
 
@@ -337,7 +337,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select \'\' as `first`, \'\' as `second`')->then(function (QueryCommand $command) {
+        $connection->query('select \'\' as `first`, \'\' as `second`')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(2, $command->resultRows[0]);
             $this->assertSame(array('', ''), array_values($command->resultRows[0]));
@@ -358,7 +358,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
         $connection->connect(function () {});
 
-        $connection->query('select "foo" as `col`,"bar" as `col`')->then(function (QueryCommand $command) {
+        $connection->query('select "foo" as `col`,"bar" as `col`')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -386,7 +386,7 @@ class ResultQueryTest extends BaseTestCase
         $connection->query("insert into book (`name`) values ('foo')");
         $connection->query("insert into book (`name`) values ('bar')");
 
-        $connection->query('select * from book')->then(function (QueryCommand $command) {
+        $connection->query('select * from book')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
         });
 
@@ -451,12 +451,12 @@ class ResultQueryTest extends BaseTestCase
         $command = $connection->query('select * from book');
         $command->on('result', function ($result, $command, $conn) {
                 $this->assertArrayHasKey('id', $result);
-                $this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
+                $this->assertInstanceOf('React\MySQL\Commands\QueryResult', $command);
                 $this->assertInstanceOf('React\MySQL\Connection', $conn);
                 echo 'result.';
             })
             ->on('end', function ($command, $conn) {
-                $this->assertInstanceOf('React\MySQL\Commands\QueryCommand', $command);
+                $this->assertInstanceOf('React\MySQL\Commands\QueryResult', $command);
                 $this->assertInstanceOf('React\MySQL\Connection', $conn);
                 echo 'end.';
             });
@@ -472,7 +472,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
 
         $callback = function () use ($connection) {
-            $connection->query('select 1+1')->then(function (QueryCommand $command) {
+            $connection->query('select 1+1')->then(function (QueryResult $command) {
                 $this->assertEquals([['1+1' => 2]], $command->resultRows);
             });
             $connection->close();

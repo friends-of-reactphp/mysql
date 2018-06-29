@@ -2,9 +2,10 @@
 
 namespace React\MySQL\Commands;
 
-use React\MySQL\Command;
-
-class AuthenticateCommand extends Command
+/**
+ * @internal
+ */
+class AuthenticateCommand extends AbstractCommand
 {
     public function getId()
     {
