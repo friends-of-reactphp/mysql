@@ -15,7 +15,7 @@ It is written in pure PHP and does not require any extensions.
 * [Usage](#usage)
   * [Factory](#factory)
     * [createConnection()](#createconnection)
-  * [Connection](#connection)
+  * [ConnectionInterface](#connectioninterface)
     * [query()](#query)
     * [queryStream()](#querystream)
     * [ping()](#ping)
@@ -56,7 +56,7 @@ See also the [examples](examples).
 
 ### Factory
 
-The `Factory` is responsible for creating your [`Connection`](#connection) instance.
+The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
 It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
 
 ```php
@@ -86,14 +86,14 @@ $factory = new Factory($loop, $connector);
 #### createConnection()
 
 The `createConnection(string $url): PromiseInterface<ConnectionInterface, Exception>` method can be used to
-create a new [`Connection`](#connection).
+create a new [`ConnectionInterface`](#connectioninterface).
 
 It helps with establishing a TCP/IP connection to your MySQL database
 and issuing the initial authentication handshake.
 
 ```php
 $factory->createConnection($url)->then(
-    function (ConnetionInterface $connection) {
+    function (ConnectionInterface $connection) {
         // client connection established (and authenticated)
     },
     function (Exception $e) {
@@ -103,9 +103,9 @@ $factory->createConnection($url)->then(
 ```
 
 The method returns a [Promise](https://github.com/reactphp/promise) that
-will resolve with the [`Connection`](#connection) instance on success or
-will reject with an `Exception` if the URL is invalid or the connection
-or authentication fails.
+will resolve with a [`ConnectionInterface`](#connectioninterface)
+instance on success or will reject with an `Exception` if the URL is
+invalid or the connection or authentication fails.
 
 The `$url` parameter must contain the database host, optional
 authentication, port and database to connect to:
@@ -129,44 +129,11 @@ database, but likely to yield an authentication error in a production system:
 $factory->createConnection('localhost');
 ```
 
-### Connection
+### ConnectionInterface
 
-The `Connection` is responsible for communicating with your MySQL server
-instance, managing the connection state and sending your database queries.
-It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
-
-```php
-$loop = React\EventLoop\Factory::create();
-
-$options = array(
-    'host'   => '127.0.0.1',
-    'port'   => 3306,
-    'user'   => 'root',
-    'passwd' => '',
-    'dbname' => '',
-);
-
-$connection = new Connection($loop, $options);
-```
-
-If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
-proxy servers etc.), you can explicitly pass a custom instance of the
-[`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
-
-```php
-$connector = new \React\Socket\Connector($loop, array(
-    'dns' => '127.0.0.1',
-    'tcp' => array(
-        'bindto' => '192.168.10.1:0'
-    ),
-    'tls' => array(
-        'verify_peer' => false,
-        'verify_peer_name' => false
-    )
-));
-
-$connection = new Connection($loop, $options, $connector);
-```
+The `ConnectionInterface` represents a connection that is responsible for
+communicating with your MySQL server instance, managing the connection state
+and sending your database queries.
 
 #### query()
 

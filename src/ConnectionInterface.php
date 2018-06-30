@@ -6,9 +6,9 @@ use React\Promise\PromiseInterface;
 use React\Stream\ReadableStreamInterface;
 
 /**
- * Interface ConnectionInterface
- *
- * @package React\MySQL
+ * The `ConnectionInterface` represents a connection that is responsible for
+ * communicating with your MySQL server instance, managing the connection state
+ * and sending your database queries.
  */
 interface ConnectionInterface
 {

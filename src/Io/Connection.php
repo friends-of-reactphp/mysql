@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL;
+namespace React\MySQL\Io;
 
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
@@ -10,9 +10,9 @@ use React\MySQL\Commands\CommandInterface;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
-use React\MySQL\Io\Executor;
-use React\MySQL\Io\Parser;
-use React\MySQL\Io\Query;
+use React\MySQL\ConnectionInterface;
+use React\MySQL\Exception;
+use React\MySQL\QueryResult;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
@@ -21,13 +21,11 @@ use React\Socket\ConnectorInterface;
 use React\Stream\ThroughStream;
 
 /**
- * Class Connection
- *
- * @package React\MySQL
+ * @internal
+ * @see ConnectionInterface
  */
 class Connection extends EventEmitter implements ConnectionInterface
 {
-
     /**
      * @var LoopInterface
      */
@@ -240,7 +238,7 @@ class Connection extends EventEmitter implements ConnectionInterface
      * This method will be invoked once after the `Connection` is initialized.
      *
      * @internal
-     * @see Factory
+     * @see \React\MySQL\Factory
      */
     public function doConnect($callback)
     {

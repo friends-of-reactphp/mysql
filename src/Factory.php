@@ -3,10 +3,11 @@
 namespace React\MySQL;
 
 use React\EventLoop\LoopInterface;
+use React\MySQL\Io\Connection;
 use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
-use React\Promise\PromiseInterface;
 
 class Factory
 {
@@ -14,7 +15,7 @@ class Factory
     private $connector;
 
     /**
-     * The `Factory` is responsible for creating your [`Connection`](#connection) instance.
+     * The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
      * It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
      *
      * ```php
@@ -62,7 +63,7 @@ class Factory
      *
      * ```php
      * $factory->createConnection($url)->then(
-     *     function (ConnetionInterface $connection) {
+     *     function (ConnectionInterface $connection) {
      *         // client connection established (and authenticated)
      *     },
      *     function (Exception $e) {
@@ -72,9 +73,9 @@ class Factory
      * ```
      *
      * The method returns a [Promise](https://github.com/reactphp/promise) that
-     * will resolve with the [`Connection`](#connection) instance on success or
-     * will reject with an `Exception` if the URL is invalid or the connection
-     * or authentication fails.
+     * will resolve with a [`ConnectionInterface`](#connectioninterface)
+     * instance on success or will reject with an `Exception` if the URL is
+     * invalid or the connection or authentication fails.
      *
      * The `$url` parameter must contain the database host, optional
      * authentication, port and database to connect to:

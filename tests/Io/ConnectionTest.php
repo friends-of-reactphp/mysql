@@ -1,9 +1,10 @@
 <?php
 
-namespace React\Tests\MySQL;
+namespace React\Tests\MySQL\Io;
 
-use React\MySQL\Connection;
+use React\MySQL\Io\Connection;
 use React\Socket\Server;
+use React\Tests\MySQL\BaseTestCase;
 
 class ConnectionTest extends BaseTestCase
 {
@@ -16,7 +17,7 @@ class ConnectionTest extends BaseTestCase
         $conn->on('error', $this->expectCallableOnce());
 
         $conn->doConnect(function ($err, $conn) use ($loop, $options) {
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+            $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
             $this->assertEquals(Connection::STATE_CONNECT_FAILED, $conn->getState());
         });
         $loop->run();
@@ -35,7 +36,7 @@ class ConnectionTest extends BaseTestCase
                 "/^Access denied for user '.*?'@'.*?' \(using password: YES\)$/",
                 $err->getMessage()
             );
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+            $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
             $this->assertEquals(Connection::STATE_AUTHENTICATE_FAILED, $conn->getState());
         });
         $loop->run();
@@ -243,18 +244,18 @@ class ConnectionTest extends BaseTestCase
         $conn->on('error', $this->expectCallableNever());
 
         $conn->on('end', function ($conn){
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+            $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
             echo 'end';
         });
 
         $conn->on('close', function ($conn){
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+            $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
             echo 'close';
         });
 
         $conn->doConnect(function ($err, $conn) use ($loop) {
             $this->assertEquals(null, $err);
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
+            $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
             $this->assertEquals(Connection::STATE_AUTHENTICATED, $conn->getState());
         });
 
