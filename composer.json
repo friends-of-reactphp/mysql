@@ -11,6 +11,7 @@
         "react/socket": "^1.0 || ^0.8"
     },
     "require-dev": {
+        "clue/block-react": "^1.2",
         "phpunit/phpunit": "^4.8.35"
     },
     "autoload": {

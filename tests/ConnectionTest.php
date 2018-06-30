@@ -15,7 +15,7 @@ class ConnectionTest extends BaseTestCase
 
         $conn->on('error', $this->expectCallableOnce());
 
-        $conn->connect(function ($err, $conn) use ($loop, $options) {
+        $conn->doConnect(function ($err, $conn) use ($loop, $options) {
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
             $this->assertEquals(Connection::STATE_CONNECT_FAILED, $conn->getState());
         });
@@ -30,7 +30,7 @@ class ConnectionTest extends BaseTestCase
 
         $conn->on('error', $this->expectCallableOnce());
 
-        $conn->connect(function ($err, $conn) use ($loop) {
+        $conn->doConnect(function ($err, $conn) use ($loop) {
             $this->assertRegExp(
                 "/^Access denied for user '.*?'@'.*?' \(using password: YES\)$/",
                 $err->getMessage()
@@ -51,8 +51,8 @@ class ConnectionTest extends BaseTestCase
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $options);
 
-        $conn->connect(function () { });
-        $conn->connect(function () { });
+        $conn->doConnect(function () { });
+        $conn->doConnect(function () { });
     }
 
     /**
@@ -105,7 +105,7 @@ class ConnectionTest extends BaseTestCase
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $options);
 
-        $conn->connect(function ($err) {
+        $conn->doConnect(function ($err) {
             echo $err ? $err : 'connected';
         });
         $conn->close(function () {
@@ -134,7 +134,7 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($loop, $options);
 
-        $conn->connect(function ($err) {
+        $conn->doConnect(function ($err) {
             echo $err ? $err->getMessage() : 'OK';
         });
 
@@ -160,7 +160,7 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($loop, $options);
 
-        $conn->connect(function () { });
+        $conn->doConnect(function () { });
         $conn->ping()->then(
             $this->expectCallableNever(),
             function ($err) {
@@ -178,7 +178,7 @@ class ConnectionTest extends BaseTestCase
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $options);
 
-        $conn->connect(function ($err) {
+        $conn->doConnect(function ($err) {
             echo $err ? $err : 'connected';
         });
         $conn->ping()->then(function () {
@@ -200,7 +200,7 @@ class ConnectionTest extends BaseTestCase
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $options);
 
-        $conn->connect(function ($err) {
+        $conn->doConnect(function ($err) {
             echo $err ? $err : 'connected';
         });
         $conn->close(function () {
@@ -223,7 +223,7 @@ class ConnectionTest extends BaseTestCase
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, array('passwd' => 'invalidpass') + $options);
 
-        $conn->connect(function ($err) {
+        $conn->doConnect(function ($err) {
             echo $err ? 'error' : 'connected';
         });
         $conn->close(function () {
@@ -252,7 +252,7 @@ class ConnectionTest extends BaseTestCase
             echo 'close';
         });
 
-        $conn->connect(function ($err, $conn) use ($loop) {
+        $conn->doConnect(function ($err, $conn) use ($loop) {
             $this->assertEquals(null, $err);
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
             $this->assertEquals(Connection::STATE_AUTHENTICATED, $conn->getState());

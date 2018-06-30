@@ -235,9 +235,14 @@ class Connection extends EventEmitter implements ConnectionInterface
     }
 
     /**
-     * {@inheritdoc}
+     * [internal] Connect to mysql server.
+     *
+     * This method will be invoked once after the `Connection` is initialized.
+     *
+     * @internal
+     * @see Factory
      */
-    public function connect($callback)
+    public function doConnect($callback)
     {
         if ($this->state !== self::STATE_INIT) {
             throw new Exception('Connection not in idle state');

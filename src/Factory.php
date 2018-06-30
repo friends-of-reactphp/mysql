@@ -118,7 +118,7 @@ class Factory
 
         return new Promise(function ($resolve, $reject) use ($args) {
             $connection = new Connection($this->loop, $args, $this->connector);
-            $connection->connect(function ($e) use ($connection, $resolve, $reject) {
+            $connection->doConnect(function ($e) use ($connection, $resolve, $reject) {
                 if ($e !== null) {
                     $reject($e);
                 } else {
