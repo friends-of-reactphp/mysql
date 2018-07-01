@@ -135,18 +135,25 @@ interface ConnectionInterface
     public function queryStream($sql, $params = array());
 
     /**
-     * Checks that connection is alive.
+     * Checks that the connection is alive.
      *
-     * @param callable $callback Checking result handler.
+     * This method returns a promise that will resolve with a boolean `true` on
+     * success or will reject with an `Exception` on error. The MySQL protocol
+     * is inherently sequential, so that all commands will be performed in order
+     * and outstanding command will be put into a queue to be executed once the
+     * previous queries are completed.
      *
-     * $callback signature:
+     * ```php
+     * $connection->ping()->then(function () {
+     *     echo 'OK' . PHP_EOL;
+     * }, function (Exception $e) {
+     *     echo 'Error: ' . $e->getMessage() . PHP_EOL;
+     * });
+     * ```
      *
-     *  function (\Exception $e = null, ConnectionInterface $conn): void
-     *
-     * @return void
-     * @throws Exception if the connection is not initialized or already closed/closing
+     * @return PromiseInterface Returns a Promise<true,Exception>
      */
-    public function ping($callback);
+    public function ping();
 
     /**
      * Change connection option parameter.

@@ -17,6 +17,7 @@ It is written in pure PHP and does not require any extensions.
     * [connect()](#connect)
     * [query()](#query)
     * [queryStream()](#querystream)
+    * [ping()](#ping)
 * [Install](#install)
 * [Tests](#tests)
 * [License](#license)
@@ -224,6 +225,25 @@ The given `$sql` parameter MUST contain a single statement. Support
 for multiple statements is disabled for security reasons because it
 could allow for possible SQL injection attacks and this API is not
 suited for exposing multiple possible results.
+
+#### ping()
+
+The `ping(): PromiseInterface<true, Exception>` method can be used to
+check that the connection is alive.
+
+This method returns a promise that will resolve with a boolean `true` on
+success or will reject with an `Exception` on error. The MySQL protocol
+is inherently sequential, so that all commands will be performed in order
+and outstanding command will be put into a queue to be executed once the
+previous queries are completed.
+
+```php
+$connection->ping()->then(function () {
+    echo 'OK' . PHP_EOL;
+}, function (Exception $e) {
+    echo 'Error: ' . $e->getMessage() . PHP_EOL;
+});
+```
 
 ## Install
 

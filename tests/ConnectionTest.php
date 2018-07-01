@@ -3,7 +3,6 @@
 namespace React\Tests\MySQL;
 
 use React\MySQL\Connection;
-use React\MySQL\Exception;
 use React\Socket\Server;
 
 class ConnectionTest extends BaseTestCase
@@ -84,17 +83,19 @@ class ConnectionTest extends BaseTestCase
         );
     }
 
-    /**
-     * @expectedException React\MySQL\Exception
-     * @expectedExceptionMessage Can't send command
-     */
-    public function testPingWithoutConnectThrows()
+    public function testPingWithoutConnectRejects()
     {
         $options = $this->getConnectionOptions();
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $options);
 
-        $conn->ping(function () { });
+        $conn->ping()->done(
+            $this->expectCallableNever(),
+            function (\Exception $error) {
+                $this->assertInstanceOf('React\MySQL\Exception', $error);
+                $this->assertSame('Can\'t send command', $error->getMessage());
+            }
+        );
     }
 
     public function testCloseWhileConnectingWillBeQueuedAfterConnection()
@@ -160,9 +161,12 @@ class ConnectionTest extends BaseTestCase
         $conn = new Connection($loop, $options);
 
         $conn->connect(function () { });
-        $conn->ping(function ($err) {
-            echo $err ? $err->getMessage() : 'OK';
-        });
+        $conn->ping()->then(
+            $this->expectCallableNever(),
+            function ($err) {
+                echo $err->getMessage();
+            }
+        );
 
         $loop->run();
     }
@@ -177,8 +181,10 @@ class ConnectionTest extends BaseTestCase
         $conn->connect(function ($err) {
             echo $err ? $err : 'connected';
         });
-        $conn->ping(function ($err) {
-            echo $err ? $err : 'ping';
+        $conn->ping()->then(function () {
+            echo 'ping';
+        }, function () {
+            echo $err;
         });
         $conn->close(function () {
             echo 'closed';
@@ -187,7 +193,7 @@ class ConnectionTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testPingAfterCloseWhileConnectingThrows()
+    public function testPingAfterCloseWhileConnectingRejectsImmediately()
     {
         $this->expectOutputString('connectedclosed');
         $options = $this->getConnectionOptions();
@@ -201,14 +207,11 @@ class ConnectionTest extends BaseTestCase
             echo 'closed';
         });
 
-        try {
-            $conn->ping(function ($err) {
-                echo $err ? $err : 'ping';
-            });
-            $this->fail();
-        } catch (Exception $e) {
-            // expected
-        }
+        $failed = false;
+        $conn->ping()->then(null, function () use (&$failed) {
+            $failed = true;
+        });
+        $this->assertTrue($failed);
 
         $loop->run();
     }
@@ -255,8 +258,7 @@ class ConnectionTest extends BaseTestCase
             $this->assertEquals(Connection::STATE_AUTHENTICATED, $conn->getState());
         });
 
-        $conn->ping(function ($err, $conn) use ($loop) {
-            $this->assertEquals(null, $err);
+        $conn->ping()->then(function () use ($loop, $conn) {
             $conn->close(function ($conn) {
                 $this->assertEquals($conn::STATE_CLOSED, $conn->getState());
             });
