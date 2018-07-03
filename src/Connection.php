@@ -14,6 +14,7 @@ use React\MySQL\Io\Executor;
 use React\MySQL\Io\Parser;
 use React\MySQL\Io\Query;
 use React\Promise\Deferred;
+use React\Promise\Promise;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
@@ -173,21 +174,17 @@ class Connection extends EventEmitter implements ConnectionInterface
         return $stream;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function ping($callback)
+    public function ping()
     {
-        if (!is_callable($callback)) {
-            throw new \InvalidArgumentException('Callback is not a valid callable');
-        }
-        $this->_doCommand(new PingCommand($this))
-            ->on('error', function ($reason) use ($callback) {
-                $callback($reason, $this);
-            })
-            ->on('success', function () use ($callback) {
-                $callback(null, $this);
-            });
+        return new Promise(function ($resolve, $reject) {
+            $this->_doCommand(new PingCommand($this))
+                ->on('error', function ($reason) use ($reject) {
+                    $reject($reason);
+                })
+                ->on('success', function () use ($resolve) {
+                    $resolve(true);
+                });
+        });
     }
 
     /**
