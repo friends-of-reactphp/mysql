@@ -3,11 +3,15 @@
 namespace React\MySQL;
 
 use React\EventLoop\LoopInterface;
+use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Io\Connection;
+use React\MySQL\Io\Executor;
+use React\MySQL\Io\Parser;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
+use React\Socket\ConnectionInterface;
 
 class Factory
 {
@@ -117,17 +121,29 @@ class Factory
             'dbname' => isset($parts['path']) ? ltrim($parts['path'], '/') : ''
         );
 
-        return new Promise(function ($resolve, $reject) use ($args) {
-            $connection = new Connection($this->loop, $args, $this->connector);
-            $connection->doConnect(function ($e) use ($connection, $resolve, $reject) {
-                if ($e !== null) {
-                    $reject($e);
-                } else {
+        $uri = $args['host'] . ':' . $args['port'];
+        return $this->connector->connect($uri)->then(function (ConnectionInterface $stream) use ($args) {
+            $executor = new Executor();
+            $parser = new Parser($stream, $executor);
+            $parser->setOptions($args);
+
+            $connection = new Connection($stream, $executor);
+            $command = $executor->enqueue(new AuthenticateCommand());
+            $parser->start();
+
+            return new Promise(function ($resolve, $reject) use ($command, $connection, $stream) {
+                $command->on('authenticated', function () use ($resolve, $connection) {
                     $this->loop->futureTick(function () use ($resolve, $connection) {
                         $resolve($connection);
                     });
-                }
+                });
+                $command->on('error', function ($error) use ($reject, $stream) {
+                    $reject($error);
+                    $stream->close();
+                });
             });
+        }, function ($error) {
+            throw new \RuntimeException('Unable to connect to database server', 0, $error);
         });
     }
 }
