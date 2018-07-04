@@ -3,6 +3,9 @@
 namespace React\Tests\MySQL;
 
 use PHPUnit\Framework\TestCase;
+use React\EventLoop\LoopInterface;
+use React\MySQL\ConnectionInterface;
+use React\MySQL\Factory;
 
 class BaseTestCase extends TestCase
 {
@@ -16,6 +19,25 @@ class BaseTestCase extends TestCase
             'user'   => getenv('DB_USER'),
             'passwd' => getenv('DB_PASSWD'),
         ] + ($debug ? ['debug' => true] : []);
+    }
+
+    protected function getConnectionString($params = array())
+    {
+        $parts = $params + $this->getConnectionOptions();
+
+        return rawurlencode($parts['user']) . ':' . rawurlencode($parts['passwd']) . '@' . $parts['host'] . ':' . $parts['port'] . '/' . rawurlencode($parts['dbname']);
+    }
+
+    /**
+     * @param LoopInterface $loop
+     * @return ConnectionInterface
+     */
+    protected function createConnection(LoopInterface $loop)
+    {
+        $factory = new Factory($loop);
+        $promise = $factory->createConnection($this->getConnectionString());
+
+        return \Clue\React\Block\await($promise, $loop, 10.0);
     }
 
     protected function getDataTable()

@@ -6,9 +6,9 @@ use React\Promise\PromiseInterface;
 use React\Stream\ReadableStreamInterface;
 
 /**
- * Interface ConnectionInterface
- *
- * @package React\MySQL
+ * The `ConnectionInterface` represents a connection that is responsible for
+ * communicating with your MySQL server instance, managing the connection state
+ * and sending your database queries.
  */
 interface ConnectionInterface
 {
@@ -221,22 +221,4 @@ interface ConnectionInterface
      * @throws Exception if the connection is not initialized or already closed/closing
      */
     public function close($callback = null);
-
-    /**
-     * Connect to mysql server.
-     *
-     * @param callable $callback Connection result handler.
-     *
-     * $callback signature:
-     *
-     *  function (\Exception $e = null, ConnectionInterface $conn): void
-     *
-     * This method should be invoked once after the `Connection` is initialized.
-     * You can queue additional `query()`, `ping()` and `close()` calls after
-     * invoking this method without having to await its resolution first.
-     *
-     * @return void
-     * @throws Exception if the connection is already initialized, i.e. it MUST NOT be called more than once.
-     */
-    public function connect($callback);
 }

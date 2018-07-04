@@ -9,9 +9,7 @@ class NoResultQueryTest extends BaseTestCase
     public function setUp()
     {
         $loop = \React\EventLoop\Factory::create();
-
-        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
-        $connection->connect(function () {});
+        $connection = $this->createConnection($loop);
 
         // re-create test "book" table
         $connection->query('DROP TABLE IF EXISTS book');
@@ -24,9 +22,7 @@ class NoResultQueryTest extends BaseTestCase
     public function testUpdateSimpleNonExistentReportsNoAffectedRows()
     {
         $loop = \React\EventLoop\Factory::create();
-
-        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
-        $connection->connect(function () {});
+        $connection = $this->createConnection($loop);
 
         $connection->query('update book set created=999 where id=999')->then(function (QueryResult $command) {
             $this->assertEquals(0, $command->affectedRows);
@@ -39,9 +35,7 @@ class NoResultQueryTest extends BaseTestCase
     public function testInsertSimpleReportsFirstInsertId()
     {
         $loop = \React\EventLoop\Factory::create();
-
-        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
-        $connection->connect(function () {});
+        $connection = $this->createConnection($loop);
 
         $connection->query("insert into book (`name`) values ('foo')")->then(function (QueryResult $command) {
             $this->assertEquals(1, $command->affectedRows);
@@ -55,9 +49,7 @@ class NoResultQueryTest extends BaseTestCase
     public function testUpdateSimpleReportsAffectedRow()
     {
         $loop = \React\EventLoop\Factory::create();
-
-        $connection = new \React\MySQL\Connection($loop, $this->getConnectionOptions());
-        $connection->connect(function () {});
+        $connection = $this->createConnection($loop);
 
         $connection->query("insert into book (`name`) values ('foo')");
         $connection->query('update book set created=999 where id=1')->then(function (QueryResult $command) {

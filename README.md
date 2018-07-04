@@ -13,8 +13,9 @@ It is written in pure PHP and does not require any extensions.
 
 * [Quickstart example](#quickstart-example)
 * [Usage](#usage)
-  * [Connection](#connection)
-    * [connect()](#connect)
+  * [Factory](#factory)
+    * [createConnection()](#createconnection)
+  * [ConnectionInterface](#connectioninterface)
     * [query()](#query)
     * [queryStream()](#querystream)
     * [ping()](#ping)
@@ -28,27 +29,23 @@ This example runs a simple `SELECT` query and dumps all the records from a `book
 
 ```php
 $loop = React\EventLoop\Factory::create();
+$factory = new Factory($loop);
 
-$connection = new React\MySQL\Connection($loop, array(
-    'dbname' => 'test',
-    'user'   => 'test',
-    'passwd' => 'test',
-));
-
-$connection->connect(function () {});
-
-$connection->query('SELECT * FROM book')->then(
-    function (QueryResult $command) {
-        print_r($command->resultFields);
-        print_r($command->resultRows);
-        echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
-    },
-    function (Exception $error) {
-        echo 'Error: ' . $error->getMessage() . PHP_EOL;
-    }
-);
-
-$connection->close();
+$uri = 'test:test@localhost/test';
+$factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+    $connection->query('SELECT * FROM book')->then(
+        function (QueryResult $command) {
+            print_r($command->resultFields);
+            print_r($command->resultRows);
+            echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
+        },
+        function (Exception $error) {
+            echo 'Error: ' . $error->getMessage() . PHP_EOL;
+        }
+    );
+    
+    $connection->close();
+});
 
 $loop->run();
 ```
@@ -57,24 +54,14 @@ See also the [examples](examples).
 
 ## Usage
 
-### Connection
+### Factory
 
-The `Connection` is responsible for communicating with your MySQL server
-instance, managing the connection state and sending your database queries.
+The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
 It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
 
 ```php
-$loop = React\EventLoop\Factory::create();
-
-$options = array(
-    'host'   => '127.0.0.1',
-    'port'   => 3306,
-    'user'   => 'root',
-    'passwd' => '',
-    'dbname' => '',
-);
-
-$connection = new Connection($loop, $options);
+$loop = \React\EventLoop\Factory::create();
+$factory = new Factory($loop);
 ```
 
 If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
@@ -93,33 +80,60 @@ $connector = new \React\Socket\Connector($loop, array(
     )
 ));
 
-$connection = new Connection($loop, $options, $connector);
+$factory = new Factory($loop, $connector);
 ```
 
-#### connect()
+#### createConnection()
 
-The `connect(callable $callback): void` method can be used to
-connect to the MySQL server.
+The `createConnection(string $url): PromiseInterface<ConnectionInterface, Exception>` method can be used to
+create a new [`ConnectionInterface`](#connectioninterface).
 
-It accepts a `callable $callback` parameter which is the handler that will
-be called when the connection succeeds or fails.
+It helps with establishing a TCP/IP connection to your MySQL database
+and issuing the initial authentication handshake.
 
 ```php
-$connection->connect(function (?Exception $error, $connection) {
-    if ($error) {
-        echo 'Connection failed: ' . $error->getMessage();
-    } else {
-        echo 'Successfully connected';
+$factory->createConnection($url)->then(
+    function (ConnectionInterface $connection) {
+        // client connection established (and authenticated)
+    },
+    function (Exception $e) {
+        // an error occured while trying to connect or authorize client
     }
-});
+);
 ```
 
-This method should be invoked once after the `Connection` is initialized.
-You can queue additional `query()`, `ping()` and `close()` calls after
-invoking this method without having to await its resolution first.
+The method returns a [Promise](https://github.com/reactphp/promise) that
+will resolve with a [`ConnectionInterface`](#connectioninterface)
+instance on success or will reject with an `Exception` if the URL is
+invalid or the connection or authentication fails.
 
-This method throws an `Exception` if the connection is already initialized,
-i.e. it MUST NOT be called more than once.
+The `$url` parameter must contain the database host, optional
+authentication, port and database to connect to:
+
+```php
+$factory->createConnection('user:secret@localhost:3306/database');
+```
+
+You can omit the port if you're connecting to default port `3306`:
+
+```php
+$factory->createConnection('user:secret@localhost/database');
+```
+
+If you do not include authentication and/or database, then this method
+will default to trying to connect as user `root` with an empty password
+and no database selected. This may be useful when initially setting up a
+database, but likely to yield an authentication error in a production system:
+
+```php
+$factory->createConnection('localhost');
+```
+
+### ConnectionInterface
+
+The `ConnectionInterface` represents a connection that is responsible for
+communicating with your MySQL server instance, managing the connection state
+and sending your database queries.
 
 #### query()
 
