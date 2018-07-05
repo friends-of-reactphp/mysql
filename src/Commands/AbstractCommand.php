@@ -133,8 +133,6 @@ abstract class AbstractCommand extends EventEmitter implements CommandInterface
 
     private $states = [];
 
-    private $error;
-
     public function getState($name, $default = null)
     {
         if (isset($this->states[$name])) {
@@ -154,20 +152,5 @@ abstract class AbstractCommand extends EventEmitter implements CommandInterface
     public function equals($commandId)
     {
         return $this->getId() === $commandId;
-    }
-
-    public function setError(\Exception $error)
-    {
-        $this->error = $error;
-    }
-
-    public function getError()
-    {
-        return $this->error;
-    }
-
-    public function hasError()
-    {
-        return (boolean) $this->error;
     }
 }

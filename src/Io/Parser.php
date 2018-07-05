@@ -318,7 +318,6 @@ field:
         $this->currCommand = null;
 
         $error = new Exception($this->errmsg, $this->errno);
-        $command->setError($error);
         $command->emit('error', array($error, $command));
         $this->errmsg = '';
         $this->errno  = 0;
