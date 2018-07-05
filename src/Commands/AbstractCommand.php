@@ -3,7 +3,6 @@
 namespace React\MySQL\Commands;
 
 use Evenement\EventEmitter;
-use React\MySQL\ConnectionInterface;
 
 /**
  * @internal
@@ -132,21 +131,9 @@ abstract class AbstractCommand extends EventEmitter implements CommandInterface
      */
     const INIT_AUTHENTICATE = 0xf1;
 
-    protected $connection;
-
     private $states = [];
 
     private $error;
-
-    /**
-     * Construtor.
-     *
-     * @param ConnectionInterface $connection
-     */
-    public function __construct(ConnectionInterface $connection)
-    {
-        $this->connection = $connection;
-    }
 
     public function getState($name, $default = null)
     {
@@ -182,10 +169,5 @@ abstract class AbstractCommand extends EventEmitter implements CommandInterface
     public function hasError()
     {
         return (boolean) $this->error;
-    }
-
-    public function getConnection()
-    {
-        return $this->connection;
     }
 }

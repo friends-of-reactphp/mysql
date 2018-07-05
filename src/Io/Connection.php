@@ -100,7 +100,7 @@ class Connection extends EventEmitter implements ConnectionInterface
             $query->bindParamsFromArray($params);
         }
 
-        $command = new QueryCommand($this);
+        $command = new QueryCommand();
         $command->setQuery($query);
         try {
             $this->_doCommand($command);
@@ -146,7 +146,7 @@ class Connection extends EventEmitter implements ConnectionInterface
             $query->bindParamsFromArray($params);
         }
 
-        $command = new QueryCommand($this);
+        $command = new QueryCommand();
         $command->setQuery($query);
         $this->_doCommand($command);
 
@@ -175,7 +175,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     public function ping()
     {
         return new Promise(function ($resolve, $reject) {
-            $this->_doCommand(new PingCommand($this))
+            $this->_doCommand(new PingCommand())
                 ->on('error', function ($reason) use ($reject) {
                     $reject($reason);
                 })
@@ -218,7 +218,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     public function quit()
     {
         return new Promise(function ($resolve, $reject) {
-            $this->_doCommand(new QuitCommand($this))
+            $this->_doCommand(new QuitCommand())
                 ->on('error', function ($reason) use ($reject) {
                     $reject($reason);
                 })
@@ -272,7 +272,7 @@ class Connection extends EventEmitter implements ConnectionInterface
 
                 $parser->setOptions($options);
 
-                $command = $this->_doCommand(new AuthenticateCommand($this));
+                $command = $this->_doCommand(new AuthenticateCommand());
                 $command->on('authenticated', $connectedHandler);
                 $command->on('error', $errorHandler);
 
