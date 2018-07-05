@@ -114,7 +114,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         $command->on('result', function ($row) use (&$rows) {
             $rows[] = $row;
         });
-        $command->on('end', function ($command) use ($deferred, &$rows) {
+        $command->on('end', function () use ($command, $deferred, &$rows) {
             $result = new QueryResult();
             $result->resultFields = $command->resultFields;
             $result->resultRows = $rows;
@@ -127,7 +127,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         $command->on('error', function ($error) use ($deferred) {
             $deferred->reject($error);
         });
-        $command->on('success', function (QueryCommand $command) use ($deferred) {
+        $command->on('success', function () use ($command, $deferred) {
             $result = new QueryResult();
             $result->affectedRows = $command->affectedRows;
             $result->insertId = $command->insertId;
@@ -320,9 +320,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         while (!$this->executor->isIdle()) {
             $command = $this->executor->dequeue();
             $command->emit('error', array(
-                new \RuntimeException('Connection lost'),
-                $command,
-                $this
+                new \RuntimeException('Connection lost')
             ));
         }
     }

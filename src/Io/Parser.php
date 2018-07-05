@@ -311,7 +311,7 @@ field:
     {
         // $this->debug('row data: ' . json_encode($row));
         $command = $this->currCommand;
-        $command->emit('result', array($row, $command));
+        $command->emit('result', array($row));
     }
 
     protected function onError()
@@ -320,9 +320,9 @@ field:
         $this->currCommand = null;
 
         $error = new Exception($this->errmsg, $this->errno);
-        $command->emit('error', array($error, $command));
         $this->errmsg = '';
         $this->errno  = 0;
+        $command->emit('error', array($error));
     }
 
     protected function onResultDone()
@@ -331,7 +331,7 @@ field:
         $this->currCommand = null;
 
         $command->resultFields = $this->resultFields;
-        $command->emit('end', array($command));
+        $command->emit('end');
 
         $this->rsState      = self::RS_STATE_HEADER;
         $this->resultFields = [];
@@ -348,7 +348,7 @@ field:
             $command->warnCount    = $this->warnCount;
             $command->message      = $this->message;
         }
-        $command->emit('success', array($command));
+        $command->emit('success');
     }
 
     protected function onAuthenticated()
@@ -370,8 +370,7 @@ field:
                 $command->emit('success');
             } else {
                 $command->emit('error', array(
-                    new \RuntimeException('Connection lost'),
-                    $command
+                    new \RuntimeException('Connection lost')
                 ));
             }
         }
