@@ -56,17 +56,19 @@ class ConnectionTest extends BaseTestCase
         $conn->doConnect(function () { });
     }
 
-    /**
-     * @expectedException React\MySQL\Exception
-     * @expectedExceptionMessage Can't send command
-     */
-    public function testCloseWithoutConnectThrows()
+    public function testQuitWithoutConnectRejects()
     {
         $options = $this->getConnectionOptions();
         $loop = \React\EventLoop\Factory::create();
         $conn = new Connection($loop, $options);
 
-        $conn->close(function () { });
+        $conn->quit()->done(
+            $this->expectCallableNever(),
+            function (\Exception $error) {
+                $this->assertInstanceOf('React\MySQL\Exception', $error);
+                $this->assertSame('Can\'t send command', $error->getMessage());
+            }
+        );
     }
 
     public function testQueryWithoutConnectRejects()
@@ -99,7 +101,7 @@ class ConnectionTest extends BaseTestCase
         );
     }
 
-    public function testCloseWhileConnectingWillBeQueuedAfterConnection()
+    public function testQuitWhileConnectingWillBeQueuedAfterConnection()
     {
         $this->expectOutputString('connectedclosed');
         $options = $this->getConnectionOptions();
@@ -109,14 +111,34 @@ class ConnectionTest extends BaseTestCase
         $conn->doConnect(function ($err) {
             echo $err ? $err : 'connected';
         });
-        $conn->close(function () {
+        $conn->quit()->then(function () {
             echo 'closed';
         });
 
         $loop->run();
     }
 
-    public function testPingAfterConnectWillEmitErrorWhenServerClosesConnection()
+    public function testQuitAfterQuitWhileConnectingWillBeRejected()
+    {
+        $options = $this->getConnectionOptions();
+        $loop = \React\EventLoop\Factory::create();
+        $conn = new Connection($loop, $options);
+
+        $conn->doConnect(function ($err) { });
+        $conn->quit();
+
+        $conn->quit()->done(
+            $this->expectCallableNever(),
+            function (\Exception $error) {
+                $this->assertInstanceOf('React\MySQL\Exception', $error);
+                $this->assertSame('Can\'t send command', $error->getMessage());
+            }
+        );
+
+        $loop->run();
+    }
+
+    public function testConnectWillEmitErrorWhenServerClosesConnection()
     {
         $this->expectOutputString('Connection lost');
 
@@ -142,7 +164,7 @@ class ConnectionTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testConnectWillEmitErrorWhenServerClosesConnection()
+    public function testPingAfterConnectWillEmitErrorWhenServerClosesConnection()
     {
         $this->expectOutputString('Connection lost');
 
@@ -172,7 +194,7 @@ class ConnectionTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testPingAndCloseWhileConnectingWillBeQueuedAfterConnection()
+    public function testPingAndQuitWhileConnectingWillBeQueuedAfterConnection()
     {
         $this->expectOutputString('connectedpingclosed');
         $options = $this->getConnectionOptions();
@@ -187,14 +209,14 @@ class ConnectionTest extends BaseTestCase
         }, function () {
             echo $err;
         });
-        $conn->close(function () {
+        $conn->quit()->then(function () {
             echo 'closed';
         });
 
         $loop->run();
     }
 
-    public function testPingAfterCloseWhileConnectingRejectsImmediately()
+    public function testPingAfterQuitWhileConnectingRejectsImmediately()
     {
         $this->expectOutputString('connectedclosed');
         $options = $this->getConnectionOptions();
@@ -204,7 +226,7 @@ class ConnectionTest extends BaseTestCase
         $conn->doConnect(function ($err) {
             echo $err ? $err : 'connected';
         });
-        $conn->close(function () {
+        $conn->quit()->then(function () {
             echo 'closed';
         });
 
@@ -217,7 +239,7 @@ class ConnectionTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testCloseWhileConnectingWithInvalidPassWillNeverFire()
+    public function testQuitWhileConnectingWithInvalidPassWillNeverFire()
     {
         $this->expectOutputString('error');
         $options = $this->getConnectionOptions();
@@ -227,7 +249,7 @@ class ConnectionTest extends BaseTestCase
         $conn->doConnect(function ($err) {
             echo $err ? 'error' : 'connected';
         });
-        $conn->close(function () {
+        $conn->quit()->then(function () {
             echo 'never';
         });
 
@@ -260,7 +282,7 @@ class ConnectionTest extends BaseTestCase
         });
 
         $conn->ping()->then(function () use ($loop, $conn) {
-            $conn->close(function ($conn) {
+            $conn->quit()->done(function () use ($conn) {
                 $this->assertEquals($conn::STATE_CLOSED, $conn->getState());
             });
         });

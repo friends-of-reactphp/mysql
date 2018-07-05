@@ -20,7 +20,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertInstanceOf('React\MySQL\Connection', $conn);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -64,7 +64,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame($expected, reset($command->resultRows[0]));
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -82,7 +82,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame($expected, reset($command->resultRows[0]));
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -97,7 +97,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertEquals('hello?', reset($command->resultRows[0]));
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -115,7 +115,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -134,7 +134,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame('', $command->resultFields[0]['name']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -152,7 +152,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame(Constants::FIELD_TYPE_NULL, $command->resultFields[0]['type']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -169,7 +169,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame('bar', reset($command->resultRows[1]));
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -189,7 +189,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -209,7 +209,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame(Constants::FIELD_TYPE_LONGLONG, $command->resultFields[0]['type']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -229,7 +229,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -246,7 +246,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame('', reset($command->resultRows[1]));
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -262,7 +262,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame('foo', $command->resultFields[0]['name']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -279,7 +279,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame('bar', next($command->resultRows[0]));
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -296,7 +296,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame('', next($command->resultRows[0]));
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -315,7 +315,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[1]['type']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -335,7 +335,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertSame('col', $command->resultFields[1]['name']);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -354,7 +354,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(2, $command->resultRows);
         });
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -373,7 +373,7 @@ class ResultQueryTest extends BaseTestCase
             }
         );
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -389,7 +389,7 @@ class ResultQueryTest extends BaseTestCase
             }
         );
 
-        $connection->close();
+        $connection->quit();
         $loop->run();
     }
 
@@ -402,7 +402,7 @@ class ResultQueryTest extends BaseTestCase
             $connection->query('select 1+1')->then(function (QueryResult $command) {
                 $this->assertEquals([['1+1' => 2]], $command->resultRows);
             });
-            $connection->close();
+            $connection->quit();
         });
 
         $timeout = $loop->addTimer(1, function () use ($loop) {
@@ -426,7 +426,7 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('end', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
 
-        $connection->close();
+        $connection->quit();
 
         $loop->run();
     }
@@ -441,7 +441,7 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('end', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
 
-        $connection->close();
+        $connection->quit();
 
         $loop->run();
     }
@@ -456,7 +456,7 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('end', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
 
-        $connection->close();
+        $connection->quit();
 
         $loop->run();
     }
@@ -472,7 +472,7 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('error', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
 
-        $connection->close();
+        $connection->quit();
 
         $loop->run();
     }
@@ -487,7 +487,7 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('end', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
 
-        $connection->close();
+        $connection->quit();
 
         $loop->run();
     }

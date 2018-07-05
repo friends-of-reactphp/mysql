@@ -44,7 +44,7 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
         }
     );
     
-    $connection->close();
+    $connection->quit();
 });
 
 $loop->run();
@@ -257,6 +257,22 @@ $connection->ping()->then(function () {
 }, function (Exception $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
 });
+```
+
+#### quit()
+
+The `quit(): PromiseInterface<void, Exception>` method can be used to
+quit (soft-close) the connection.
+
+This method returns a promise that will resolve (with a void value) on
+success or will reject with an `Exception` on error. The MySQL protocol
+is inherently sequential, so that all commands will be performed in order
+and outstanding commands will be put into a queue to be executed once the
+previous commands are completed.
+
+```php
+$connection->query('CREATE TABLE test ...');
+$connection->quit();
 ```
 
 ## Install

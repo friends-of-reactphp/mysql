@@ -31,7 +31,7 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
         if ($query === 'exit') {
             // exit command should close the connection
             echo 'bye.' . PHP_EOL;
-            $connection->close();
+            $connection->quit();
             return;
         }
 
@@ -74,9 +74,7 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
 
     // close connection when STDIN closes (EOF or CTRL+D)
     $stdin->on('close', function () use ($connection) {
-        if ($connection->getState() === ConnectionInterface::STATE_AUTHENTICATED) {
-            $connection->close();
-        }
+        $connection->quit();
     });
 
     // close STDIN (stop reading) when connection closes

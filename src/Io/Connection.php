@@ -215,21 +215,21 @@ class Connection extends EventEmitter implements ConnectionInterface
         return $this->state;
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function close($callback = null)
+    public function quit()
     {
-        $this->_doCommand(new QuitCommand($this))
-            ->on('success', function () use ($callback) {
-                $this->state = self::STATE_CLOSED;
-                $this->emit('end', [$this]);
-                $this->emit('close', [$this]);
-                if (is_callable($callback)) {
-                    $callback($this);
-                }
-            });
-        $this->state = self::STATE_CLOSEING;
+        return new Promise(function ($resolve, $reject) {
+            $this->_doCommand(new QuitCommand($this))
+                ->on('error', function ($reason) use ($reject) {
+                    $reject($reason);
+                })
+                ->on('success', function () use ($resolve) {
+                    $this->state = self::STATE_CLOSED;
+                    $this->emit('end', [$this]);
+                    $this->emit('close', [$this]);
+                    $resolve();
+                });
+            $this->state = self::STATE_CLOSEING;
+        });
     }
 
     /**

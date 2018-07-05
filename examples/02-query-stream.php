@@ -26,7 +26,7 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
         echo 'CLOSED' . PHP_EOL;
     });
 
-    $connection->close();
+    $connection->quit();
 }, 'printf');
 
 $loop->run();
