@@ -210,7 +210,7 @@ interface ConnectionInterface
     /**
      * Quits (soft-close) the connection.
      *
-     * This method returns a promise that will resolve with a boolean `true` on
+     * This method returns a promise that will resolve (with a void value) on
      * success or will reject with an `Exception` on error. The MySQL protocol
      * is inherently sequential, so that all commands will be performed in order
      * and outstanding commands will be put into a queue to be executed once the
@@ -221,7 +221,7 @@ interface ConnectionInterface
      * $connection->quit();
      * ```
      *
-     * @return PromiseInterface Returns a Promise<true,Exception>
+     * @return PromiseInterface Returns a Promise<void,Exception>
      */
     public function quit();
 }

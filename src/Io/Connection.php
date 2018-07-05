@@ -226,7 +226,7 @@ class Connection extends EventEmitter implements ConnectionInterface
                     $this->state = self::STATE_CLOSED;
                     $this->emit('end', [$this]);
                     $this->emit('close', [$this]);
-                    $resolve(true);
+                    $resolve();
                 });
             $this->state = self::STATE_CLOSEING;
         });
