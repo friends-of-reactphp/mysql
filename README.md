@@ -242,10 +242,10 @@ suited for exposing multiple possible results.
 
 #### ping()
 
-The `ping(): PromiseInterface<true, Exception>` method can be used to
+The `ping(): PromiseInterface<void, Exception>` method can be used to
 check that the connection is alive.
 
-This method returns a promise that will resolve with a boolean `true` on
+This method returns a promise that will resolve (with a void value) on
 success or will reject with an `Exception` on error. The MySQL protocol
 is inherently sequential, so that all commands will be performed in order
 and outstanding command will be put into a queue to be executed once the
