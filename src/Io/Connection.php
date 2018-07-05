@@ -180,7 +180,7 @@ class Connection extends EventEmitter implements ConnectionInterface
                     $reject($reason);
                 })
                 ->on('success', function () use ($resolve) {
-                    $resolve(true);
+                    $resolve();
                 });
         });
     }
