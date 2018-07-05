@@ -4,7 +4,6 @@ namespace React\MySQL\Io;
 
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
-use React\MySQL\Commands\AbstractCommand;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\CommandInterface;
 use React\MySQL\Commands\PingCommand;
@@ -335,7 +334,7 @@ class Connection extends EventEmitter implements ConnectionInterface
      */
     protected function _doCommand(CommandInterface $command)
     {
-        if ($command->equals(AbstractCommand::INIT_AUTHENTICATE)) {
+        if ($command instanceof AuthenticateCommand) {
             return $this->executor->undequeue($command);
         } elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
             return $this->executor->enqueue($command);

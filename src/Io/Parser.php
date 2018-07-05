@@ -3,7 +3,9 @@
 namespace React\MySQL\Io;
 
 use Evenement\EventEmitter;
-use React\MySQL\Commands\AbstractCommand;
+use React\MySQL\Commands\AuthenticateCommand;
+use React\MySQL\Commands\QueryCommand;
+use React\MySQL\Commands\QuitCommand;
 use React\MySQL\Exception;
 use React\Stream\DuplexStreamInterface;
 
@@ -340,7 +342,7 @@ field:
         $command = $this->currCommand;
         $this->currCommand = null;
 
-        if ($command->equals(AbstractCommand::QUERY)) {
+        if ($command instanceof QueryCommand) {
             $command->affectedRows = $this->affectedRows;
             $command->insertId     = $this->insertId;
             $command->warnCount    = $this->warnCount;
@@ -364,7 +366,7 @@ field:
             $command = $this->currCommand;
             $this->currCommand = null;
 
-            if ($command->equals(AbstractCommand::QUIT)) {
+            if ($command instanceof QuitCommand) {
                 $command->emit('success');
             } else {
                 $command->emit('error', array(
@@ -426,7 +428,7 @@ field:
             $command = $this->executor->dequeue();
             $this->currCommand = $command;
 
-            if ($command->equals(AbstractCommand::INIT_AUTHENTICATE)) {
+            if ($command instanceof AuthenticateCommand) {
                 $this->authenticate();
             } else {
                 $this->seq = 0;

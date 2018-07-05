@@ -130,9 +130,4 @@ abstract class AbstractCommand extends EventEmitter implements CommandInterface
      * Authenticate after the connection is established, only for this project.
      */
     const INIT_AUTHENTICATE = 0xf1;
-
-    public function equals($commandId)
-    {
-        return $this->getId() === $commandId;
-    }
 }

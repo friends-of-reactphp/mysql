@@ -11,5 +11,4 @@ interface CommandInterface extends EventEmitterInterface
 {
     public function buildPacket();
     public function getId();
-    public function equals($commandId);
 }
