@@ -131,24 +131,6 @@ abstract class AbstractCommand extends EventEmitter implements CommandInterface
      */
     const INIT_AUTHENTICATE = 0xf1;
 
-    private $states = [];
-
-    public function getState($name, $default = null)
-    {
-        if (isset($this->states[$name])) {
-            return $this->states[$name];
-        }
-
-        return $default;
-    }
-
-    public function setState($name, $value)
-    {
-        $this->states[$name] = $value;
-
-        return $this;
-    }
-
     public function equals($commandId)
     {
         return $this->getId() === $commandId;
