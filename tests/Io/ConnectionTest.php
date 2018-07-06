@@ -18,7 +18,6 @@ class ConnectionTest extends BaseTestCase
 
         $conn->doConnect(function ($err, $conn) use ($loop, $options) {
             $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
-            $this->assertEquals(Connection::STATE_CONNECT_FAILED, $conn->getState());
         });
         $loop->run();
     }
@@ -37,7 +36,6 @@ class ConnectionTest extends BaseTestCase
                 $err->getMessage()
             );
             $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
-            $this->assertEquals(Connection::STATE_AUTHENTICATE_FAILED, $conn->getState());
         });
         $loop->run();
     }
@@ -278,14 +276,13 @@ class ConnectionTest extends BaseTestCase
         $conn->doConnect(function ($err, $conn) use ($loop) {
             $this->assertEquals(null, $err);
             $this->assertInstanceOf('React\MySQL\Io\Connection', $conn);
-            $this->assertEquals(Connection::STATE_AUTHENTICATED, $conn->getState());
         });
 
-        $conn->ping()->then(function () use ($loop, $conn) {
-            $conn->quit()->done(function () use ($conn) {
-                $this->assertEquals($conn::STATE_CLOSED, $conn->getState());
-            });
+        $once = $this->expectCallableOnce();
+        $conn->ping()->then(function () use ($conn, $once) {
+            $conn->quit()->then($once);
         });
+
         $loop->run();
     }
 }

@@ -12,15 +12,6 @@ use React\Stream\ReadableStreamInterface;
  */
 interface ConnectionInterface
 {
-    const STATE_INIT                = 0;
-    const STATE_CONNECT_FAILED      = 1;
-    const STATE_AUTHENTICATE_FAILED = 2;
-    const STATE_CONNECTING          = 3;
-    const STATE_CONNECTED           = 4;
-    const STATE_AUTHENTICATED       = 5;
-    const STATE_CLOSEING            = 6;
-    const STATE_CLOSED              = 7;
-
     /**
      * Performs an async query.
      *
@@ -154,58 +145,6 @@ interface ConnectionInterface
      * @return PromiseInterface Returns a Promise<true,Exception>
      */
     public function ping();
-
-    /**
-     * Change connection option parameter.
-     *
-     * @param string $name  Parameter name.
-     * @param mixed  $value New value.
-     *
-     * @return ConnectionInterface
-     */
-    public function setOption($name, $value);
-
-    /**
-     * Get connection parameter value.
-     *
-     * @param string $name    Parameter which should be returned.
-     * @param mixed  $default Value which should be returned if parameter is not
-     *                        set.
-     *
-     * @return mixed
-     */
-    public function getOption($name, $default = null);
-
-    /**
-     * Information about the server with which the connection is established.
-     *
-     * Available:
-     *
-     *  * serverVersion
-     *  * threadId
-     *  * ServerCaps
-     *  * serverLang
-     *  * serverStatus
-     *
-     * @return array
-     */
-    public function getServerOptions();
-
-    /**
-     * Get connection state.
-     *
-     * @return integer
-     *
-     * @see ConnectionInterface::STATE_INIT
-     * @see ConnectionInterface::STATE_CONNECT_FAILED
-     * @see ConnectionInterface::STATE_AUTHENTICATE_FAILED
-     * @see ConnectionInterface::STATE_CONNECTING
-     * @see ConnectionInterface::STATE_CONNECTED
-     * @see ConnectionInterface::STATE_AUTHENTICATED
-     * @see ConnectionInterface::STATE_CLOSEING
-     * @see ConnectionInterface::STATE_CLOSED
-     */
-    public function getState();
 
     /**
      * Quits (soft-close) the connection.
