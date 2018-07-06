@@ -267,14 +267,6 @@ class Connection extends EventEmitter implements ConnectionInterface
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function getServerOptions()
-    {
-        return $this->serverOptions;
-    }
-
-    /**
      * @param Exception $err Error from socket.
      *
      * @return void

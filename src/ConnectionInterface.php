@@ -147,21 +147,6 @@ interface ConnectionInterface
     public function ping();
 
     /**
-     * Information about the server with which the connection is established.
-     *
-     * Available:
-     *
-     *  * serverVersion
-     *  * threadId
-     *  * ServerCaps
-     *  * serverLang
-     *  * serverStatus
-     *
-     * @return array
-     */
-    public function getServerOptions();
-
-    /**
      * Quits (soft-close) the connection.
      *
      * This method returns a promise that will resolve (with a void value) on
