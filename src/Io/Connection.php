@@ -26,6 +26,15 @@ use React\Stream\ThroughStream;
  */
 class Connection extends EventEmitter implements ConnectionInterface
 {
+    const STATE_INIT                = 0;
+    const STATE_CONNECT_FAILED      = 1;
+    const STATE_AUTHENTICATE_FAILED = 2;
+    const STATE_CONNECTING          = 3;
+    const STATE_CONNECTED           = 4;
+    const STATE_AUTHENTICATED       = 5;
+    const STATE_CLOSEING            = 6;
+    const STATE_CLOSED              = 7;
+
     /**
      * @var LoopInterface
      */
@@ -205,14 +214,6 @@ class Connection extends EventEmitter implements ConnectionInterface
         }
 
         return $default;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getState()
-    {
-        return $this->state;
     }
 
     public function quit()
