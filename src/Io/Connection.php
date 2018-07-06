@@ -194,28 +194,6 @@ class Connection extends EventEmitter implements ConnectionInterface
         });
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function setOption($name, $value)
-    {
-        $this->options[$name] = $value;
-
-        return $this;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getOption($name, $default = null)
-    {
-        if (isset($this->options[$name])) {
-            return $this->options[$name];
-        }
-
-        return $default;
-    }
-
     public function quit()
     {
         return new Promise(function ($resolve, $reject) {

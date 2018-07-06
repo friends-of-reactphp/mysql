@@ -147,27 +147,6 @@ interface ConnectionInterface
     public function ping();
 
     /**
-     * Change connection option parameter.
-     *
-     * @param string $name  Parameter name.
-     * @param mixed  $value New value.
-     *
-     * @return ConnectionInterface
-     */
-    public function setOption($name, $value);
-
-    /**
-     * Get connection parameter value.
-     *
-     * @param string $name    Parameter which should be returned.
-     * @param mixed  $default Value which should be returned if parameter is not
-     *                        set.
-     *
-     * @return mixed
-     */
-    public function getOption($name, $default = null);
-
-    /**
      * Information about the server with which the connection is established.
      *
      * Available:
