@@ -12,10 +12,6 @@ class PingCommand extends AbstractCommand
         return self::PING;
     }
 
-    public function buildPacket()
-    {
-    }
-
     public function getSql()
     {
         return '';

@@ -26,10 +26,6 @@ class Parser extends EventEmitter
     const STATE_STANDBY = 0;
     const STATE_BODY    = 1;
 
-    protected $user     = 'root';
-    protected $passwd   = '';
-    protected $dbname   = '';
-
     /**
      * Keeps a reference to the command that is currently being processed.
      *
@@ -55,14 +51,9 @@ class Parser extends EventEmitter
     protected $phase = 0;
 
     public $seq = 0;
-    public $clientFlags = 239237;
 
     public $warnCount;
     public $message;
-
-    protected $maxPacketSize = 0x1000000;
-
-    public $charsetNumber = 0x21;
 
     protected $serverVersion;
     protected $threadId;
@@ -134,15 +125,6 @@ class Parser extends EventEmitter
             $bt = \debug_backtrace();
             $caller = \array_shift($bt);
             printf("[DEBUG] <%s:%d> %s\n", $caller['class'], $caller['line'], $message);
-        }
-    }
-
-    public function setOptions($options)
-    {
-        foreach ($options as $option => $value) {
-            if (\property_exists($this, $option)) {
-                $this->$option = $value;
-            }
         }
     }
 
@@ -222,10 +204,8 @@ field:
                 // Empty OK Packet terminates a query without a result set (UPDATE, INSERT etc.)
                 $this->debug('Ok Packet');
 
-                $isAuthenticated = false;
                 if ($this->phase === self::PHASE_AUTH_SENT) {
                     $this->phase = self::PHASE_HANDSHAKED;
-                    $isAuthenticated = true;
                 }
 
                 $this->affectedRows = $this->buffer->readIntLen();
@@ -235,12 +215,8 @@ field:
 
                 $this->message      = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
 
-                if ($isAuthenticated) {
-                    $this->onAuthenticated();
-                } else {
-                    $this->onSuccess();
-                }
                 $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarnCount:%d", $this->affectedRows, $this->insertId, $this->warnCount));
+                $this->onSuccess();
                 $this->nextRequest();
             } elseif ($fieldCount === 0xFE) {
                 // EOF Packet
@@ -351,14 +327,6 @@ field:
         $command->emit('success');
     }
 
-    protected function onAuthenticated()
-    {
-        $command = $this->currCommand;
-        $this->currCommand = null;
-
-        $command->emit('authenticated', array($this->connectOptions));
-    }
-
     protected function onClose()
     {
         $this->emit('close');
@@ -374,42 +342,6 @@ field:
                 ));
             }
         }
-    }
-
-    public function authenticate()
-    {
-        if ($this->phase !== self::PHASE_GOT_INIT) {
-            return;
-        }
-        $this->phase = self::PHASE_AUTH_SENT;
-
-        $clientFlags = Constants::CLIENT_LONG_PASSWORD |
-                Constants::CLIENT_LONG_FLAG |
-                Constants::CLIENT_LOCAL_FILES |
-                Constants::CLIENT_PROTOCOL_41 |
-                Constants::CLIENT_INTERACTIVE |
-                Constants::CLIENT_TRANSACTIONS |
-                Constants::CLIENT_SECURE_CONNECTION |
-                Constants::CLIENT_CONNECT_WITH_DB;
-
-        $packet = pack('VVc', $clientFlags, $this->maxPacketSize, $this->charsetNumber)
-                . "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-                . $this->user . "\x00"
-                . $this->getAuthToken($this->scramble, $this->passwd)
-                . ($this->dbname ? $this->dbname . "\x00" : '');
-
-        $this->sendPacket($packet);
-        $this->debug('Auth packet sent');
-    }
-
-    public function getAuthToken($scramble, $password = '')
-    {
-        if ($password === '') {
-            return "\x00";
-        }
-        $token = \sha1($scramble . \sha1($hash1 = \sha1($password, true), true), true) ^ $hash1;
-
-        return $this->buffer->buildStringLen($token);
     }
 
     public function sendPacket($packet)
@@ -428,7 +360,8 @@ field:
             $this->currCommand = $command;
 
             if ($command instanceof AuthenticateCommand) {
-                $this->authenticate();
+                $this->phase = self::PHASE_AUTH_SENT;
+                $this->sendPacket($command->authenticatePacket($this->scramble, $this->buffer));
             } else {
                 $this->seq = 0;
                 $this->sendPacket($this->buffer->buildInt1($command->getId()) . $command->getSql());

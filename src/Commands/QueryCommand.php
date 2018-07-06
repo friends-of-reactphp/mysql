@@ -45,8 +45,4 @@ class QueryCommand extends AbstractCommand
 
         return $query;
     }
-
-    public function buildPacket()
-    {
-    }
 }

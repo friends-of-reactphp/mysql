@@ -113,26 +113,21 @@ class Factory
             return \React\Promise\reject(new \InvalidArgumentException());
         }
 
-        $args = array(
-            'host' => $parts['host'],
-            'port' => isset($parts['port']) ? $parts['port'] : 3306,
-            'user' => isset($parts['user']) ? $parts['user'] : 'root',
-            'passwd' => isset($parts['pass']) ? $parts['pass'] : '',
-            'dbname' => isset($parts['path']) ? ltrim($parts['path'], '/') : ''
-        );
-
-        $uri = $args['host'] . ':' . $args['port'];
-        return $this->connector->connect($uri)->then(function (ConnectionInterface $stream) use ($args) {
+        $uri = $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 3306);
+        return $this->connector->connect($uri)->then(function (ConnectionInterface $stream) use ($parts) {
             $executor = new Executor();
             $parser = new Parser($stream, $executor);
-            $parser->setOptions($args);
 
             $connection = new Connection($stream, $executor);
-            $command = $executor->enqueue(new AuthenticateCommand());
+            $command = $executor->enqueue(new AuthenticateCommand(
+                isset($parts['user']) ? $parts['user'] : 'root',
+                isset($parts['pass']) ? $parts['pass'] : '',
+                isset($parts['path']) ? ltrim($parts['path'], '/') : ''
+            ));
             $parser->start();
 
             return new Promise(function ($resolve, $reject) use ($command, $connection, $stream) {
-                $command->on('authenticated', function () use ($resolve, $connection) {
+                $command->on('success', function () use ($resolve, $connection) {
                     $this->loop->futureTick(function () use ($resolve, $connection) {
                         $resolve($connection);
                     });

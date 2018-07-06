@@ -37,7 +37,9 @@ class ParserTest extends BaseTestCase
         $command->on('error', $this->expectCallableOnce());
 
         // hack to inject command as current command
-        $parser->setOptions(array('currCommand' => $command));
+        $ref = new \ReflectionProperty($parser, 'currCommand');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, $command);
 
         $stream->close();
     }
