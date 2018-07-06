@@ -3,7 +3,9 @@
 namespace React\MySQL\Io;
 
 use Evenement\EventEmitter;
-use React\MySQL\Commands\AbstractCommand;
+use React\MySQL\Commands\AuthenticateCommand;
+use React\MySQL\Commands\QueryCommand;
+use React\MySQL\Commands\QuitCommand;
 use React\MySQL\Exception;
 use React\Stream\DuplexStreamInterface;
 
@@ -309,7 +311,7 @@ field:
     {
         // $this->debug('row data: ' . json_encode($row));
         $command = $this->currCommand;
-        $command->emit('result', array($row, $command, $command->getConnection()));
+        $command->emit('result', array($row));
     }
 
     protected function onError()
@@ -318,10 +320,9 @@ field:
         $this->currCommand = null;
 
         $error = new Exception($this->errmsg, $this->errno);
-        $command->setError($error);
-        $command->emit('error', array($error, $command, $command->getConnection()));
         $this->errmsg = '';
         $this->errno  = 0;
+        $command->emit('error', array($error));
     }
 
     protected function onResultDone()
@@ -330,7 +331,7 @@ field:
         $this->currCommand = null;
 
         $command->resultFields = $this->resultFields;
-        $command->emit('end', array($command, $command->getConnection()));
+        $command->emit('end');
 
         $this->rsState      = self::RS_STATE_HEADER;
         $this->resultFields = [];
@@ -341,13 +342,13 @@ field:
         $command = $this->currCommand;
         $this->currCommand = null;
 
-        if ($command->equals(AbstractCommand::QUERY)) {
+        if ($command instanceof QueryCommand) {
             $command->affectedRows = $this->affectedRows;
             $command->insertId     = $this->insertId;
             $command->warnCount    = $this->warnCount;
             $command->message      = $this->message;
         }
-        $command->emit('success', array($command, $command->getConnection()));
+        $command->emit('success');
     }
 
     protected function onAuthenticated()
@@ -365,13 +366,11 @@ field:
             $command = $this->currCommand;
             $this->currCommand = null;
 
-            if ($command->equals(AbstractCommand::QUIT)) {
+            if ($command instanceof QuitCommand) {
                 $command->emit('success');
             } else {
                 $command->emit('error', array(
-                    new \RuntimeException('Connection lost'),
-                    $command,
-                    $command->getConnection()
+                    new \RuntimeException('Connection lost')
                 ));
             }
         }
@@ -428,7 +427,7 @@ field:
             $command = $this->executor->dequeue();
             $this->currCommand = $command;
 
-            if ($command->equals(AbstractCommand::INIT_AUTHENTICATE)) {
+            if ($command instanceof AuthenticateCommand) {
                 $this->authenticate();
             } else {
                 $this->seq = 0;

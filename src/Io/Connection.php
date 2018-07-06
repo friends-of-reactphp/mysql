@@ -4,7 +4,6 @@ namespace React\MySQL\Io;
 
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
-use React\MySQL\Commands\AbstractCommand;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\CommandInterface;
 use React\MySQL\Commands\PingCommand;
@@ -100,7 +99,7 @@ class Connection extends EventEmitter implements ConnectionInterface
             $query->bindParamsFromArray($params);
         }
 
-        $command = new QueryCommand($this);
+        $command = new QueryCommand();
         $command->setQuery($query);
         try {
             $this->_doCommand($command);
@@ -115,7 +114,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         $command->on('result', function ($row) use (&$rows) {
             $rows[] = $row;
         });
-        $command->on('end', function ($command) use ($deferred, &$rows) {
+        $command->on('end', function () use ($command, $deferred, &$rows) {
             $result = new QueryResult();
             $result->resultFields = $command->resultFields;
             $result->resultRows = $rows;
@@ -128,7 +127,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         $command->on('error', function ($error) use ($deferred) {
             $deferred->reject($error);
         });
-        $command->on('success', function (QueryCommand $command) use ($deferred) {
+        $command->on('success', function () use ($command, $deferred) {
             $result = new QueryResult();
             $result->affectedRows = $command->affectedRows;
             $result->insertId = $command->insertId;
@@ -146,7 +145,7 @@ class Connection extends EventEmitter implements ConnectionInterface
             $query->bindParamsFromArray($params);
         }
 
-        $command = new QueryCommand($this);
+        $command = new QueryCommand();
         $command->setQuery($query);
         $this->_doCommand($command);
 
@@ -175,7 +174,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     public function ping()
     {
         return new Promise(function ($resolve, $reject) {
-            $this->_doCommand(new PingCommand($this))
+            $this->_doCommand(new PingCommand())
                 ->on('error', function ($reason) use ($reject) {
                     $reject($reason);
                 })
@@ -218,7 +217,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     public function quit()
     {
         return new Promise(function ($resolve, $reject) {
-            $this->_doCommand(new QuitCommand($this))
+            $this->_doCommand(new QuitCommand())
                 ->on('error', function ($reason) use ($reject) {
                     $reject($reason);
                 })
@@ -272,7 +271,7 @@ class Connection extends EventEmitter implements ConnectionInterface
 
                 $parser->setOptions($options);
 
-                $command = $this->_doCommand(new AuthenticateCommand($this));
+                $command = $this->_doCommand(new AuthenticateCommand());
                 $command->on('authenticated', $connectedHandler);
                 $command->on('error', $errorHandler);
 
@@ -321,9 +320,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         while (!$this->executor->isIdle()) {
             $command = $this->executor->dequeue();
             $command->emit('error', array(
-                new \RuntimeException('Connection lost'),
-                $command,
-                $this
+                new \RuntimeException('Connection lost')
             ));
         }
     }
@@ -335,7 +332,7 @@ class Connection extends EventEmitter implements ConnectionInterface
      */
     protected function _doCommand(CommandInterface $command)
     {
-        if ($command->equals(AbstractCommand::INIT_AUTHENTICATE)) {
+        if ($command instanceof AuthenticateCommand) {
             return $this->executor->undequeue($command);
         } elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
             return $this->executor->enqueue($command);
