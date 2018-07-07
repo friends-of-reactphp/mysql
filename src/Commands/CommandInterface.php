@@ -9,6 +9,5 @@ use Evenement\EventEmitterInterface;
  */
 interface CommandInterface extends EventEmitterInterface
 {
-    public function buildPacket();
     public function getId();
 }

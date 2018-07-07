@@ -12,10 +12,6 @@ class QuitCommand extends AbstractCommand
         return self::QUIT;
     }
 
-    public function buildPacket()
-    {
-    }
-
     public function getSql()
     {
         return '';

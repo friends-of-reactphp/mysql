@@ -125,9 +125,4 @@ abstract class AbstractCommand extends EventEmitter implements CommandInterface
      * mysql_stmt_fetch
      */
     const STMT_FETCH = 0x1c;
-
-    /**
-     * Authenticate after the connection is established, only for this project.
-     */
-    const INIT_AUTHENTICATE = 0xf1;
 }

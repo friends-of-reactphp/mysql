@@ -96,7 +96,7 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testConnectWithValidAuthWillRunUtilClose()
+    public function testConnectWithValidAuthWillRunUntilQuit()
     {
         $this->expectOutputString('connected.closed.');
 
@@ -114,7 +114,29 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testConnectWithValidAuthCanPingAndClose()
+    public function testConnectWithValidAuthCanPingAndThenQuit()
+    {
+        $this->expectOutputString('connected.ping.closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+            echo 'connected.';
+            $connection->ping()->then(function () use ($connection) {
+                echo 'ping.';
+                $connection->quit()->then(function () {
+                    echo 'closed.';
+                });
+            });
+
+        }, 'printf')->then(null, 'printf');
+
+        $loop->run();
+    }
+
+    public function testConnectWithValidAuthCanQueuePingAndQuit()
     {
         $this->expectOutputString('connected.ping.closed.');
 
@@ -126,6 +148,27 @@ class FactoryTest extends BaseTestCase
             echo 'connected.';
             $connection->ping()->then(function () {
                 echo 'ping.';
+            });
+            $connection->quit()->then(function () {
+                echo 'closed.';
+            });
+        }, 'printf')->then(null, 'printf');
+
+        $loop->run();
+    }
+
+    public function testConnectWithValidAuthQuitOnlyOnce()
+    {
+        $this->expectOutputString('connected.closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+            echo 'connected.';
+            $connection->quit()->then(function () {
+                echo 'closed.';
             });
             $connection->quit()->then(function () {
                 echo 'closed.';

@@ -3,8 +3,6 @@
 namespace React\MySQL\Io;
 
 use Evenement\EventEmitter;
-use React\EventLoop\LoopInterface;
-use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\CommandInterface;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
@@ -15,8 +13,6 @@ use React\MySQL\QueryResult;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
-use React\Socket\Connector;
-use React\Socket\ConnectorInterface;
 use React\Stream\ThroughStream;
 
 /**
@@ -25,40 +21,9 @@ use React\Stream\ThroughStream;
  */
 class Connection extends EventEmitter implements ConnectionInterface
 {
-    const STATE_INIT                = 0;
-    const STATE_CONNECT_FAILED      = 1;
-    const STATE_AUTHENTICATE_FAILED = 2;
-    const STATE_CONNECTING          = 3;
-    const STATE_CONNECTED           = 4;
     const STATE_AUTHENTICATED       = 5;
     const STATE_CLOSEING            = 6;
     const STATE_CLOSED              = 7;
-
-    /**
-     * @var LoopInterface
-     */
-    private $loop;
-
-    /**
-     * @var Connector
-     */
-    private $connector;
-
-    /**
-     * @var array
-     */
-    private $options = [
-        'host'   => '127.0.0.1',
-        'port'   => 3306,
-        'user'   => 'root',
-        'passwd' => '',
-        'dbname' => '',
-    ];
-
-    /**
-     * @var array
-     */
-    private $serverOptions;
 
     /**
      * @var Executor
@@ -68,7 +33,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     /**
      * @var integer
      */
-    private $state = self::STATE_INIT;
+    private $state = self::STATE_AUTHENTICATED;
 
     /**
      * @var SocketConnectionInterface
@@ -76,26 +41,18 @@ class Connection extends EventEmitter implements ConnectionInterface
     private $stream;
 
     /**
-     * @var Parser
-     */
-    public $parser;
-
-    /**
      * Connection constructor.
      *
-     * @param LoopInterface      $loop           ReactPHP event loop instance.
-     * @param array              $connectOptions MySQL connection options.
-     * @param ConnectorInterface $connector      (optional) socket connector instance.
+     * @param SocketConnectionInterface $stream
+     * @param Executor                  $executor
      */
-    public function __construct(LoopInterface $loop, array $connectOptions = array(), ConnectorInterface $connector = null)
+    public function __construct(SocketConnectionInterface $stream, Executor $executor)
     {
-        $this->loop       = $loop;
-        if (!$connector) {
-            $connector    = new Connector($loop);
-        }
-        $this->connector  = $connector;
-        $this->executor   = new Executor();
-        $this->options    = $connectOptions + $this->options;
+        $this->stream   = $stream;
+        $this->executor = $executor;
+
+        $stream->on('error', [$this, 'handleConnectionError']);
+        $stream->on('close', [$this, 'handleConnectionClosed']);
     }
 
     /**
@@ -211,61 +168,6 @@ class Connection extends EventEmitter implements ConnectionInterface
     }
 
     /**
-     * [internal] Connect to mysql server.
-     *
-     * This method will be invoked once after the `Connection` is initialized.
-     *
-     * @internal
-     * @see \React\MySQL\Factory
-     */
-    public function doConnect($callback)
-    {
-        if ($this->state !== self::STATE_INIT) {
-            throw new Exception('Connection not in idle state');
-        }
-
-        $this->state = self::STATE_CONNECTING;
-        $options     = $this->options;
-        $streamRef   = $this->stream;
-
-        $errorHandler = function ($reason) use ($callback) {
-            $this->state = self::STATE_AUTHENTICATE_FAILED;
-            $callback($reason, $this);
-        };
-        $connectedHandler = function ($serverOptions) use ($callback) {
-            $this->state = self::STATE_AUTHENTICATED;
-            $this->serverOptions = $serverOptions;
-            $callback(null, $this);
-        };
-
-        $this->connector
-            ->connect($this->options['host'] . ':' . $this->options['port'])
-            ->then(function ($stream) use (&$streamRef, $options, $errorHandler, $connectedHandler) {
-                $streamRef = $stream;
-
-                $stream->on('error', [$this, 'handleConnectionError']);
-                $stream->on('close', [$this, 'handleConnectionClosed']);
-
-                $parser = $this->parser = new Parser($stream, $this->executor);
-
-                $parser->setOptions($options);
-
-                $command = $this->_doCommand(new AuthenticateCommand());
-                $command->on('authenticated', $connectedHandler);
-                $command->on('error', $errorHandler);
-
-                //$parser->on('close', $closeHandler);
-                $parser->start();
-
-            }, function (\Exception $error) use ($callback) {
-                $this->state = self::STATE_CONNECT_FAILED;
-                $error = new \RuntimeException('Unable to connect to database server', 0, $error);
-                $this->handleConnectionError($error);
-                $callback($error, $this);
-            });
-    }
-
-    /**
      * @param Exception $err Error from socket.
      *
      * @return void
@@ -303,9 +205,7 @@ class Connection extends EventEmitter implements ConnectionInterface
      */
     protected function _doCommand(CommandInterface $command)
     {
-        if ($command instanceof AuthenticateCommand) {
-            return $this->executor->undequeue($command);
-        } elseif ($this->state >= self::STATE_CONNECTING && $this->state <= self::STATE_AUTHENTICATED) {
+        if ($this->state === self::STATE_AUTHENTICATED) {
             return $this->executor->enqueue($command);
         } else {
             throw new Exception("Can't send command");

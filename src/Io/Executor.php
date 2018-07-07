@@ -33,11 +33,4 @@ class Executor extends EventEmitter
     {
         return $this->queue->dequeue();
     }
-
-    public function undequeue($command)
-    {
-        $this->queue->unshift($command);
-
-        return $command;
-    }
 }
