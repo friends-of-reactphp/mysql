@@ -13,7 +13,6 @@ use React\MySQL\QueryResult;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
-use React\Stream\ThroughStream;
 
 /**
  * @internal
@@ -115,26 +114,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         $command->setQuery($query);
         $this->_doCommand($command);
 
-        $stream = new ThroughStream();
-
-        // forward result set rows until result set end
-        $command->on('result', function ($row) use ($stream) {
-            $stream->write($row);
-        });
-        $command->on('end', function () use ($stream) {
-            $stream->end();
-        });
-
-        // status reply (response without result set) ends stream without data
-        $command->on('success', function () use ($stream) {
-            $stream->end();
-        });
-        $command->on('error', function ($err) use ($stream) {
-            $stream->emit('error', array($err));
-            $stream->close();
-        });
-
-        return $stream;
+        return new QueryStream($command, $this->stream);
     }
 
     public function ping()

@@ -491,4 +491,20 @@ class ResultQueryTest extends BaseTestCase
 
         $loop->run();
     }
+
+    public function testQueryStreamExplicitCloseEmitsCloseEventWithoutData()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $connection = $this->createConnection($loop);
+
+        $stream = $connection->queryStream('SELECT 1');
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('end', $this->expectCallableNever());
+        $stream->on('close', $this->expectCallableOnce());
+        $stream->close();
+
+        $connection->quit();
+
+        $loop->run();
+    }
 }
