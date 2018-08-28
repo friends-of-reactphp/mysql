@@ -163,4 +163,22 @@ interface ConnectionInterface
      * @return PromiseInterface Returns a Promise<void,Exception>
      */
     public function quit();
+
+    /**
+     * Force-close the connection.
+     *
+     * Unlike the `quit()` method, this method will immediately force-close the
+     * connection and reject all oustanding commands.
+     *
+     * ```php
+     * $connection->close();
+     * ```
+     *
+     * Forcefully closing the connection will yield a warning in the server logs
+     * and should generally only be used as a last resort. See also
+     * [`quit()`](#quit) as a safe alternative.
+     *
+     * @return void
+     */
+    public function close();
 }

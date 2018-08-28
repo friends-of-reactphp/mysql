@@ -177,4 +177,57 @@ class FactoryTest extends BaseTestCase
 
         $loop->run();
     }
+
+    public function testConnectWithValidAuthCanCloseOnlyOnce()
+    {
+        $this->expectOutputString('connected.closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+            echo 'connected.';
+            $connection->on('close', function () {
+                echo 'closed.';
+            });
+            $connection->on('error', function () {
+                echo 'error?';
+            });
+
+            $connection->close();
+            $connection->close();
+        }, 'printf')->then(null, 'printf');
+
+        $loop->run();
+    }
+
+    public function testConnectWithValidAuthCanCloseAndAbortPing()
+    {
+        $this->expectOutputString('connected.aborted pending (Connection lost).aborted queued (Connection lost).closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+            echo 'connected.';
+            $connection->on('close', function () {
+                echo 'closed.';
+            });
+            $connection->on('error', function () {
+                echo 'error?';
+            });
+
+            $connection->ping()->then(null, function ($e) {
+                echo 'aborted pending (' . $e->getMessage() .').';
+            });
+            $connection->ping()->then(null, function ($e) {
+                echo 'aborted queued (' . $e->getMessage() . ').';
+            });
+            $connection->close();
+        }, 'printf')->then(null, 'printf');
+
+        $loop->run();
+    }
 }
