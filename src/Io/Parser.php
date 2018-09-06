@@ -293,21 +293,23 @@ field:
     protected function onError()
     {
         $command = $this->currCommand;
-        $this->currCommand = null;
 
         $error = new Exception($this->errmsg, $this->errno);
         $this->errmsg = '';
         $this->errno  = 0;
         $command->emit('error', array($error));
+
+        $this->currCommand = null;
     }
 
     protected function onResultDone()
     {
         $command = $this->currCommand;
-        $this->currCommand = null;
 
         $command->resultFields = $this->resultFields;
         $command->emit('end');
+
+        $this->currCommand = null;
 
         $this->rsState      = self::RS_STATE_HEADER;
         $this->resultFields = [];
@@ -316,7 +318,6 @@ field:
     protected function onSuccess()
     {
         $command = $this->currCommand;
-        $this->currCommand = null;
 
         if ($command instanceof QueryCommand) {
             $command->affectedRows = $this->affectedRows;
@@ -325,6 +326,8 @@ field:
             $command->message      = $this->message;
         }
         $command->emit('success');
+
+        $this->currCommand = null;
     }
 
     protected function onClose()
