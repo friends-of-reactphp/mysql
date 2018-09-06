@@ -59,4 +59,26 @@ class NoResultQueryTest extends BaseTestCase
         $connection->quit();
         $loop->run();
     }
+
+    public function testPingMultipleWillBeExecutedInSameOrderTheyAreEnqueuedFromHandlers()
+    {
+        $this->expectOutputString('123');
+
+        $loop = \React\EventLoop\Factory::create();
+        $connection = $this->createConnection($loop);
+
+        $connection->ping()->then(function () use ($connection) {
+            echo '1';
+
+            $connection->ping()->then(function () use ($connection) {
+                echo '3';
+                $connection->quit();
+            });
+        });
+        $connection->ping()->then(function () {
+            echo '2';
+        });
+
+        $loop->run();
+    }
 }

@@ -128,9 +128,7 @@ class Factory
 
             return new Promise(function ($resolve, $reject) use ($command, $connection, $stream) {
                 $command->on('success', function () use ($resolve, $connection) {
-                    $this->loop->futureTick(function () use ($resolve, $connection) {
-                        $resolve($connection);
-                    });
+                    $resolve($connection);
                 });
                 $command->on('error', function ($error) use ($reject, $stream) {
                     $reject($error);
