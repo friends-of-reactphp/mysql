@@ -114,6 +114,14 @@ interface ConnectionInterface
      * $connection->queryStream('SELECT * FROM user')->pipe($formatter)->pipe($logger);
      * ```
      *
+     * Note that as per the underlying stream definition, calling `pause()` and
+     * `resume()` on this stream is advisory-only, i.e. the stream MAY continue
+     * emitting some data until the underlying network buffer is drained. Also
+     * notice that the server side limits how long a connection is allowed to be
+     * in a state that has outgoing data. Special care should be taken to ensure
+     * the stream is resumed in time. This implies that using `pipe()` with a
+     * slow destination stream may cause the connection to abort after a while.
+     *
      * The given `$sql` parameter MUST contain a single statement. Support
      * for multiple statements is disabled for security reasons because it
      * could allow for possible SQL injection attacks and this API is not
