@@ -88,35 +88,21 @@ class Parser extends EventEmitter
      */
     protected $executor;
 
-    /**
-     * @deprecated
-     * @see self::$currCommand
-     */
-    protected $queue;
-
     public function __construct(DuplexStreamInterface $stream, Executor $executor)
     {
         $this->stream   = $stream;
         $this->executor = $executor;
 
-        // @deprecated unused, exists for BC only.
-        $this->queue    = new \SplQueue();
-
         $this->buffer   = new Buffer();
-        $executor->on('new', array($this, 'handleNewCommand'));
+        $executor->on('new', function () {
+            $this->nextRequest();
+        });
     }
 
     public function start()
     {
         $this->stream->on('data', array($this, 'parse'));
         $this->stream->on('close', array($this, 'onClose'));
-    }
-
-    public function handleNewCommand()
-    {
-        if ($this->currCommand === null) {
-            $this->nextRequest();
-        }
     }
 
     public function debug($message)
@@ -355,7 +341,7 @@ field:
             return false;
         }
 
-        if (!$this->executor->isIdle()) {
+        if ($this->currCommand === null && !$this->executor->isIdle()) {
             $command = $this->executor->dequeue();
             $this->currCommand = $command;
 
