@@ -19,6 +19,8 @@ It is written in pure PHP and does not require any extensions.
     * [query()](#query)
     * [queryStream()](#querystream)
     * [ping()](#ping)
+    * [quit()](#quit)
+    * [close()](#close)
 * [Install](#install)
 * [Tests](#tests)
 * [License](#license)
@@ -274,6 +276,22 @@ previous commands are completed.
 $connection->query('CREATE TABLE test ...');
 $connection->quit();
 ```
+
+#### close()
+
+The `close(): void` method can be used to
+force-close the connection.
+
+Unlike the `quit()` method, this method will immediately force-close the
+connection and reject all oustanding commands.
+
+```php
+$connection->close();
+```
+
+Forcefully closing the connection will yield a warning in the server logs
+and should generally only be used as a last resort. See also
+[`quit()`](#quit) as a safe alternative.
 
 ## Install
 

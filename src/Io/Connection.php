@@ -167,6 +167,27 @@ class Connection extends EventEmitter implements ConnectionInterface
         });
     }
 
+    public function close()
+    {
+        if ($this->state === self::STATE_CLOSED) {
+            return;
+        }
+
+        $this->state = self::STATE_CLOSED;
+        $this->stream->close();
+
+        // reject all pending commands if connection is closed
+        while (!$this->executor->isIdle()) {
+            $command = $this->executor->dequeue();
+            $command->emit('error', array(
+                new \RuntimeException('Connection lost')
+            ));
+        }
+
+        $this->emit('close');
+        $this->removeAllListeners();
+    }
+
     /**
      * @param Exception $err Error from socket.
      *
@@ -185,17 +206,10 @@ class Connection extends EventEmitter implements ConnectionInterface
     public function handleConnectionClosed()
     {
         if ($this->state < self::STATE_CLOSEING) {
-            $this->state = self::STATE_CLOSED;
             $this->emit('error', [new \RuntimeException('mysql server has gone away'), $this]);
         }
 
-        // reject all pending commands if connection is closed
-        while (!$this->executor->isIdle()) {
-            $command = $this->executor->dequeue();
-            $command->emit('error', array(
-                new \RuntimeException('Connection lost')
-            ));
-        }
+        $this->close();
     }
 
     /**
