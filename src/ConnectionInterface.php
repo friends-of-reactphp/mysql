@@ -2,6 +2,7 @@
 
 namespace React\MySQL;
 
+use Evenement\EventEmitterInterface;
 use React\Promise\PromiseInterface;
 use React\Stream\ReadableStreamInterface;
 
@@ -9,8 +10,37 @@ use React\Stream\ReadableStreamInterface;
  * The `ConnectionInterface` represents a connection that is responsible for
  * communicating with your MySQL server instance, managing the connection state
  * and sending your database queries.
+ *
+ * Besides defining a few methods, this interface also implements the
+ * `EventEmitterInterface` which allows you to react to certain events:
+ *
+ * error event:
+ *     The `error` event will be emitted once a fatal error occurs, such as
+ *     when the connection is lost or is invalid.
+ *     The event receives a single `Exception` argument for the error instance.
+ *
+ *     ```php
+ *     $connection->on('error', function (Exception $e) {
+ *         echo 'Error: ' . $e->getMessage() . PHP_EOL;
+ *     });
+ *     ```
+ *
+ *     This event will only be triggered for fatal errors and will be followed
+ *     by closing the connection. It is not to be confused with "soft" errors
+ *     caused by invalid SQL queries.
+ *
+ * close event:
+ *     The `close` event will be emitted once the connection closes (terminates).
+ *
+ *     ```php
+ *     $connecion->on('close', function () {
+ *         echo 'Connection closed' . PHP_EOL;
+ *     });
+ *     ```
+ *
+ *     See also the [#close](#close) method.
  */
-interface ConnectionInterface
+interface ConnectionInterface extends EventEmitterInterface
 {
     /**
      * Performs an async query.

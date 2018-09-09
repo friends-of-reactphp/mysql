@@ -21,6 +21,7 @@ It is written in pure PHP and does not require any extensions.
     * [ping()](#ping)
     * [quit()](#quit)
     * [close()](#close)
+    * [Events](#events)
 * [Install](#install)
 * [Tests](#tests)
 * [License](#license)
@@ -300,6 +301,39 @@ $connection->close();
 Forcefully closing the connection will yield a warning in the server logs
 and should generally only be used as a last resort. See also
 [`quit()`](#quit) as a safe alternative.
+
+#### Events
+
+Besides defining a few methods, this interface also implements the
+`EventEmitterInterface` which allows you to react to certain events:
+
+##### error event
+
+The `error` event will be emitted once a fatal error occurs, such as
+when the connection is lost or is invalid.
+The event receives a single `Exception` argument for the error instance.
+
+```php
+$connection->on('error', function (Exception $e) {
+    echo 'Error: ' . $e->getMessage() . PHP_EOL;
+});
+```
+
+This event will only be triggered for fatal errors and will be followed
+by closing the connection. It is not to be confused with "soft" errors
+caused by invalid SQL queries.
+
+##### close event
+
+The `close` event will be emitted once the connection closes (terminates).
+
+```php
+$connecion->on('close', function () {
+    echo 'Connection closed' . PHP_EOL;
+});
+```
+
+See also the [#close](#close) method.
 
 ## Install
 
