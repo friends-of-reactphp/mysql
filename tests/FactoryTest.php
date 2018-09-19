@@ -352,4 +352,60 @@ class FactoryTest extends BaseTestCase
             return ($e->getMessage() === 'Connection to database server cancelled');
         })));
     }
+
+    public function testConnectLazyWithValidAuthWillRunUntilQuit()
+    {
+        $this->expectOutputString('closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->quit()->then(function () {
+            echo 'closed.';
+        });
+
+        $loop->run();
+    }
+
+    public function testConnectLazyWithInvalidAuthWillEmitErrorAndClose()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString(array('passwd' => 'invalidpass'));
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->on('error', $this->expectCallableOnce());
+        $connection->on('close', $this->expectCallableOnce());
+
+        $loop->run();
+    }
+
+    public function testConnectLazyWithValidAuthWillPingBeforeQuitButNotAfter()
+    {
+        $this->expectOutputString('ping.closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->ping()->then(function () {
+            echo 'ping.';
+        });
+
+        $connection->quit()->then(function () {
+            echo 'closed.';
+        });
+
+        $connection->ping()->then(function () {
+            echo 'never reached';
+        });
+
+        $loop->run();
+    }
 }

@@ -13,6 +13,7 @@ use React\Promise\Timer\TimeoutException;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
 use React\Socket\ConnectionInterface;
+use React\MySQL\Io\LazyConnection;
 
 class Factory
 {
@@ -193,5 +194,75 @@ class Factory
             }
             throw $e;
         });
+    }
+
+    /**
+     * Creates a new connection.
+     *
+     * It helps with establishing a TCP/IP connection to your MySQL database
+     * and issuing the initial authentication handshake.
+     *
+     * ```php
+     * $connection = $factory->createLazyConnection($url);
+     *
+     * $connection->query(…);
+     * ```
+     *
+     * This method immediately returns a "virtual" connection implementing the
+     * [`ConnectionInterface`](#connectioninterface) that can be used to
+     * interface with your MySQL database. Internally, it lazily creates the
+     * underlying database connection (which may take some time) and will
+     * queue all outstanding requests until the underlying connection is ready.
+     *
+     * From a consumer side this means that you can start sending queries to the
+     * database right away while the connection may still be pending. It will
+     * ensure that all commands will be executed in the order they are enqueued
+     * once the connection is ready. If the database connection fails, it will
+     * emit an `error` event, reject all outstanding commands and `close` the
+     * connection as described in the `ConnectionInterface`. In other words, it
+     * behaves just like a real connection and frees you from having to deal
+     * with its async resolution.
+     *
+     * Depending on your particular use case, you may prefer this method or the
+     * underlying `createConnection()` which resolves with a promise. For many
+     * simple use cases it may be easier to create a lazy connection.
+     *
+     * The `$url` parameter must contain the database host, optional
+     * authentication, port and database to connect to:
+     *
+     * ```php
+     * $factory->createLazyConnection('user:secret@localhost:3306/database');
+     * ```
+     *
+     * You can omit the port if you're connecting to default port `3306`:
+     *
+     * ```php
+     * $factory->createLazyConnection('user:secret@localhost/database');
+     * ```
+     *
+     * If you do not include authentication and/or database, then this method
+     * will default to trying to connect as user `root` with an empty password
+     * and no database selected. This may be useful when initially setting up a
+     * database, but likely to yield an authentication error in a production system:
+     *
+     * ```php
+     * $factory->createLazyConnection('localhost');
+     * ```
+     *
+     * This method respects PHP's `default_socket_timeout` setting (default 60s)
+     * as a timeout for establishing the connection and waiting for successful
+     * authentication. You can explicitly pass a custom timeout value in seconds
+     * (or use a negative number to not apply a timeout) like this:
+     *
+     * ```php
+     * $factory->createLazyConnection('localhost?timeout=0.5');
+     * ```
+     *
+     * @param string $uri
+     * @return ConnectionInterface
+     */
+    public function createLazyConnection($uri)
+    {
+        return new LazyConnection($this->createConnection($uri));
     }
 }
