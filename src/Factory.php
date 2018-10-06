@@ -110,7 +110,7 @@ class Factory
     {
         $parts = parse_url('mysql://' . $uri);
         if (!isset($parts['scheme'], $parts['host']) || $parts['scheme'] !== 'mysql') {
-            return \React\Promise\reject(new \InvalidArgumentException());
+            return \React\Promise\reject(new \InvalidArgumentException('Invalid connect uri given'));
         }
 
         $uri = $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 3306);
