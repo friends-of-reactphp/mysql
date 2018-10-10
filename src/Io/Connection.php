@@ -83,6 +83,8 @@ class Connection extends EventEmitter implements ConnectionInterface
             $result = new QueryResult();
             $result->resultFields = $command->resultFields;
             $result->resultRows = $rows;
+            $result->warnCount = $command->warnCount;
+
             $rows = array();
 
             $deferred->resolve($result);
@@ -96,6 +98,7 @@ class Connection extends EventEmitter implements ConnectionInterface
             $result = new QueryResult();
             $result->affectedRows = $command->affectedRows;
             $result->insertId = $command->insertId;
+            $result->warnCount = $command->warnCount;
 
             $deferred->resolve($result);
         });

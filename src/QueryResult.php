@@ -30,4 +30,10 @@ class QueryResult
      * @var array|null
      */
     public $resultRows;
+
+    /**
+     * number of warnings (if any)
+     * @var int|null
+     */
+    public $warnCount;
 }
