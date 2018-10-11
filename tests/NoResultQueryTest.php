@@ -60,6 +60,29 @@ class NoResultQueryTest extends BaseTestCase
         $loop->run();
     }
 
+    public function testCreateTableAgainWillAddWarning()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $connection = $this->createConnection($loop);
+
+        $sql = '
+CREATE TABLE IF NOT EXISTS `book` (
+    `id`      INT(11)      NOT NULL AUTO_INCREMENT,
+    `name`    VARCHAR(255) NOT NULL,
+    `isbn`    VARCHAR(255) NULL,
+    `author`  VARCHAR(255) NULL,
+    `created` INT(11)      NULL,
+    PRIMARY KEY (`id`)
+)';
+
+        $connection->query($sql)->then(function (QueryResult $command) {
+            $this->assertEquals(1, $command->warningCount);
+        });
+
+        $connection->quit();
+        $loop->run();
+    }
+
     public function testPingMultipleWillBeExecutedInSameOrderTheyAreEnqueuedFromHandlers()
     {
         $this->expectOutputString('123');
