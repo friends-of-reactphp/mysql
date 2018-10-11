@@ -138,25 +138,26 @@ packet:
         $this->state = self::STATE_STANDBY;
         //$this->stream->bufferSize = 4;
         if ($this->phase === 0) {
-            $this->phase = self::PHASE_GOT_INIT;
-            $this->protocalVersion = $this->buffer->readInt1();
-            $this->debug(sprintf("Protocal Version: %d", $this->protocalVersion));
-            if ($this->protocalVersion === 0xFF) { //error
-                $fieldCount = $this->protocalVersion;
-                $this->protocalVersion = 0;
-                printf("Error:\n");
+            $response = $this->buffer->readInt1();
+            if ($response === 0xFF) {
+                // error packet before handshake means we did not exchange capabilities and error does not include SQL state
+                $this->phase   = self::PHASE_AUTH_ERR;
+                $this->errno   = $this->buffer->readInt2();
+                $this->errmsg  = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
+                $this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
 
-                $this->rsState = self::RS_STATE_HEADER;
-                $this->resultFields = [];
-                if ($this->phase === self::PHASE_AUTH_SENT || $this->phase === self::PHASE_GOT_INIT) {
-                    $this->phase = self::PHASE_AUTH_ERR;
-                }
-
-                goto field;
+                // error during init phase also means we're not currently executing any command
+                // simply reject the first outstanding command in the queue (AuthenticateCommand)
+                $this->currCommand = $this->executor->dequeue();
+                $this->onError();
+                return;
             }
 
-            $options = &$this->connectOptions;
+            $this->phase = self::PHASE_GOT_INIT;
+            $this->protocalVersion = $response;
+            $this->debug(sprintf("Protocal Version: %d", $this->protocalVersion));
 
+            $options = &$this->connectOptions;
             $options['serverVersion'] = $this->buffer->readStringNull();
             $options['threadId']      = $this->buffer->readInt4();
             $this->scramble           = $this->buffer->read(8); // 1st part
@@ -173,14 +174,15 @@ packet:
                 $this->buffer->readStringNull(); // skip authentication plugin name
             }
 
+            // init completed, continue with sending AuthenticateCommand
             $this->nextRequest(true);
         } else {
             $fieldCount = $this->buffer->readInt1();
-field:
+
             if ($fieldCount === 0xFF) {
                 // error packet
                 $this->errno   = $this->buffer->readInt2();
-                $this->buffer->skip(6); // state
+                $this->buffer->skip(6); // skip SQL state
                 $this->errmsg  = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
                 $this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
 
