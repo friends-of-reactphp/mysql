@@ -52,7 +52,7 @@ class Parser extends EventEmitter
 
     public $seq = 0;
 
-    public $warnCount;
+    public $warningCount;
     public $message;
 
     protected $serverVersion;
@@ -197,11 +197,11 @@ field:
                 $this->affectedRows = $this->buffer->readIntLen();
                 $this->insertId     = $this->buffer->readIntLen();
                 $this->serverStatus = $this->buffer->readInt2();
-                $this->warnCount    = $this->buffer->readInt2();
+                $this->warningCount    = $this->buffer->readInt2();
 
                 $this->message      = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
 
-                $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarnCount:%d", $this->affectedRows, $this->insertId, $this->warnCount));
+                $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarningCount:%d", $this->affectedRows, $this->insertId, $this->warningCount));
                 $this->onSuccess();
                 $this->nextRequest();
             } elseif ($fieldCount === 0xFE) {
@@ -307,7 +307,7 @@ field:
         if ($command instanceof QueryCommand) {
             $command->affectedRows = $this->affectedRows;
             $command->insertId     = $this->insertId;
-            $command->warnCount    = $this->warnCount;
+            $command->warningCount    = $this->warningCount;
             $command->message      = $this->message;
         }
         $command->emit('success');

@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `book` (
 )';
 
         $connection->query($sql)->then(function (QueryResult $command) {
-            $this->assertEquals(1, $command->warnCount);
+            $this->assertEquals(1, $command->warningCount);
         });
 
         $connection->quit();

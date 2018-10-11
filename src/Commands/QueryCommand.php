@@ -13,7 +13,7 @@ class QueryCommand extends AbstractCommand
     public $fields;
     public $insertId;
     public $affectedRows;
-    public $warnCount;
+    public $warningCount;
 
     public function getId()
     {
