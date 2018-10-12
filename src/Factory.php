@@ -7,7 +7,7 @@ use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Io\Connection;
 use React\MySQL\Io\Executor;
 use React\MySQL\Io\Parser;
-use React\Promise\Promise;
+use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
@@ -81,6 +81,19 @@ class Factory
      * instance on success or will reject with an `Exception` if the URL is
      * invalid or the connection or authentication fails.
      *
+     * The returned Promise is implemented in such a way that it can be
+     * cancelled when it is still pending. Cancelling a pending promise will
+     * reject its value with an Exception and will cancel the underlying TCP/IP
+     * connection attempt and/or MySQL authentication.
+     *
+     * ```php
+     * $promise = $factory->createConnection($url);
+     *
+     * $loop->addTimer(3.0, function () use ($promise) {
+     *     $promise->cancel();
+     * });
+     * ```
+     *
      * The `$url` parameter must contain the database host, optional
      * authentication, port and database to connect to:
      *
@@ -113,8 +126,22 @@ class Factory
             return \React\Promise\reject(new \InvalidArgumentException('Invalid connect uri given'));
         }
 
-        $uri = $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 3306);
-        return $this->connector->connect($uri)->then(function (ConnectionInterface $stream) use ($parts) {
+        $connecting = $this->connector->connect(
+            $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 3306)
+        );
+
+        $deferred = new Deferred(function ($_, $reject) use ($connecting) {
+            // connection cancelled, start with rejecting attempt, then clean up
+            $reject(new \RuntimeException('Connection to database server cancelled'));
+
+            // either close successful connection or cancel pending connection attempt
+            $connecting->then(function (ConnectionInterface $connection) {
+                $connection->close();
+            });
+            $connecting->cancel();
+        });
+
+        $connecting->then(function (ConnectionInterface $stream) use ($parts, $deferred) {
             $executor = new Executor();
             $parser = new Parser($stream, $executor);
 
@@ -126,17 +153,17 @@ class Factory
             ));
             $parser->start();
 
-            return new Promise(function ($resolve, $reject) use ($command, $connection, $stream) {
-                $command->on('success', function () use ($resolve, $connection) {
-                    $resolve($connection);
-                });
-                $command->on('error', function ($error) use ($reject, $stream) {
-                    $reject($error);
-                    $stream->close();
-                });
+            $command->on('success', function () use ($deferred, $connection) {
+                $deferred->resolve($connection);
             });
-        }, function ($error) {
-            throw new \RuntimeException('Unable to connect to database server', 0, $error);
+            $command->on('error', function ($error) use ($deferred, $stream) {
+                $deferred->reject($error);
+                $stream->close();
+            });
+        }, function ($error) use ($deferred) {
+            $deferred->reject(new \RuntimeException('Unable to connect to database server', 0, $error));
         });
+
+        return $deferred->promise();
     }
 }

@@ -110,6 +110,19 @@ will resolve with a [`ConnectionInterface`](#connectioninterface)
 instance on success or will reject with an `Exception` if the URL is
 invalid or the connection or authentication fails.
 
+The returned Promise is implemented in such a way that it can be
+cancelled when it is still pending. Cancelling a pending promise will
+reject its value with an Exception and will cancel the underlying TCP/IP
+connection attempt and/or MySQL authentication.
+
+```php
+$promise = $factory->createConnection($url);
+
+$loop->addTimer(3.0, function () use ($promise) {
+    $promise->cancel();
+});
+```
+
 The `$url` parameter must contain the database host, optional
 authentication, port and database to connect to:
 

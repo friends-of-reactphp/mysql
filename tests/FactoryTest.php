@@ -5,6 +5,7 @@ namespace React\Tests\MySQL;
 use React\MySQL\ConnectionInterface;
 use React\MySQL\Factory;
 use React\Socket\Server;
+use React\Promise\Promise;
 
 class FactoryTest extends BaseTestCase
 {
@@ -229,5 +230,63 @@ class FactoryTest extends BaseTestCase
         }, 'printf')->then(null, 'printf');
 
         $loop->run();
+    }
+
+    public function testCancelConnectWillCancelPendingConnection()
+    {
+        $pending = new Promise(function () { }, $this->expectCallableOnce());
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->once())->method('connect')->willReturn($pending);
+
+        $factory = new Factory($loop, $connector);
+        $promise = $factory->createConnection('127.0.0.1');
+
+        $promise->cancel();
+
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
+        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
+            return ($e->getMessage() === 'Connection to database server cancelled');
+        })));
+    }
+
+    public function testCancelConnectWillCancelPendingConnectionWithRuntimeException()
+    {
+        $pending = new Promise(function () { }, function () {
+            throw new \UnexpectedValueException('ignored');
+        });
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->once())->method('connect')->willReturn($pending);
+
+        $factory = new Factory($loop, $connector);
+        $promise = $factory->createConnection('127.0.0.1');
+
+        $promise->cancel();
+
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
+        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
+            return ($e->getMessage() === 'Connection to database server cancelled');
+        })));
+    }
+
+    public function testCancelConnectDuringAuthenticationWillCloseConnection()
+    {
+        $connection = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $connection->expects($this->once())->method('close');
+
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->once())->method('connect')->willReturn(\React\Promise\resolve($connection));
+
+        $factory = new Factory($loop, $connector);
+        $promise = $factory->createConnection('127.0.0.1');
+
+        $promise->cancel();
+
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
+        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
+            return ($e->getMessage() === 'Connection to database server cancelled');
+        })));
     }
 }
