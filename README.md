@@ -171,17 +171,24 @@ $connection->query(…);
 This method immediately returns a "virtual" connection implementing the
 [`ConnectionInterface`](#connectioninterface) that can be used to
 interface with your MySQL database. Internally, it lazily creates the
-underlying database connection (which may take some time) and will
-queue all outstanding requests until the underlying connection is ready.
+underlying database connection (which may take some time) only once the
+first request is invoked on this instance and will queue all outstanding
+requests until the underlying connection is ready.
 
 From a consumer side this means that you can start sending queries to the
-database right away while the connection may still be pending. It will
-ensure that all commands will be executed in the order they are enqueued
-once the connection is ready. If the database connection fails, it will
-emit an `error` event, reject all outstanding commands and `close` the
-connection as described in the `ConnectionInterface`. In other words, it
-behaves just like a real connection and frees you from having to deal
+database right away while the actual connection may still be outstanding.
+It will ensure that all commands will be executed in the order they are
+enqueued once the connection is ready. If the database connection fails,
+it will emit an `error` event, reject all outstanding commands and `close`
+the connection as described in the `ConnectionInterface`. In other words,
+it behaves just like a real connection and frees you from having to deal
 with its async resolution.
+
+Note that creating the underlying connection will be deferred until the
+first request is invoked. Accordingly, any eventual connection issues
+will be detected once this instance is first used. Similarly, calling
+`quit()` on this instance before invoking any requests will succeed
+immediately and will not wait for an actual underlying connection.
 
 Depending on your particular use case, you may prefer this method or the
 underlying `createConnection()` which resolves with a promise. For many
@@ -210,9 +217,9 @@ $factory->createLazyConnection('localhost');
 ```
 
 This method respects PHP's `default_socket_timeout` setting (default 60s)
-as a timeout for establishing the connection and waiting for successful
-authentication. You can explicitly pass a custom timeout value in seconds
-(or use a negative number to not apply a timeout) like this:
+as a timeout for establishing the underlying connection and waiting for
+successful authentication. You can explicitly pass a custom timeout value
+in seconds (or use a negative number to not apply a timeout) like this:
 
 ```php
 $factory->createLazyConnection('localhost?timeout=0.5');

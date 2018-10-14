@@ -12,47 +12,64 @@ use React\Stream\ThroughStream;
 
 class LazyConnectionTest extends BaseTestCase
 {
-    public function testConnectionWillBeClosedWithErrorWhenPendingConnectionFails()
+    public function testPingWillCloseConnectionWithErrorWhenPendingConnectionFails()
     {
         $deferred = new Deferred();
-        $connection = new LazyConnection($deferred->promise());
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
+        $connection = new LazyConnection($factory, '');
 
         $connection->on('error', $this->expectCallableOnce());
         $connection->on('close', $this->expectCallableOnce());
+
+        $connection->ping();
 
         $deferred->reject(new \RuntimeException());
     }
 
-    public function testConnectionWillBeClosedWithoutErrorWhenUnderlyingConnectionCloses()
+    public function testPingWillCloseConnectionWithoutErrorWhenUnderlyingConnectionCloses()
     {
         $promise = new Promise(function () { });
-        $base = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($promise);
+        $base = new LazyConnection($factory, '');
 
-        $connection = new LazyConnection(\React\Promise\resolve($base));
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $connection = new LazyConnection($factory, '');
 
         $connection->on('error', $this->expectCallableNever());
         $connection->on('close', $this->expectCallableOnce());
 
+        $connection->ping();
         $base->close();
     }
 
-    public function testConnectionWillForwardErrorFromUnderlyingConnection()
+    public function testPingWillForwardErrorFromUnderlyingConnection()
     {
         $promise = new Promise(function () { });
-        $base = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($promise);
+        $base = new LazyConnection($factory, '');
 
-        $connection = new LazyConnection(\React\Promise\resolve($base));
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $connection = new LazyConnection($factory, '');
 
         $connection->on('error', $this->expectCallableOnce());
         $connection->on('close', $this->expectCallableNever());
+
+        $connection->ping();
 
         $base->emit('error', [new \RuntimeException()]);
     }
 
     public function testQueryReturnsPendingPromiseWhenConnectionIsPending()
     {
-        $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $deferred = new Deferred();
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
+        $connection = new LazyConnection($factory, '');
 
         $ret = $connection->query('SELECT 1');
 
@@ -65,7 +82,9 @@ class LazyConnectionTest extends BaseTestCase
         $base = $this->getMockBuilder('React\MySQL\ConnectionInterface')->getMock();
         $base->expects($this->once())->method('query')->with('SELECT 1');
 
-        $connection = new LazyConnection(\React\Promise\resolve($base));
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $connection = new LazyConnection($factory, '');
 
         $connection->query('SELECT 1');
     }
@@ -73,7 +92,9 @@ class LazyConnectionTest extends BaseTestCase
     public function testQueryWillRejectWhenUnderlyingConnectionRejects()
     {
         $deferred = new Deferred();
-        $connection = new LazyConnection($deferred->promise());
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
+        $connection = new LazyConnection($factory, '');
 
         $ret = $connection->query('SELECT 1');
         $ret->then($this->expectCallableNever(), $this->expectCallableOnce());
@@ -84,7 +105,9 @@ class LazyConnectionTest extends BaseTestCase
     public function testQueryStreamReturnsReadableStreamWhenConnectionIsPending()
     {
         $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($promise);
+        $connection = new LazyConnection($factory, '');
 
         $ret = $connection->queryStream('SELECT 1');
 
@@ -98,7 +121,9 @@ class LazyConnectionTest extends BaseTestCase
         $base = $this->getMockBuilder('React\MySQL\ConnectionInterface')->getMock();
         $base->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn($stream);
 
-        $connection = new LazyConnection(\React\Promise\resolve($base));
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $connection = new LazyConnection($factory, '');
 
         $ret = $connection->queryStream('SELECT 1');
 
@@ -114,7 +139,9 @@ class LazyConnectionTest extends BaseTestCase
     public function testQueryStreamWillCloseStreamWithErrorWhenUnderlyingConnectionRejects()
     {
         $deferred = new Deferred();
-        $connection = new LazyConnection($deferred->promise());
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
+        $connection = new LazyConnection($factory, '');
 
         $ret = $connection->queryStream('SELECT 1');
 
@@ -129,7 +156,9 @@ class LazyConnectionTest extends BaseTestCase
     public function testPingReturnsPendingPromiseWhenConnectionIsPending()
     {
         $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($promise);
+        $connection = new LazyConnection($factory, '');
 
         $ret = $connection->ping();
 
@@ -142,80 +171,129 @@ class LazyConnectionTest extends BaseTestCase
         $base = $this->getMockBuilder('React\MySQL\ConnectionInterface')->getMock();
         $base->expects($this->once())->method('ping');
 
-        $connection = new LazyConnection(\React\Promise\resolve($base));
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $connection = new LazyConnection($factory, '');
 
         $connection->ping();
     }
 
-    public function testQuitReturnsPendingPromiseWhenConnectionIsPending()
+    public function testQuitResolvesAndEmitsCloseImmediatelyWhenConnectionIsNotAlreadyPending()
+    {
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $connection = new LazyConnection($factory, '');
+
+        $connection->on('error', $this->expectCallableNever());
+        $connection->on('close', $this->expectCallableOnce());
+
+        $ret = $connection->quit();
+
+        $this->assertTrue($ret instanceof PromiseInterface);
+        $ret->then($this->expectCallableOnce(), $this->expectCallableNever());
+    }
+
+    public function testQuitAfterPingReturnsPendingPromiseWhenConnectionIsPending()
     {
         $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($promise);
+        $connection = new LazyConnection($factory, '');
 
+        $connection->ping();
         $ret = $connection->quit();
 
         $this->assertTrue($ret instanceof PromiseInterface);
         $ret->then($this->expectCallableNever(), $this->expectCallableNever());
     }
 
-    public function testQuitWillQuitUnderlyingConnectionWhenResolved()
+    public function testQuitAfterPingWillQuitUnderlyingConnectionWhenResolved()
     {
         $base = $this->getMockBuilder('React\MySQL\ConnectionInterface')->getMock();
         $base->expects($this->once())->method('quit');
 
-        $connection = new LazyConnection(\React\Promise\resolve($base));
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $connection = new LazyConnection($factory, '');
 
+        $connection->ping();
         $connection->quit();
     }
 
-    public function testCloseCancelsPendingConnection()
+    public function testCloseEmitsCloseImmediatelyWhenConnectionIsNotAlreadyPending()
     {
-        $promise = new Promise(function () { }, $this->expectCallableOnce());
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $connection = new LazyConnection($factory, '');
+
+        $connection->on('error', $this->expectCallableNever());
+        $connection->on('close', $this->expectCallableOnce());
 
         $connection->close();
     }
 
-    public function testCloseTwiceWillCloseUnderlyingConnectionWhenResolved()
+    public function testCloseAfterPingCancelsPendingConnection()
+    {
+        $deferred = new Deferred($this->expectCallableOnce());
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
+        $connection = new LazyConnection($factory, '');
+
+        $connection->ping();
+        $connection->close();
+    }
+
+    public function testCloseTwiceAfterPingWillCloseUnderlyingConnectionWhenResolved()
     {
         $base = $this->getMockBuilder('React\MySQL\ConnectionInterface')->getMock();
         $base->expects($this->once())->method('close');
 
-        $connection = new LazyConnection(\React\Promise\resolve($base));
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $connection = new LazyConnection($factory, '');
 
+        $connection->ping();
         $connection->close();
         $connection->close();
     }
 
-    public function testCloseDoesNotEmitConnectionErrorFromAbortedConnection()
+    public function testCloseAfterPingDoesNotEmitConnectionErrorFromAbortedConnection()
     {
         $promise = new Promise(function () { }, function () {
             throw new \RuntimeException();
         });
-        $connection = new LazyConnection($promise);
+
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($promise);
+        $connection = new LazyConnection($factory, '');
 
         $connection->on('error', $this->expectCallableNever());
         $connection->on('close', $this->expectCallableOnce());
 
+        $connection->ping();
         $connection->close();
     }
 
-    public function testCloseTwiceEmitsCloseEventOnceWhenConnectionIsPending()
+    public function testCloseTwiceAfterPingEmitsCloseEventOnceWhenConnectionIsPending()
     {
         $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($promise);
+        $connection = new LazyConnection($factory, '');
 
         $connection->on('error', $this->expectCallableNever());
         $connection->on('close', $this->expectCallableOnce());
 
+        $connection->ping();
         $connection->close();
         $connection->close();
     }
 
     public function testQueryReturnsRejectedPromiseAfterConnectionIsClosed()
     {
-        $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $connection = new LazyConnection($factory, '');
 
         $connection->close();
         $ret = $connection->query('SELECT 1');
@@ -229,8 +307,9 @@ class LazyConnectionTest extends BaseTestCase
      */
     public function testQueryStreamThrowsAfterConnectionIsClosed()
     {
-        $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $connection = new LazyConnection($factory, '');
 
         $connection->close();
         $connection->queryStream('SELECT 1');
@@ -238,8 +317,9 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testPingReturnsRejectedPromiseAfterConnectionIsClosed()
     {
-        $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $connection = new LazyConnection($factory, '');
 
         $connection->close();
         $ret = $connection->ping();
@@ -250,8 +330,9 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testQuitReturnsRejectedPromiseAfterConnectionIsClosed()
     {
-        $promise = new Promise(function () { });
-        $connection = new LazyConnection($promise);
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $connection = new LazyConnection($factory, '');
 
         $connection->close();
         $ret = $connection->quit();

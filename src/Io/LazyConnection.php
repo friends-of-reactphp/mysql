@@ -4,8 +4,8 @@ namespace React\MySQL\Io;
 
 use React\MySQL\ConnectionInterface;
 use Evenement\EventEmitter;
-use React\Promise\PromiseInterface;
 use React\MySQL\Exception;
+use React\MySQL\Factory;
 
 /**
  * @internal
@@ -13,52 +13,64 @@ use React\MySQL\Exception;
  */
 class LazyConnection extends EventEmitter implements ConnectionInterface
 {
+    private $factory;
+    private $uri;
     private $connecting;
     private $closed = false;
     private $busy = false;
 
-    public function __construct(PromiseInterface $connecting)
+    public function __construct(Factory $factory, $uri)
     {
-        $this->connecting = $connecting;
+        $this->factory = $factory;
+        $this->uri = $uri;
+    }
 
-        $connecting->then(function (ConnectionInterface $connection) {
-            // connection completed => forward error and close events
-            $connection->on('error', function ($e) {
+    private function connecting()
+    {
+        if ($this->connecting === null) {
+            $this->connecting = $this->factory->createConnection($this->uri);
+
+            $this->connecting->then(function (ConnectionInterface $connection) {
+                // connection completed => forward error and close events
+                $connection->on('error', function ($e) {
+                    $this->emit('error', [$e]);
+                });
+                $connection->on('close', function () {
+                    $this->close();
+                });
+            }, function (\Exception $e) {
+                // connection failed => emit error if connection is not already closed
+                if ($this->closed) {
+                    return;
+                }
+
                 $this->emit('error', [$e]);
-            });
-            $connection->on('close', function () {
                 $this->close();
             });
-        }, function (\Exception $e) {
-            // connection failed => emit error if connection is not already closed
-            if ($this->closed) {
-                return;
-            }
+        }
 
-            $this->emit('error', [$e]);
-            $this->close();
-        });
+        return $this->connecting;
     }
 
     public function query($sql, array $params = [])
     {
-        if ($this->connecting === null) {
+        if ($this->closed) {
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
-        return $this->connecting->then(function (ConnectionInterface $connection) use ($sql, $params) {
+        return $this->connecting()->then(function (ConnectionInterface $connection) use ($sql, $params) {
             return $connection->query($sql, $params);
         });
     }
 
     public function queryStream($sql, $params = [])
     {
-        if ($this->connecting === null) {
+        if ($this->closed) {
             throw new Exception('Connection closed');
         }
 
         return \React\Promise\Stream\unwrapReadable(
-            $this->connecting->then(function (ConnectionInterface $connection) use ($sql, $params) {
+            $this->connecting()->then(function (ConnectionInterface $connection) use ($sql, $params) {
                 return $connection->queryStream($sql, $params);
             })
         );
@@ -66,22 +78,28 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
 
     public function ping()
     {
-        if ($this->connecting === null) {
+        if ($this->closed) {
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
-        return $this->connecting->then(function (ConnectionInterface $connection) {
+        return $this->connecting()->then(function (ConnectionInterface $connection) {
             return $connection->ping();
         });
     }
 
     public function quit()
     {
-        if ($this->connecting === null) {
+        if ($this->closed) {
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
-        return $this->connecting->then(function (ConnectionInterface $connection) {
+        // not already connecting => no need to connect, simply close virtual connection
+        if ($this->connecting === null) {
+            $this->close();
+            return \React\Promise\resolve();
+        }
+
+        return $this->connecting()->then(function (ConnectionInterface $connection) {
             return $connection->quit();
         });
     }
@@ -95,12 +113,13 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         $this->closed = true;
 
         // either close active connection or cancel pending connection attempt
-        $this->connecting->then(function (ConnectionInterface $connection) {
-            $connection->close();
-        });
-        $this->connecting->cancel();
-
-        $this->connecting = null;
+        if ($this->connecting !== null) {
+            $this->connecting->then(function (ConnectionInterface $connection) {
+                $connection->close();
+            });
+            $this->connecting->cancel();
+            $this->connecting = null;
+        }
 
         $this->emit('close');
         $this->removeAllListeners();

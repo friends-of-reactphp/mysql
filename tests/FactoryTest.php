@@ -353,7 +353,22 @@ class FactoryTest extends BaseTestCase
         })));
     }
 
-    public function testConnectLazyWithValidAuthWillRunUntilQuit()
+    public function testConnectLazyWithAnyAuthWillQuitWithoutRunning()
+    {
+        $this->expectOutputString('closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = 'mysql://random:pass@host';
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->quit()->then(function () {
+            echo 'closed.';
+        });
+    }
+
+    public function testConnectLazyWithValidAuthWillRunUntilQuitAfterPing()
     {
         $this->expectOutputString('closed.');
 
@@ -363,6 +378,8 @@ class FactoryTest extends BaseTestCase
         $uri = $this->getConnectionString();
         $connection = $factory->createLazyConnection($uri);
 
+        $connection->ping();
+
         $connection->quit()->then(function () {
             echo 'closed.';
         });
@@ -370,7 +387,7 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testConnectLazyWithInvalidAuthWillEmitErrorAndClose()
+    public function testConnectLazyWithInvalidAuthWillEmitErrorAndCloseAfterPing()
     {
         $loop = \React\EventLoop\Factory::create();
         $factory = new Factory($loop);
@@ -380,6 +397,8 @@ class FactoryTest extends BaseTestCase
 
         $connection->on('error', $this->expectCallableOnce());
         $connection->on('close', $this->expectCallableOnce());
+
+        $connection->ping();
 
         $loop->run();
     }
