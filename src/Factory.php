@@ -9,6 +9,7 @@ use React\MySQL\Io\Executor;
 use React\MySQL\Io\Parser;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
+use React\Promise\Timer\TimeoutException;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
 use React\Socket\ConnectionInterface;
@@ -116,6 +117,15 @@ class Factory
      * $factory->createConnection('localhost');
      * ```
      *
+     * This method respects PHP's `default_socket_timeout` setting (default 60s)
+     * as a timeout for establishing the connection and waiting for successful
+     * authentication. You can explicitly pass a custom timeout value in seconds
+     * (or use a negative number to not apply a timeout) like this:
+     *
+     * ```php
+     * $factory->createConnection('localhost?timeout=0.5');
+     * ```
+     *
      * @param string $uri
      * @return PromiseInterface Promise<ConnectionInterface, Exception>
      */
@@ -164,6 +174,24 @@ class Factory
             $deferred->reject(new \RuntimeException('Unable to connect to database server', 0, $error));
         });
 
-        return $deferred->promise();
+        $args = [];
+        if (isset($parts['query'])) {
+            parse_str($parts['query'], $args);
+        }
+
+        // use timeout from explicit ?timeout=x parameter or default to PHP's default_socket_timeout (60)
+        $timeout = (float) isset($args['timeout']) ? $args['timeout'] : ini_get("default_socket_timeout");
+        if ($timeout < 0) {
+            return $deferred->promise();
+        }
+
+        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) {
+            if ($e instanceof TimeoutException) {
+                throw new \RuntimeException(
+                    'Connection to database server timed out after ' . $e->getTimeout() . ' seconds'
+                );
+            }
+            throw $e;
+        });
     }
 }

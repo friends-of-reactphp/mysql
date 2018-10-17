@@ -145,6 +145,15 @@ database, but likely to yield an authentication error in a production system:
 $factory->createConnection('localhost');
 ```
 
+This method respects PHP's `default_socket_timeout` setting (default 60s)
+as a timeout for establishing the connection and waiting for successful
+authentication. You can explicitly pass a custom timeout value in seconds
+(or use a negative number to not apply a timeout) like this:
+
+```php
+$factory->createConnection('localhost?timeout=0.5');
+```
+
 ### ConnectionInterface
 
 The `ConnectionInterface` represents a connection that is responsible for
