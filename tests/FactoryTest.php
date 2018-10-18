@@ -97,6 +97,51 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
+    public function testConnectWillRejectOnExplicitTimeoutDespiteValidAuth()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString() . '?timeout=0';
+
+        $promise = $factory->createConnection($uri);
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('Exception'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to database server timed out after 0 seconds';
+                })
+            )
+        ));
+
+        $loop->run();
+    }
+
+    public function testConnectWillRejectOnDefaultTimeoutFromIniDespiteValidAuth()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+
+        $old = ini_get('default_socket_timeout');
+        ini_set('default_socket_timeout', '0');
+        $promise = $factory->createConnection($uri);
+        ini_set('default_socket_timeout', $old);
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('Exception'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to database server timed out after 0 seconds';
+                })
+            )
+        ));
+
+        $loop->run();
+    }
+
     public function testConnectWithValidAuthWillRunUntilQuit()
     {
         $this->expectOutputString('connected.closed.');
@@ -105,6 +150,24 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory($loop);
 
         $uri = $this->getConnectionString();
+        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+            echo 'connected.';
+            $connection->quit()->then(function () {
+                echo 'closed.';
+            });
+        }, 'printf')->then(null, 'printf');
+
+        $loop->run();
+    }
+
+    public function testConnectWithValidAuthWillIgnoreNegativeTimeoutAndRunUntilQuit()
+    {
+        $this->expectOutputString('connected.closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString() . '?timeout=-1';
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
             echo 'connected.';
             $connection->quit()->then(function () {
