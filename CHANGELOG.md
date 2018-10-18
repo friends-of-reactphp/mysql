@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.1 (2018-10-18)
+
+*   Feature: Support cancellation of pending connection attempts.
+    (#84 by @clue)
+
+*   Feature: Add `warningCount` to `QueryResult`.
+    (#82 by @legionth)
+
+*   Feature: Add exception message for invalid MySQL URI.
+    (#80 by @CharlotteDunois)
+
+*   Fix: Fix parsing error message during handshake (Too many connections).
+    (#83 by @clue)
+
 ## 0.4.0 (2018-09-21)
 
 A major feature release with a significant documentation overhaul and long overdue API cleanup!
