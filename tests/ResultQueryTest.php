@@ -4,6 +4,7 @@ namespace React\Tests\MySQL;
 
 use React\MySQL\Io\Constants;
 use React\MySQL\QueryResult;
+use React\MySQL\Factory;
 
 class ResultQueryTest extends BaseTestCase
 {
@@ -504,6 +505,44 @@ class ResultQueryTest extends BaseTestCase
         $stream->close();
 
         $connection->quit();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamFromLazyConnectionEmitsSingleRow()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $connection = $factory->createLazyConnection($uri);
+
+        $stream = $connection->queryStream('SELECT 1');
+
+        $stream->on('data', $this->expectCallableOnceWith([1 => '1']));
+        $stream->on('end', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->quit();
+
+        $loop->run();
+    }
+
+    public function testQueryStreamFromLazyConnectionWillErrorWhenConnectionIsClosed()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString();
+        $connection = $factory->createLazyConnection($uri);
+
+        $stream = $connection->queryStream('SELECT 1');
+
+        $stream->on('data', $this->expectCallableNever());
+        $stream->on('error', $this->expectCallableOnce());
+        $stream->on('close', $this->expectCallableOnce());
+
+        $connection->close();
 
         $loop->run();
     }

@@ -15,6 +15,7 @@ It is written in pure PHP and does not require any extensions.
 * [Usage](#usage)
   * [Factory](#factory)
     * [createConnection()](#createconnection)
+    * [createLazyConnection()](#createlazyconnection)
   * [ConnectionInterface](#connectioninterface)
     * [query()](#query)
     * [queryStream()](#querystream)
@@ -35,20 +36,20 @@ $loop = React\EventLoop\Factory::create();
 $factory = new Factory($loop);
 
 $uri = 'test:test@localhost/test';
-$factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
-    $connection->query('SELECT * FROM book')->then(
-        function (QueryResult $command) {
-            print_r($command->resultFields);
-            print_r($command->resultRows);
-            echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
-        },
-        function (Exception $error) {
-            echo 'Error: ' . $error->getMessage() . PHP_EOL;
-        }
-    );
-    
-    $connection->quit();
-});
+$connection = $factory->createLazyConnection($uri);
+
+$connection->query('SELECT * FROM book')->then(
+    function (QueryResult $command) {
+        print_r($command->resultFields);
+        print_r($command->resultRows);
+        echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
+    },
+    function (Exception $error) {
+        echo 'Error: ' . $error->getMessage() . PHP_EOL;
+    }
+);
+
+$connection->quit();
 
 $loop->run();
 ```
@@ -152,6 +153,76 @@ authentication. You can explicitly pass a custom timeout value in seconds
 
 ```php
 $factory->createConnection('localhost?timeout=0.5');
+```
+
+#### createLazyConnection()
+
+Creates a new connection.
+
+It helps with establishing a TCP/IP connection to your MySQL database
+and issuing the initial authentication handshake.
+
+```php
+$connection = $factory->createLazyConnection($url);
+
+$connection->query(…);
+```
+
+This method immediately returns a "virtual" connection implementing the
+[`ConnectionInterface`](#connectioninterface) that can be used to
+interface with your MySQL database. Internally, it lazily creates the
+underlying database connection (which may take some time) only once the
+first request is invoked on this instance and will queue all outstanding
+requests until the underlying connection is ready.
+
+From a consumer side this means that you can start sending queries to the
+database right away while the actual connection may still be outstanding.
+It will ensure that all commands will be executed in the order they are
+enqueued once the connection is ready. If the database connection fails,
+it will emit an `error` event, reject all outstanding commands and `close`
+the connection as described in the `ConnectionInterface`. In other words,
+it behaves just like a real connection and frees you from having to deal
+with its async resolution.
+
+Note that creating the underlying connection will be deferred until the
+first request is invoked. Accordingly, any eventual connection issues
+will be detected once this instance is first used. Similarly, calling
+`quit()` on this instance before invoking any requests will succeed
+immediately and will not wait for an actual underlying connection.
+
+Depending on your particular use case, you may prefer this method or the
+underlying `createConnection()` which resolves with a promise. For many
+simple use cases it may be easier to create a lazy connection.
+
+The `$url` parameter must contain the database host, optional
+authentication, port and database to connect to:
+
+```php
+$factory->createLazyConnection('user:secret@localhost:3306/database');
+```
+
+You can omit the port if you're connecting to default port `3306`:
+
+```php
+$factory->createLazyConnection('user:secret@localhost/database');
+```
+
+If you do not include authentication and/or database, then this method
+will default to trying to connect as user `root` with an empty password
+and no database selected. This may be useful when initially setting up a
+database, but likely to yield an authentication error in a production system:
+
+```php
+$factory->createLazyConnection('localhost');
+```
+
+This method respects PHP's `default_socket_timeout` setting (default 60s)
+as a timeout for establishing the underlying connection and waiting for
+successful authentication. You can explicitly pass a custom timeout value
+in seconds (or use a negative number to not apply a timeout) like this:
+
+```php
+$factory->createLazyConnection('localhost?timeout=0.5');
 ```
 
 ### ConnectionInterface
