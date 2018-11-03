@@ -260,7 +260,55 @@ packet:
                     $this->debug('Result set row data');
                     $row = [];
                     foreach ($this->resultFields as $field) {
-                        $row[$field['name']] = $this->buffer->readStringLen();
+                        $fieldValue = $this->buffer->readStringLen();
+
+                        if ($fieldValue !== null && ($field['flags'] & Constants::ZEROFILL_FLAG) === 0) {
+                            switch($field['type']) {
+                                case Constants::FIELD_TYPE_LONG:
+                                    if (($field['flags'] & Constants::UNSIGNED_FLAG) === 0 || PHP_INT_SIZE > 4) {
+                                        $fieldValue = (int) $fieldValue;
+                                    }
+                                    break;
+                                case Constants::FIELD_TYPE_LONGLONG:
+                                    if (($field['flags'] & Constants::UNSIGNED_FLAG) === 0 && PHP_INT_SIZE > 4) {
+                                        $fieldValue = (int) $fieldValue;
+                                    }
+                                    break;
+                                case Constants::FIELD_TYPE_TINY:
+                                case Constants::FIELD_TYPE_SHORT:
+                                case Constants::FIELD_TYPE_INT24:
+                                case Constants::FIELD_TYPE_TIMESTAMP:
+                                    $fieldValue = (int) $fieldValue;
+                                    break;
+                                case Constants::FIELD_TYPE_FLOAT:
+                                case Constants::FIELD_TYPE_DOUBLE:
+                                    $fieldValue = (float) $fieldValue;
+                                    break;
+                                /* -- Nothing to do - we take them as-is
+                                case Constants::FIELD_TYPE_NULL:
+                                case Constants::FIELD_TYPE_DATE:
+                                case Constants::FIELD_TYPE_TIME:
+                                case Constants::FIELD_TYPE_DATETIME:
+                                case Constants::FIELD_TYPE_YEAR:
+                                case Constants::FIELD_TYPE_NEWDATE:
+                                case Constants::FIELD_TYPE_VARCHAR:
+                                case Constants::FIELD_TYPE_BIT:
+                                case Constants::FIELD_TYPE_ENUM:
+                                case Constants::FIELD_TYPE_SET:
+                                case Constants::FIELD_TYPE_DECIMAL:
+                                case Constants::FIELD_TYPE_NEWDECIMAL:
+                                case Constants::FIELD_TYPE_TINY_BLOB:
+                                case Constants::FIELD_TYPE_MEDIUM_BLOB:
+                                case Constants::FIELD_TYPE_LONG_BLOB:
+                                case Constants::FIELD_TYPE_BLOB:
+                                case Constants::FIELD_TYPE_VAR_STRING:
+                                case Constants::FIELD_TYPE_STRING:
+                                case Constants::FIELD_TYPE_GEOMETRY:
+                                */
+                            }
+                        }
+
+                        $row[$field['name']] = $fieldValue;
                     }
                     $this->onResultRow($row);
                 }
