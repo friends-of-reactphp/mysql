@@ -27,29 +27,22 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
 
     private function connecting()
     {
-        if ($this->connecting === null) {
-            $this->connecting = $this->factory->createConnection($this->uri);
-
-            $this->connecting->then(function (ConnectionInterface $connection) {
-                // connection completed => forward error and close events
-                $connection->on('error', function ($e) {
-                    $this->emit('error', [$e]);
-                });
-                $connection->on('close', function () {
-                    $this->close();
-                });
-            }, function (\Exception $e) {
-                // connection failed => emit error if connection is not already closed
-                if ($this->closed) {
-                    return;
-                }
-
-                $this->emit('error', [$e]);
-                $this->close();
-            });
+        if ($this->connecting !== null) {
+            return $this->connecting;
         }
 
-        return $this->connecting;
+        $this->connecting = $connecting = $this->factory->createConnection($this->uri);
+        $this->connecting->then(function (ConnectionInterface $connection) {
+            // connection completed => remember only until closed
+            $connection->on('close', function () {
+                $this->connecting = null;
+            });
+        }, function () {
+            // connection failed => discard connection attempt
+            $this->connecting = null;
+        });
+
+        return $connecting;
     }
 
     public function query($sql, array $params = [])
@@ -100,7 +93,15 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         }
 
         return $this->connecting()->then(function (ConnectionInterface $connection) {
-            return $connection->quit();
+            return $connection->quit()->then(
+                function () {
+                    $this->close();
+                },
+                function (\Exception $e) {
+                    $this->close();
+                    throw $e;
+                }
+            );
         });
     }
 

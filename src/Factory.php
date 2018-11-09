@@ -211,24 +211,33 @@ class Factory
      * This method immediately returns a "virtual" connection implementing the
      * [`ConnectionInterface`](#connectioninterface) that can be used to
      * interface with your MySQL database. Internally, it lazily creates the
-     * underlying database connection (which may take some time) only once the
-     * first request is invoked on this instance and will queue all outstanding
-     * requests until the underlying connection is ready.
+     * underlying database connection only on demand once the first request is
+     * invoked on this instance and will queue all outstanding requests until
+     * the underlying connection is ready. Additionally, it will keep track of
+     * this underlying connection and will create a new underlying connection
+     * on demand when the current connection is lost.
      *
      * From a consumer side this means that you can start sending queries to the
-     * database right away while the actual connection may still be outstanding.
-     * It will ensure that all commands will be executed in the order they are
-     * enqueued once the connection is ready. If the database connection fails,
-     * it will emit an `error` event, reject all outstanding commands and `close`
-     * the connection as described in the `ConnectionInterface`. In other words,
-     * it behaves just like a real connection and frees you from having to deal
-     * with its async resolution.
+     * database right away while the underlying connection may still be
+     * outstanding. Because creating this underlying connection may take some
+     * time, it will enqueue all oustanding commands and will ensure that all
+     * commands will be executed in correct order once the connection is ready.
+     * In other words, this "virtual" connection behaves just like a "real"
+     * connection as described in the `ConnectionInterface` and frees you from
+     * having to deal with its async resolution.
+     *
+     * If the underlying database connection fails, it will reject all
+     * outstanding commands and will return to the initial "idle" state. This
+     * means that you can keep sending additional commands at a later time which
+     * will again try to open the underlying connection.
      *
      * Note that creating the underlying connection will be deferred until the
      * first request is invoked. Accordingly, any eventual connection issues
-     * will be detected once this instance is first used. Similarly, calling
-     * `quit()` on this instance before invoking any requests will succeed
-     * immediately and will not wait for an actual underlying connection.
+     * will be detected once this instance is first used. You can use the
+     * `quit()` method to ensure that the "virtual" connection will be soft-closed
+     * and no further commands can be enqueued. Similarly, calling `quit()` on
+     * this instance before invoking any requests will succeed immediately and
+     * will not wait for an actual underlying connection.
      *
      * Depending on your particular use case, you may prefer this method or the
      * underlying `createConnection()` which resolves with a promise. For many
