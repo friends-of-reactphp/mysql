@@ -213,9 +213,9 @@ class Factory
      * interface with your MySQL database. Internally, it lazily creates the
      * underlying database connection only on demand once the first request is
      * invoked on this instance and will queue all outstanding requests until
-     * the underlying connection is ready. Additionally, it will keep track of
-     * this underlying connection and will create a new underlying connection
-     * on demand when the current connection is lost.
+     * the underlying connection is ready. Additionally, it will only keep this
+     * underlying connection in an "idle" state for 60s by default and will
+     * automatically end the underlying connection when it is no longer needed.
      *
      * From a consumer side this means that you can start sending queries to the
      * database right away while the underlying connection may still be
@@ -229,15 +229,17 @@ class Factory
      * If the underlying database connection fails, it will reject all
      * outstanding commands and will return to the initial "idle" state. This
      * means that you can keep sending additional commands at a later time which
-     * will again try to open the underlying connection.
+     * will again try to open a new underlying connection. Note that this may
+     * require special care if you're using transactions that are kept open for
+     * longer than the idle period.
      *
      * Note that creating the underlying connection will be deferred until the
      * first request is invoked. Accordingly, any eventual connection issues
      * will be detected once this instance is first used. You can use the
      * `quit()` method to ensure that the "virtual" connection will be soft-closed
      * and no further commands can be enqueued. Similarly, calling `quit()` on
-     * this instance before invoking any requests will succeed immediately and
-     * will not wait for an actual underlying connection.
+     * this instance when not currently connected will succeed immediately and
+     * will not have to wait for an actual underlying connection.
      *
      * Depending on your particular use case, you may prefer this method or the
      * underlying `createConnection()` which resolves with a promise. For many
@@ -274,11 +276,24 @@ class Factory
      * $factory->createLazyConnection('localhost?timeout=0.5');
      * ```
      *
+     * By default, this method will keep "idle" connection open for 60s and will
+     * then end the underlying connection. The next request after an "idle"
+     * connection ended will automatically create a new underlying connection.
+     * This ensure you always get a "fresh" connection and as such should not be
+     * confused with a "keepalive" or "heartbeat" mechanism, as this will not
+     * actively try to probe the connection. You can explicitly pass a custom
+     * idle timeout value in seconds (or use a negative number to not apply a
+     * timeout) like this:
+     *
+     * ```php
+     * $factory->createLazyConnection('localhost?idle=0.1');
+     * ```
+     *
      * @param string $uri
      * @return ConnectionInterface
      */
     public function createLazyConnection($uri)
     {
-        return new LazyConnection($this, $uri);
+        return new LazyConnection($this, $uri, $this->loop);
     }
 }

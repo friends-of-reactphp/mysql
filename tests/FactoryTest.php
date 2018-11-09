@@ -387,6 +387,19 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
+    public function testConnectLazyWithValidAuthWillRunUntilIdleTimerAfterPingEvenWithoutQuit()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString() . '?idle=0';
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->ping();
+
+        $loop->run();
+    }
+
     public function testConnectLazyWithInvalidAuthWillRejectPingButWillNotEmitErrorOrClose()
     {
         $loop = \React\EventLoop\Factory::create();

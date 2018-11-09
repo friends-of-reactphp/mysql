@@ -6,6 +6,8 @@ use React\MySQL\ConnectionInterface;
 use Evenement\EventEmitter;
 use React\MySQL\Exception;
 use React\MySQL\Factory;
+use React\EventLoop\LoopInterface;
+use React\MySQL\QueryResult;
 
 /**
  * @internal
@@ -19,10 +21,22 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     private $closed = false;
     private $busy = false;
 
-    public function __construct(Factory $factory, $uri)
+    private $loop;
+    private $idlePeriod = 60.0;
+    private $idleTimer;
+    private $pending = 0;
+
+    public function __construct(Factory $factory, $uri, LoopInterface $loop)
     {
+        $args = array();
+        \parse_str(\parse_url($uri, \PHP_URL_QUERY), $args);
+        if (isset($args['idle'])) {
+            $this->idlePeriod = (float)$args['idle'];
+        }
+
         $this->factory = $factory;
         $this->uri = $uri;
+        $this->loop = $loop;
     }
 
     private function connecting()
@@ -36,6 +50,11 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
             // connection completed => remember only until closed
             $connection->on('close', function () {
                 $this->connecting = null;
+
+                if ($this->idleTimer !== null) {
+                    $this->loop->cancelTimer($this->idleTimer);
+                    $this->idleTimer = null;
+                }
             });
         }, function () {
             // connection failed => discard connection attempt
@@ -45,6 +64,31 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         return $connecting;
     }
 
+    private function awake()
+    {
+        ++$this->pending;
+
+        if ($this->idleTimer !== null) {
+            $this->loop->cancelTimer($this->idleTimer);
+            $this->idleTimer = null;
+        }
+    }
+
+    private function idle()
+    {
+        --$this->pending;
+
+        if ($this->pending < 1 && $this->idlePeriod >= 0) {
+            $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
+                $this->connecting->then(function (ConnectionInterface $connection) {
+                    $connection->quit();
+                });
+                $this->connecting = null;
+                $this->idleTimer = null;
+            });
+        }
+    }
+
     public function query($sql, array $params = [])
     {
         if ($this->closed) {
@@ -52,7 +96,17 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         }
 
         return $this->connecting()->then(function (ConnectionInterface $connection) use ($sql, $params) {
-            return $connection->query($sql, $params);
+            $this->awake();
+            return $connection->query($sql, $params)->then(
+                function (QueryResult $result) {
+                    $this->idle();
+                    return $result;
+                },
+                function (\Exception $e) {
+                    $this->idle();
+                    throw $e;
+                }
+            );
         });
     }
 
@@ -64,7 +118,14 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
 
         return \React\Promise\Stream\unwrapReadable(
             $this->connecting()->then(function (ConnectionInterface $connection) use ($sql, $params) {
-                return $connection->queryStream($sql, $params);
+                $stream = $connection->queryStream($sql, $params);
+
+                $this->awake();
+                $stream->on('close', function () {
+                    $this->idle();
+                });
+
+                return $stream;
             })
         );
     }
@@ -76,7 +137,16 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         }
 
         return $this->connecting()->then(function (ConnectionInterface $connection) {
-            return $connection->ping();
+            $this->awake();
+            return $connection->ping()->then(
+                function () {
+                    $this->idle();
+                },
+                function (\Exception $e) {
+                    $this->idle();
+                    throw $e;
+                }
+            );
         });
     }
 
@@ -93,6 +163,7 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         }
 
         return $this->connecting()->then(function (ConnectionInterface $connection) {
+            $this->awake();
             return $connection->quit()->then(
                 function () {
                     $this->close();
@@ -120,6 +191,11 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
             });
             $this->connecting->cancel();
             $this->connecting = null;
+        }
+
+        if ($this->idleTimer !== null) {
+            $this->loop->cancelTimer($this->idleTimer);
+            $this->idleTimer = null;
         }
 
         $this->emit('close');

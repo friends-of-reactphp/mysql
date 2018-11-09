@@ -38,7 +38,7 @@ use React\Stream\ReadableStreamInterface;
  *     });
  *     ```
  *
- *     See also the [#close](#close) method.
+ *     See also the [`close()`](#close) method.
  */
 interface ConnectionInterface extends EventEmitterInterface
 {
