@@ -86,9 +86,10 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testPingFollowedByIdleTimerWillQuitUnderlyingConnection()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'quit'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'quit', 'close'))->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
         $base->expects($this->once())->method('quit')->willReturn(\React\Promise\resolve());
+        $base->expects($this->never())->method('close');
 
         $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
@@ -110,6 +111,68 @@ class LazyConnectionTest extends BaseTestCase
         $this->assertNotNull($timeout);
         $timeout();
     }
+
+    public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWhenQuitFails()
+    {
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'quit', 'close'))->disableOriginalConstructor()->getMock();
+        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
+        $base->expects($this->once())->method('quit')->willReturn(\React\Promise\reject());
+        $base->expects($this->once())->method('close');
+
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+
+        $timeout = null;
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
+            $timeout = $cb;
+            return true;
+        }))->willReturn($timer);
+
+        $connection = new LazyConnection($factory, '', $loop);
+
+        $connection->on('close', $this->expectCallableNever());
+
+        $connection->ping();
+
+        $this->assertNotNull($timeout);
+        $timeout();
+    }
+
+    public function testPingAfterIdleTimerWillCloseUnderlyingConnectionBeforeCreatingSecondConnection()
+    {
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'quit', 'close'))->disableOriginalConstructor()->getMock();
+        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
+        $base->expects($this->once())->method('quit')->willReturn(new Promise(function () { }));
+        $base->expects($this->once())->method('close');
+
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->exactly(2))->method('createConnection')->willReturnOnConsecutiveCalls(
+            \React\Promise\resolve($base),
+            new Promise(function () { })
+        );
+
+        $timeout = null;
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
+            $timeout = $cb;
+            return true;
+        }))->willReturn($timer);
+
+        $connection = new LazyConnection($factory, '', $loop);
+
+        $connection->on('close', $this->expectCallableNever());
+
+        $connection->ping();
+
+        $this->assertNotNull($timeout);
+        $timeout();
+
+        $connection->ping();
+    }
+
 
     public function testQueryReturnsPendingPromiseAndWillNotStartTimerWhenConnectionIsPending()
     {
@@ -612,6 +675,51 @@ class LazyConnectionTest extends BaseTestCase
         $connection = new LazyConnection($factory, '', $loop);
 
         $connection->ping()->then($this->expectCallableOnce(), $this->expectCallableNever());
+        $connection->close();
+    }
+
+    public function testCloseAfterQuitAfterPingWillCloseUnderlyingConnectionWhenQuitIsStillPending()
+    {
+        $base = $this->getMockBuilder('React\MySQL\ConnectionInterface')->getMock();
+        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
+        $base->expects($this->once())->method('quit')->willReturn(new Promise(function () { }));
+        $base->expects($this->once())->method('close');
+
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connection = new LazyConnection($factory, '', $loop);
+
+        $connection->ping();
+        $connection->quit();
+        $connection->close();
+    }
+
+    public function testCloseAfterPingAfterIdleTimeoutWillCloseUnderlyingConnectionWhenQuitIsStillPending()
+    {
+        $base = $this->getMockBuilder('React\MySQL\ConnectionInterface')->getMock();
+        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
+        $base->expects($this->once())->method('quit')->willReturn(new Promise(function () { }));
+        $base->expects($this->once())->method('close');
+
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+
+        $timeout = null;
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
+            $timeout = $cb;
+            return true;
+        }))->willReturn($timer);
+
+        $connection = new LazyConnection($factory, '', $loop);
+
+        $connection->ping();
+
+        $this->assertNotNull($timeout);
+        $timeout();
+
         $connection->close();
     }
 

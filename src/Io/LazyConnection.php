@@ -21,6 +21,11 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     private $closed = false;
     private $busy = false;
 
+    /**
+     * @var ConnectionInterface|null
+     */
+    private $disconnecting;
+
     private $loop;
     private $idlePeriod = 60.0;
     private $idleTimer;
@@ -43,6 +48,12 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     {
         if ($this->connecting !== null) {
             return $this->connecting;
+        }
+
+        // force-close connection if still waiting for previous disconnection
+        if ($this->disconnecting !== null) {
+            $this->disconnecting->close();
+            $this->disconnecting = null;
         }
 
         $this->connecting = $connecting = $this->factory->createConnection($this->uri);
@@ -81,7 +92,18 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         if ($this->pending < 1 && $this->idlePeriod >= 0) {
             $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
                 $this->connecting->then(function (ConnectionInterface $connection) {
-                    $connection->quit();
+                    $this->disconnecting = $connection;
+                    $connection->quit()->then(
+                        function () {
+                            // successfully disconnected => remove reference
+                            $this->disconnecting = null;
+                        },
+                        function () use ($connection) {
+                            // soft-close failed => force-close connection
+                            $connection->close();
+                            $this->disconnecting = null;
+                        }
+                    );
                 });
                 $this->connecting = null;
                 $this->idleTimer = null;
@@ -183,6 +205,12 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         }
 
         $this->closed = true;
+
+        // force-close connection if still waiting for previous disconnection
+        if ($this->disconnecting !== null) {
+            $this->disconnecting->close();
+            $this->disconnecting = null;
+        }
 
         // either close active connection or cancel pending connection attempt
         if ($this->connecting !== null) {
