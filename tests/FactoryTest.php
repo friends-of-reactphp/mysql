@@ -387,7 +387,20 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
-    public function testConnectLazyWithInvalidAuthWillEmitErrorAndCloseAfterPing()
+    public function testConnectLazyWithValidAuthWillRunUntilIdleTimerAfterPingEvenWithoutQuit()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString() . '?idle=0';
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->ping();
+
+        $loop->run();
+    }
+
+    public function testConnectLazyWithInvalidAuthWillRejectPingButWillNotEmitErrorOrClose()
     {
         $loop = \React\EventLoop\Factory::create();
         $factory = new Factory($loop);
@@ -395,10 +408,10 @@ class FactoryTest extends BaseTestCase
         $uri = $this->getConnectionString(array('passwd' => 'invalidpass'));
         $connection = $factory->createLazyConnection($uri);
 
-        $connection->on('error', $this->expectCallableOnce());
-        $connection->on('close', $this->expectCallableOnce());
+        $connection->on('error', $this->expectCallableNever());
+        $connection->on('close', $this->expectCallableNever());
 
-        $connection->ping();
+        $connection->ping()->then(null, $this->expectCallableOnce());
 
         $loop->run();
     }
