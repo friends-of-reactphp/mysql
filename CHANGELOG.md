@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.5.0 (2018-11-28)
+
+A major feature release with a significant API improvement!
+
+This update does not involve any BC breaks, but we figured the new API provides
+significant features that warrant a major version bump. Existing code will
+continue to work without changes, but you're highly recommended to consider
+using the new lazy connections as detailed below.
+
+*   Feature: Add new `createLazyConnection()` method to only connect on demand and
+    implement "idle" timeout to close underlying connection when unused.
+    (#87 and #88 by @clue)
+
+    ```php
+    // new
+    $connection = $factory->createLazyConnection($url);
+    $connection->query(…);
+    ```
+
+    This method immediately returns a "virtual" connection implementing the
+    [`ConnectionInterface`](README.md#connectioninterface) that can be used to
+    interface with your MySQL database. Internally, it lazily creates the
+    underlying database connection only on demand once the first request is
+    invoked on this instance and will queue all outstanding requests until
+    the underlying connection is ready. Additionally, it will only keep this
+    underlying connection in an "idle" state for 60s by default and will
+    automatically end the underlying connection when it is no longer needed.
+
+    From a consumer side this means that you can start sending queries to the
+    database right away while the underlying connection may still be
+    outstanding. Because creating this underlying connection may take some
+    time, it will enqueue all oustanding commands and will ensure that all
+    commands will be executed in correct order once the connection is ready.
+    In other words, this "virtual" connection behaves just like a "real"
+    connection as described in the `ConnectionInterface` and frees you from
+    having to deal with its async resolution.
+
+*   Feature: Support connection timeouts.
+    (#86 by @clue)
+
 ## 0.4.1 (2018-10-18)
 
 *   Feature: Support cancellation of pending connection attempts.
