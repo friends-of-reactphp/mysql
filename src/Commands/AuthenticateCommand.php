@@ -44,7 +44,7 @@ class AuthenticateCommand extends AbstractCommand
             . "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             . $this->user . "\x00"
             . $this->getAuthToken($scramble, $this->passwd, $buffer)
-            . ($this->dbname ? $this->dbname . "\x00" : '');
+            . $this->dbname . "\x00";
     }
 
     public function getAuthToken($scramble, $password, Buffer $buffer)
