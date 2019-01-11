@@ -160,6 +160,24 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
+    public function testConnectWithValidAuthAndWithoutDbNameWillRunUntilQuit()
+    {
+        $this->expectOutputString('connected.closed.');
+
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString(array('dbname' => ''));
+        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+            echo 'connected.';
+            $connection->quit()->then(function () {
+                echo 'closed.';
+            });
+        }, 'printf')->then(null, 'printf');
+
+        $loop->run();
+    }
+
     public function testConnectWithValidAuthWillIgnoreNegativeTimeoutAndRunUntilQuit()
     {
         $this->expectOutputString('connected.closed.');

@@ -359,6 +359,25 @@ class ResultQueryTest extends BaseTestCase
         $loop->run();
     }
 
+    /**
+     * @depends testSimpleSelect
+     */
+    public function testSimpleSelectFromLazyConnectionWithoutDatabaseNameReturnsSameData()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString(array('dbname' => ''));
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->query('select * from test.book')->then(function (QueryResult $command) {
+            $this->assertCount(2, $command->resultRows);
+        })->done();
+
+        $connection->quit();
+        $loop->run();
+    }
+
     public function testInvalidSelectShouldFail()
     {
         $loop = \React\EventLoop\Factory::create();
