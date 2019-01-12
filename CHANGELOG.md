@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 (2019-01-12)
+
+*   Fix: Fix "bad handshake" error when connecting without database name.
+    (#91 by @clue)
+
 ## 0.5.0 (2018-11-28)
 
 A major feature release with a significant API improvement!
