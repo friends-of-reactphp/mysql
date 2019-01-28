@@ -445,7 +445,7 @@ caused by invalid SQL queries.
 The `close` event will be emitted once the connection closes (terminates).
 
 ```php
-$connecion->on('close', function () {
+$connection->on('close', function () {
     echo 'Connection closed' . PHP_EOL;
 });
 ```
