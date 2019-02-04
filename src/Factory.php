@@ -12,7 +12,7 @@ use React\Promise\PromiseInterface;
 use React\Promise\Timer\TimeoutException;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
-use React\Socket\ConnectionInterface;
+use React\Socket\ConnectionInterface as SocketConnectionInterface;
 use React\MySQL\Io\LazyConnection;
 
 class Factory
@@ -146,13 +146,13 @@ class Factory
             $reject(new \RuntimeException('Connection to database server cancelled'));
 
             // either close successful connection or cancel pending connection attempt
-            $connecting->then(function (ConnectionInterface $connection) {
+            $connecting->then(function (SocketConnectionInterface $connection) {
                 $connection->close();
             });
             $connecting->cancel();
         });
 
-        $connecting->then(function (ConnectionInterface $stream) use ($parts, $deferred) {
+        $connecting->then(function (SocketConnectionInterface $stream) use ($parts, $deferred) {
             $executor = new Executor();
             $parser = new Parser($stream, $executor);
 
