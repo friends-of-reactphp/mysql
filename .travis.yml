@@ -7,12 +7,16 @@ php:
   - 7.0
   - 7.1
   - 7.2
-  - hhvm # ignore errors, see below
+  - 7.3
+# - hhvm # requires legacy phpunit & ignore errors, see below
 
 # lock distro so new future defaults will not break the build
 dist: trusty
 
 matrix:
+  include:
+    - php: hhvm
+      install: composer require phpunit/phpunit:^5 --dev --no-interaction
   allow_failures:
     - php: hhvm
 

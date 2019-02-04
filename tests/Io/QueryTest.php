@@ -2,9 +2,10 @@
 
 namespace React\Tests\MySQL\Io;
 
+use PHPUnit\Framework\TestCase;
 use React\MySQL\Io\Query;
 
-class QueryTest extends \PHPUnit_Framework_TestCase
+class QueryTest extends TestCase
 {
     public function testBindParams()
     {

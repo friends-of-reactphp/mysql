@@ -2,9 +2,10 @@
 
 namespace React\Tests\MySQL\Io;
 
+use PHPUnit\Framework\TestCase;
 use React\MySQL\Io\Buffer;
 
-class BufferTest extends \PHPUnit_Framework_TestCase
+class BufferTest extends TestCase
 {
     public function testAppendAndReadBinary()
     {
