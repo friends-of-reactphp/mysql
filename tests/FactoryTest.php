@@ -405,6 +405,9 @@ class FactoryTest extends BaseTestCase
         $loop->run();
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
     public function testConnectLazyWithValidAuthWillRunUntilIdleTimerAfterPingEvenWithoutQuit()
     {
         $loop = \React\EventLoop\Factory::create();
