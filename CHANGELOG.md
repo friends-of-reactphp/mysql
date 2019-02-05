@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.2 (2019-02-05)
+
+*   Fix: Fix `ConnectionInterface` return type hint in `Factory`.
+    (#93 by @clue)
+
+*   Minor documentation typo fix and improve test suite to test against PHP 7.3,
+    add forward compatibility with PHPUnit 7 and use legacy PHPUnit 5 on HHVM.
+    (#92 and #94 by @clue)
+
 ## 0.5.1 (2019-01-12)
 
 *   Fix: Fix "bad handshake" error when connecting without database name.
