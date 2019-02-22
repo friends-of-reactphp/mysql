@@ -103,6 +103,18 @@ class Factory
      * $factory->createConnection('user:secret@localhost:3306/database');
      * ```
      *
+     * Note that both the username and password must be URL-encoded (percent-encoded)
+     * if they contain special characters:
+     *
+     * ```php
+     * $user = 'he:llo';
+     * $pass = 'p@ss';
+     *
+     * $promise = $factory->createConnection(
+     *     rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
+     * );
+     * ```
+     *
      * You can omit the port if you're connecting to default port `3306`:
      *
      * ```php
@@ -250,6 +262,18 @@ class Factory
      *
      * ```php
      * $factory->createLazyConnection('user:secret@localhost:3306/database');
+     * ```
+     *
+     * Note that both the username and password must be URL-encoded (percent-encoded)
+     * if they contain special characters:
+     *
+     * ```php
+     * $user = 'he:llo';
+     * $pass = 'p@ss';
+     *
+     * $connection = $factory->createLazyConnection(
+     *     rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
+     * );
      * ```
      *
      * You can omit the port if you're connecting to default port `3306`:
