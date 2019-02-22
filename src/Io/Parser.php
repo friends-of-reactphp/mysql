@@ -284,6 +284,7 @@ packet:
         $this->currCommand = null;
 
         $error = new Exception($this->errmsg, $this->errno);
+        $error->setCommand($command);
         $this->errmsg = '';
         $this->errno  = 0;
         $command->emit('error', array($error));
