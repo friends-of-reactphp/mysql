@@ -297,6 +297,10 @@ $connection->query($query)->then(function (QueryResult $command) {
 }, function (Exception $error) {
     // the query was not executed successfully
     echo 'Error: ' . $error->getMessage() . PHP_EOL;
+    // show errorous SQL
+    if($error instanceof \React\MySQL\Exception AND isset($e->command)) {
+        echo 'SQL: ' . $error->command->getSql();
+    }
 });
 ```
 
