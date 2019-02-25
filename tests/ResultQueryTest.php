@@ -397,6 +397,23 @@ class ResultQueryTest extends BaseTestCase
         $loop->run();
     }
 
+    public function testInvalidStatementsShouldFailWithCommandInException()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $connection = $this->createConnection($loop);
+
+        $connection->query('selct 1')->then(
+            $this->expectCallableNever(),
+            function (\Exception $error) {
+                $this->assertContains("You have an error in your SQL syntax", $error->getMessage());
+                $this->assertContains("selct 1", $error->command->getSql());
+            }
+        );
+
+        $connection->quit();
+        $loop->run();
+    }
+    
     public function testInvalidMultiStatementsShouldFailToPreventSqlInjections()
     {
         $loop = \React\EventLoop\Factory::create();
