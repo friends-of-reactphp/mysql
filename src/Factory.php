@@ -170,9 +170,9 @@ class Factory
 
             $connection = new Connection($stream, $executor);
             $command = $executor->enqueue(new AuthenticateCommand(
-                isset($parts['user']) ? $parts['user'] : 'root',
-                isset($parts['pass']) ? $parts['pass'] : '',
-                isset($parts['path']) ? ltrim($parts['path'], '/') : ''
+                isset($parts['user']) ? rawurldecode($parts['user']) : 'root',
+                isset($parts['pass']) ? rawurldecode($parts['pass']) : '',
+                isset($parts['path']) ? rawurldecode(ltrim($parts['path'], '/')) : ''
             ));
             $parser->start();
 

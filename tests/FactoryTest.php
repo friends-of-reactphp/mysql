@@ -31,6 +31,40 @@ class FactoryTest extends BaseTestCase
         $factory->createConnection('127.0.0.1:1234');
     }
 
+    public function testConnectWillUseGivenUserInfoAsDatabaseCredentialsAfterUrldecoding()
+    {
+        $connection = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $connection->expects($this->once())->method('write')->with($this->stringContains("user!\0"));
+
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->once())->method('connect')->with('127.0.0.1:3306')->willReturn(\React\Promise\resolve($connection));
+
+        $factory = new Factory($loop, $connector);
+        $promise = $factory->createConnection('user%21@127.0.0.1');
+
+        $promise->then($this->expectCallableNever(), $this->expectCallableNever());
+
+        $connection->emit('data', array("\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44)));
+    }
+
+    public function testConnectWillUseGivenPathAsDatabaseNameAfterUrldecoding()
+    {
+        $connection = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $connection->expects($this->once())->method('write')->with($this->stringContains("test database\0"));
+
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->once())->method('connect')->with('127.0.0.1:3306')->willReturn(\React\Promise\resolve($connection));
+
+        $factory = new Factory($loop, $connector);
+        $promise = $factory->createConnection('127.0.0.1/test%20database');
+
+        $promise->then($this->expectCallableNever(), $this->expectCallableNever());
+
+        $connection->emit('data', array("\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44)));
+    }
+
     public function testConnectWithInvalidUriWillRejectWithoutConnecting()
     {
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
