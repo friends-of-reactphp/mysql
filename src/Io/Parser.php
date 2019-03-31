@@ -2,7 +2,6 @@
 
 namespace React\MySQL\Io;
 
-use Evenement\EventEmitter;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
@@ -12,7 +11,7 @@ use React\Stream\DuplexStreamInterface;
 /**
  * @internal
  */
-class Parser extends EventEmitter
+class Parser
 {
     const PHASE_GOT_INIT   = 1;
     const PHASE_AUTH_SENT  = 2;
@@ -71,9 +70,6 @@ class Parser extends EventEmitter
     protected $affectedRows;
 
     public $protocalVersion = 0;
-
-    protected $errno = 0;
-    protected $errmsg = '';
 
     private $buffer;
 
@@ -142,14 +138,15 @@ packet:
             if ($response === 0xFF) {
                 // error packet before handshake means we did not exchange capabilities and error does not include SQL state
                 $this->phase   = self::PHASE_AUTH_ERR;
-                $this->errno   = $this->buffer->readInt2();
-                $this->errmsg  = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
-                $this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
+
+                $code = $this->buffer->readInt2();
+                $exception = new Exception($this->buffer->read($this->pctSize - $len + $this->buffer->length()), $code);
+                $this->debug(sprintf("Error Packet:%d %s\n", $code, $exception->getMessage()));
 
                 // error during init phase also means we're not currently executing any command
                 // simply reject the first outstanding command in the queue (AuthenticateCommand)
                 $this->currCommand = $this->executor->dequeue();
-                $this->onError();
+                $this->onError($exception);
                 return;
             }
 
@@ -181,12 +178,12 @@ packet:
 
             if ($fieldCount === 0xFF) {
                 // error packet
-                $this->errno   = $this->buffer->readInt2();
+                $code = $this->buffer->readInt2();
                 $this->buffer->skip(6); // skip SQL state
-                $this->errmsg  = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
-                $this->debug(sprintf("Error Packet:%d %s\n", $this->errno, $this->errmsg));
+                $exception = new Exception($this->buffer->read($this->pctSize - $len + $this->buffer->length()), $code);
+                $this->debug(sprintf("Error Packet:%d %s\n", $code, $exception->getMessage()));
 
-                $this->onError();
+                $this->onError($exception);
                 $this->nextRequest();
             } elseif ($fieldCount === 0x00 && $this->rsState !== self::RS_STATE_ROW) {
                 // Empty OK Packet terminates a query without a result set (UPDATE, INSERT etc.)
@@ -278,15 +275,16 @@ packet:
         $command->emit('result', array($row));
     }
 
-    protected function onError()
+    private function onError(Exception $error)
     {
-        $command = $this->currCommand;
-        $this->currCommand = null;
+        // reject current command with error if we're currently executing any commands
+        // ignore unsolicited server error in case we're not executing any commands (connection will be dropped)
+        if ($this->currCommand !== null) {
+            $command = $this->currCommand;
+            $this->currCommand = null;
 
-        $error = new Exception($this->errmsg, $this->errno);
-        $this->errmsg = '';
-        $this->errno  = 0;
-        $command->emit('error', array($error));
+            $command->emit('error', array($error));
+        }
     }
 
     protected function onResultDone()
@@ -315,9 +313,8 @@ packet:
         $command->emit('success');
     }
 
-    protected function onClose()
+    public function onClose()
     {
-        $this->emit('close');
         if ($this->currCommand !== null) {
             $command = $this->currCommand;
             $this->currCommand = null;

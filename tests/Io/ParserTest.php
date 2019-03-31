@@ -11,25 +11,10 @@ use React\MySQL\Exception;
 
 class ParserTest extends BaseTestCase
 {
-    public function testClosingStreamEmitsCloseEvent()
-    {
-        $stream = new ThroughStream();
-        $connection = $this->getMockBuilder('React\MySQL\ConnectionInterface')->disableOriginalConstructor()->getMock();
-        $executor = new Executor($connection);
-
-        $parser = new Parser($stream, $executor);
-        $parser->start();
-
-        $parser->on('close', $this->expectCallableOnce());
-
-        $stream->close();
-    }
-
     public function testClosingStreamEmitsErrorForCurrentCommand()
     {
         $stream = new ThroughStream();
-        $connection = $this->getMockBuilder('React\MySQL\ConnectionInterface')->disableOriginalConstructor()->getMock();
-        $executor = new Executor($connection);
+        $executor = new Executor();
 
         $parser = new Parser($stream, $executor);
         $parser->start();
@@ -45,10 +30,24 @@ class ParserTest extends BaseTestCase
         $stream->close();
     }
 
+    public function testUnexpectedErrorWithoutCurrentCommandWillBeIgnored()
+    {
+        $stream = new ThroughStream();
+
+        $executor = new Executor();
+
+        $parser = new Parser($stream, $executor);
+        $parser->start();
+
+        $stream->on('close', $this->expectCallableNever());
+
+        $stream->write("\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44));
+        $stream->write("\x17\0\0\0" . "\xFF" . "\x10\x04" . "Too many connections");
+    }
+
     public function testSendingErrorFrameDuringHandshakeShouldEmitErrorOnFollowingCommand()
     {
         $stream = new ThroughStream();
-        $connection = $this->getMockBuilder('React\MySQL\ConnectionInterface')->disableOriginalConstructor()->getMock();
 
         $command = new QueryCommand();
         $command->on('error', $this->expectCallableOnce());
@@ -58,7 +57,7 @@ class ParserTest extends BaseTestCase
             $error = $e;
         });
 
-        $executor = new Executor($connection);
+        $executor = new Executor();
         $executor->enqueue($command);
 
         $parser = new Parser($stream, $executor);
@@ -74,12 +73,11 @@ class ParserTest extends BaseTestCase
     public function testSendingIncompleteErrorFrameDuringHandshakeShouldNotEmitError()
     {
         $stream = new ThroughStream();
-        $connection = $this->getMockBuilder('React\MySQL\ConnectionInterface')->disableOriginalConstructor()->getMock();
 
         $command = new QueryCommand();
         $command->on('error', $this->expectCallableNever());
 
-        $executor = new Executor($connection);
+        $executor = new Executor();
         $executor->enqueue($command);
 
         $parser = new Parser($stream, $executor);
