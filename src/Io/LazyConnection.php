@@ -60,12 +60,11 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         $this->connecting->then(function (ConnectionInterface $connection) {
             // connection completed => remember only until closed
             $connection->on('close', function () {
-                $this->connecting = null;
-
                 if ($this->idleTimer !== null) {
                     $this->loop->cancelTimer($this->idleTimer);
                     $this->idleTimer = null;
                 }
+                $this->connecting = null;
             });
         }, function () {
             // connection failed => discard connection attempt
