@@ -513,6 +513,29 @@ class LazyConnectionTest extends BaseTestCase
         $ret->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
     }
 
+    public function testPingWillRejectAndNotStartIdleTimerWhenPingFromUnderlyingConnectionRejectsBecauseConnectionIsDead()
+    {
+        $error = new \RuntimeException();
+
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'close'))->disableOriginalConstructor()->getMock();
+        $base->expects($this->once())->method('ping')->willReturnCallback(function () use ($base, $error) {
+            $base->emit('close');
+            return \React\Promise\reject($error);
+        });
+        $base->expects($this->never())->method('close');
+
+        $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
+
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $loop->expects($this->never())->method('addTimer');
+
+        $connection = new LazyConnection($factory, '', $loop);
+
+        $ret = $connection->ping();
+        $ret->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
+    }
+
     public function testQuitResolvesAndEmitsCloseImmediatelyWhenConnectionIsNotAlreadyPending()
     {
         $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
