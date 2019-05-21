@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.4 (2019-05-21)
+
+*   Fix: Do not start idle timer when lazy connection is already closed.
+    (#110 by @clue)
+
+*   Fix: Fix explicit `close()` on lazy connection when connection is active.
+    (#109 by @clue)
+
 ## 0.5.3 (2019-04-03)
 
 *   Fix: Ignore unsolicited server error when not executing any commands.
