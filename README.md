@@ -132,6 +132,18 @@ authentication, port and database to connect to:
 $factory->createConnection('user:secret@localhost:3306/database');
 ```
 
+Note that both the username and password must be URL-encoded (percent-encoded)
+if they contain special characters:
+
+```php
+$user = 'he:llo';
+$pass = 'p@ss';
+
+$promise = $factory->createConnection(
+    rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
+);
+```
+
 You can omit the port if you're connecting to default port `3306`:
 
 ```php
@@ -211,6 +223,18 @@ authentication, port and database to connect to:
 
 ```php
 $factory->createLazyConnection('user:secret@localhost:3306/database');
+```
+
+Note that both the username and password must be URL-encoded (percent-encoded)
+if they contain special characters:
+
+```php
+$user = 'he:llo';
+$pass = 'p@ss';
+
+$connection = $factory->createLazyConnection(
+    rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
+);
 ```
 
 You can omit the port if you're connecting to default port `3306`:
@@ -461,7 +485,7 @@ The recommended way to install this library is [through Composer](https://getcom
 This will install the latest supported version:
 
 ```bash
-$ composer require react/mysql:^0.5.2
+$ composer require react/mysql:^0.5.4
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
@@ -501,7 +525,7 @@ For example, to create an empty test database, you can also use a temporary
 ```bash
 $ docker run -it --rm --net=host \
     -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test \
-    -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql
+    -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
 ```
 
 To run the test suite, go to the project root and run:
