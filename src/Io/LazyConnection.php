@@ -89,7 +89,7 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     {
         --$this->pending;
 
-        if ($this->pending < 1 && $this->idlePeriod >= 0) {
+        if ($this->pending < 1 && $this->idlePeriod >= 0 && $this->connecting !== null) {
             $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
                 $this->connecting->then(function (ConnectionInterface $connection) {
                     $this->disconnecting = $connection;
@@ -217,8 +217,10 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
             $this->connecting->then(function (ConnectionInterface $connection) {
                 $connection->close();
             });
-            $this->connecting->cancel();
-            $this->connecting = null;
+            if ($this->connecting !== null) {
+                $this->connecting->cancel();
+                $this->connecting = null;
+            }
         }
 
         if ($this->idleTimer !== null) {
