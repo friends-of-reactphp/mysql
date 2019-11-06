@@ -205,7 +205,9 @@ class Connection extends EventEmitter implements ConnectionInterface
         if ($this->state === self::STATE_AUTHENTICATED) {
             return $this->executor->enqueue($command);
         } else {
-            throw new Exception("Can't send command");
+			$e = new Exception("Can't send command");
+			$e->setCommand($command);
+            throw $e;
         }
     }
 }
