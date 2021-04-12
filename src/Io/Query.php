@@ -120,7 +120,7 @@ class Query
             $offset = strpos($sql, '?', $offset + strlen($replacement));
         }
         if ($offset !== false) {
-            throw new \LogicException('Params not enouth to build sql');
+            throw new \LogicException('Params not enough to build sql');
         }
 
         return $sql;
