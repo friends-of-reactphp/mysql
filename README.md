@@ -1,7 +1,7 @@
 
 # MySQL
 
-[![Build Status](https://travis-ci.org/friends-of-reactphp/mysql.svg?branch=master)](https://travis-ci.org/friends-of-reactphp/mysql)
+[![CI status](https://github.com/friends-of-reactphp/mysql/workflows/CI/badge.svg)](https://github.com/friends-of-reactphp/mysql/actions)
 
 Async MySQL database client for [ReactPHP](https://reactphp.org/).
 
