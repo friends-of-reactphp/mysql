@@ -2,6 +2,7 @@
 
 namespace React\MySQL;
 
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Io\Connection;
@@ -17,24 +18,31 @@ use React\MySQL\Io\LazyConnection;
 
 class Factory
 {
+    /** @var LoopInterface */
     private $loop;
+
+    /** @var ConnectorInterface */
     private $connector;
 
     /**
      * The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
-     * It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
      *
      * ```php
-     * $loop = \React\EventLoop\Factory::create();
-     * $factory = new Factory($loop);
+     * $factory = new React\MySQL\Factory();
      * ```
+     *
+     * This class takes an optional `LoopInterface|null $loop` parameter that can be used to
+     * pass the event loop instance to use for this object. You can use a `null` value
+     * here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
+     * This value SHOULD NOT be given unless you're sure you want to explicitly use a
+     * given event loop instance.
      *
      * If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
      * proxy servers etc.), you can explicitly pass a custom instance of the
      * [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
      *
      * ```php
-     * $connector = new \React\Socket\Connector($loop, array(
+     * $connector = new React\Socket\Connector(null, array(
      *     'dns' => '127.0.0.1',
      *     'tcp' => array(
      *         'bindto' => '192.168.10.1:0'
@@ -45,20 +53,16 @@ class Factory
      *     )
      * ));
      *
-     * $factory = new Factory($loop, $connector);
+     * $factory = new React\MySQL\Factory(null, $connector);
      * ```
      *
-     * @param LoopInterface $loop
-     * @param ConnectorInterface|null $connector
+     * @param ?LoopInterface $loop
+     * @param ?ConnectorInterface $connector
      */
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null)
+    public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null)
     {
-        if ($connector === null) {
-            $connector = new Connector($loop);
-        }
-
-        $this->loop = $loop;
-        $this->connector = $connector;
+        $this->loop = $loop ?: Loop::get();
+        $this->connector = $connector ?: new Connector($this->loop);
     }
 
     /**

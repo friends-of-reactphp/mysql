@@ -7,13 +7,12 @@ use React\Stream\ReadableResourceStream;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Factory();
 
 $uri = 'test:test@localhost/test';
 
 // open a STDIN stream to read keyboard input (not supported on Windows)
-$stdin = new ReadableResourceStream(STDIN, $loop);
+$stdin = new ReadableResourceStream(STDIN);
 $stdin->pause();
 
 //create a mysql connection for executing queries
@@ -86,5 +85,3 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
     echo 'Connection error: ' . $e->getMessage() . PHP_EOL;
     $stdin->close();
 });
-
-$loop->run();

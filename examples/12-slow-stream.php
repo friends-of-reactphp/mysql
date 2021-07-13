@@ -2,19 +2,19 @@
 
 // $ php examples/12-slow-stream.php "SHOW VARIABLES"
 
+use React\EventLoop\Loop;
 use React\MySQL\ConnectionInterface;
 use React\MySQL\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Factory();
 
 $uri = 'test:test@localhost/test';
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
 
 //create a mysql connection for executing query
-$factory->createConnection($uri)->then(function (ConnectionInterface $connection) use ($query, $loop) {
+$factory->createConnection($uri)->then(function (ConnectionInterface $connection) use ($query) {
     // The protocol parser reads rather large chunked from the underlying connection
     // and as such can yield multiple (dozens to hundreds) rows from a single data
     // chunk. We try to artifically limit the stream chunk size here to try to
@@ -44,13 +44,13 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
     $stream = $connection->queryStream($query);
 
     $throttle = null;
-    $stream->on('data', function ($row) use ($loop, &$throttle, $stream) {
+    $stream->on('data', function ($row) use (&$throttle, $stream) {
         echo json_encode($row, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL;
 
         // simple throttle mechanism: explicitly pause the result stream and
         // resume it again after some time.
         if ($throttle === null) {
-            $throttle = $loop->addTimer(1.0, function () use ($stream, &$throttle) {
+            $throttle = Loop::addTimer(1.0, function () use ($stream, &$throttle) {
                 $throttle = null;
                 $stream->resume();
             });
@@ -62,16 +62,14 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
         echo 'Error: ' . $e->getMessage() . PHP_EOL;
     });
 
-    $stream->on('close', function () use ($loop, &$throttle) {
+    $stream->on('close', function () use (&$throttle) {
         echo 'CLOSED' . PHP_EOL;
 
         if ($throttle) {
-            $loop->cancelTimer($throttle);
+            Loop::cancelTimer($throttle);
             $throttle = null;
         }
     });
 
     $connection->quit();
 }, 'printf');
-
-$loop->run();
