@@ -6,11 +6,11 @@
     "require": {
         "php": ">=5.4.0",
         "evenement/evenement": "^3.0 || ^2.1 || ^1.1",
-        "react/event-loop": "^1.0 || ^0.5",
+        "react/event-loop": "^1.2",
         "react/promise": "^2.7",
         "react/promise-stream": "^1.1",
         "react/promise-timer": "^1.5",
-        "react/socket": "^1.1"
+        "react/socket": "^1.8"
     },
     "require-dev": {
         "clue/block-react": "^1.2",

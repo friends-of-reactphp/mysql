@@ -33,8 +33,7 @@ It is written in pure PHP and does not require any extensions.
 This example runs a simple `SELECT` query and dumps all the records from a `book` table:
 
 ```php
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new React\MySQL\Factory();
 
 $uri = 'test:test@localhost/test';
 $connection = $factory->createLazyConnection($uri);
@@ -51,8 +50,6 @@ $connection->query('SELECT * FROM book')->then(
 );
 
 $connection->quit();
-
-$loop->run();
 ```
 
 See also the [examples](examples).
@@ -62,19 +59,23 @@ See also the [examples](examples).
 ### Factory
 
 The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
-It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
 
 ```php
-$loop = \React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new React\MySQL\Factory();
 ```
+
+This class takes an optional `LoopInterface|null $loop` parameter that can be used to
+pass the event loop instance to use for this object. You can use a `null` value
+here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
+This value SHOULD NOT be given unless you're sure you want to explicitly use a
+given event loop instance.
 
 If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
 proxy servers etc.), you can explicitly pass a custom instance of the
 [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
 ```php
-$connector = new \React\Socket\Connector($loop, array(
+$connector = new React\Socket\Connector(null, array(
     'dns' => '127.0.0.1',
     'tcp' => array(
         'bindto' => '192.168.10.1:0'
@@ -85,7 +86,7 @@ $connector = new \React\Socket\Connector($loop, array(
     )
 ));
 
-$factory = new Factory($loop, $connector);
+$factory = new React\MySQL\Factory(null, $connector);
 ```
 
 #### createConnection()
@@ -120,7 +121,7 @@ connection attempt and/or MySQL authentication.
 ```php
 $promise = $factory->createConnection($url);
 
-$loop->addTimer(3.0, function () use ($promise) {
+Loop::addTimer(3.0, function () use ($promise) {
     $promise->cancel();
 });
 ```

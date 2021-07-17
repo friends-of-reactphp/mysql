@@ -6,8 +6,7 @@ use React\MySQL\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Factory();
 
 $uri = 'test:test@localhost/test';
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
@@ -30,5 +29,3 @@ $stream->on('close', function () {
 });
 
 $connection->quit();
-
-$loop->run();

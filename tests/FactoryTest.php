@@ -9,6 +9,17 @@ use React\Promise\Promise;
 
 class FactoryTest extends BaseTestCase
 {
+    public function testConstructWithoutLoopAssignsLoopAutomatically()
+    {
+        $factory = new Factory();
+
+        $ref = new \ReflectionProperty($factory, 'loop');
+        $ref->setAccessible(true);
+        $loop = $ref->getValue($factory);
+
+        $this->assertInstanceOf('React\EventLoop\LoopInterface', $loop);
+    }
+
     public function testConnectWillUseHostAndDefaultPort()
     {
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
