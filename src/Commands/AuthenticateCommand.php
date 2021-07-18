@@ -7,6 +7,7 @@ use React\MySQL\Io\Constants;
 
 /**
  * @internal
+ * @link https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse
  */
 class AuthenticateCommand extends AbstractCommand
 {
@@ -15,13 +16,51 @@ class AuthenticateCommand extends AbstractCommand
     private $dbname;
 
     private $maxPacketSize = 0x1000000;
-    private $charsetNumber = 0x21;
 
-    public function __construct($user, $passwd, $dbname)
+    /**
+     * @var int
+     * @link https://dev.mysql.com/doc/internals/en/character-set.html#packet-Protocol::CharacterSet
+     */
+    private $charsetNumber;
+
+    /**
+     * Mapping from charset name to internal charset ID
+     *
+     * Note that this map currently only contains ASCII-compatible charset encodings
+     * because of quoting rules as defined in the `Query` class.
+     *
+     * @var array<string,int>
+     * @see self::$charsetNumber
+     * @see \React\MySQL\Io\Query::$escapeChars
+     */
+    private static $charsetMap = array(
+        'latin1' => 8,
+        'latin2' => 9,
+        'ascii' => 11,
+        'latin5' => 30,
+        'utf8' => 33,
+        'latin7' => 41,
+        'utf8mb4' => 45,
+        'binary' => 63
+    );
+
+    /**
+     * @param string $user
+     * @param string $passwd
+     * @param string $dbname
+     * @param string $charset
+     * @throws \InvalidArgumentException for invalid/unknown charset name
+     */
+    public function __construct($user, $passwd, $dbname, $charset)
     {
+        if (!isset(self::$charsetMap[$charset])) {
+            throw new \InvalidArgumentException('Unsupported charset selected');
+        }
+
         $this->user = $user;
         $this->passwd = $passwd;
         $this->dbname = $dbname;
+        $this->charsetNumber = self::$charsetMap[$charset];
     }
 
     public function getId()

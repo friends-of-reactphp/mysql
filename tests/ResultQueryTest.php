@@ -340,6 +340,39 @@ class ResultQueryTest extends BaseTestCase
         $loop->run();
     }
 
+    public function testSelectCharsetDefaultsToUtf8()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $connection = $this->createConnection($loop);
+
+        $connection->query('SELECT @@character_set_client')->then(function (QueryResult $command) {
+            $this->assertCount(1, $command->resultRows);
+            $this->assertCount(1, $command->resultRows[0]);
+            $this->assertSame('utf8', reset($command->resultRows[0]));
+        });
+
+        $connection->quit();
+        $loop->run();
+    }
+
+    public function testSelectWithExplcitCharsetReturnsCharset()
+    {
+        $loop = \React\EventLoop\Factory::create();
+        $factory = new Factory($loop);
+
+        $uri = $this->getConnectionString() . '?charset=latin1';
+        $connection = $factory->createLazyConnection($uri);
+
+        $connection->query('SELECT @@character_set_client')->then(function (QueryResult $command) {
+            $this->assertCount(1, $command->resultRows);
+            $this->assertCount(1, $command->resultRows[0]);
+            $this->assertSame('latin1', reset($command->resultRows[0]));
+        });
+
+        $connection->quit();
+        $loop->run();
+    }
+
     public function testSimpleSelect()
     {
         $loop = \React\EventLoop\Factory::create();

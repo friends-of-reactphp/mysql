@@ -143,6 +143,16 @@ class Factory
      * $factory->createConnection('localhost?timeout=0.5');
      * ```
      *
+     * By default, the connection uses the `utf8` charset encoding. Note that
+     * MySQL's `utf8` encoding (also known as `utf8mb3`) predates what is now
+     * known as UTF-8 and for historical reasons doesn't support emojis and
+     * other characters. If you want full UTF-8 support, you can pass the
+     * charset encoding like this:
+     *
+     * ```php
+     * $factory->createConnection('localhost?charset=utf8mb4');
+     * ```
+     *
      * @param string $uri
      * @return PromiseInterface Promise<ConnectionInterface, Exception>
      */
@@ -151,6 +161,22 @@ class Factory
         $parts = parse_url('mysql://' . $uri);
         if (!isset($parts['scheme'], $parts['host']) || $parts['scheme'] !== 'mysql') {
             return \React\Promise\reject(new \InvalidArgumentException('Invalid connect uri given'));
+        }
+
+        $args = [];
+        if (isset($parts['query'])) {
+            parse_str($parts['query'], $args);
+        }
+
+        try {
+            $authCommand = new AuthenticateCommand(
+                isset($parts['user']) ? rawurldecode($parts['user']) : 'root',
+                isset($parts['pass']) ? rawurldecode($parts['pass']) : '',
+                isset($parts['path']) ? rawurldecode(ltrim($parts['path'], '/')) : '',
+                isset($args['charset']) ? $args['charset'] : 'utf8'
+            );
+        } catch (\InvalidArgumentException $e) {
+            return \React\Promise\reject($e);
         }
 
         $connecting = $this->connector->connect(
@@ -168,16 +194,12 @@ class Factory
             $connecting->cancel();
         });
 
-        $connecting->then(function (SocketConnectionInterface $stream) use ($parts, $deferred) {
+        $connecting->then(function (SocketConnectionInterface $stream) use ($authCommand, $deferred) {
             $executor = new Executor();
             $parser = new Parser($stream, $executor);
 
             $connection = new Connection($stream, $executor);
-            $command = $executor->enqueue(new AuthenticateCommand(
-                isset($parts['user']) ? rawurldecode($parts['user']) : 'root',
-                isset($parts['pass']) ? rawurldecode($parts['pass']) : '',
-                isset($parts['path']) ? rawurldecode(ltrim($parts['path'], '/')) : ''
-            ));
+            $command = $executor->enqueue($authCommand);
             $parser->start();
 
             $command->on('success', function () use ($deferred, $connection) {
@@ -190,11 +212,6 @@ class Factory
         }, function ($error) use ($deferred) {
             $deferred->reject(new \RuntimeException('Unable to connect to database server', 0, $error));
         });
-
-        $args = [];
-        if (isset($parts['query'])) {
-            parse_str($parts['query'], $args);
-        }
 
         // use timeout from explicit ?timeout=x parameter or default to PHP's default_socket_timeout (60)
         $timeout = (float) isset($args['timeout']) ? $args['timeout'] : ini_get("default_socket_timeout");
@@ -315,6 +332,16 @@ class Factory
      *
      * ```php
      * $factory->createLazyConnection('localhost?idle=0.1');
+     * ```
+     *
+     * By default, the connection uses the `utf8` charset encoding. Note that
+     * MySQL's `utf8` encoding (also known as `utf8mb3`) predates what is now
+     * known as UTF-8 and for historical reasons doesn't support emojis and
+     * other characters. If you want full UTF-8 support, you can pass the
+     * charset encoding like this:
+     *
+     * ```php
+     * $factory->createLazyConnection('localhost?charset=utf8mb4');
      * ```
      *
      * @param string $uri

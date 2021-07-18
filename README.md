@@ -168,6 +168,16 @@ authentication. You can explicitly pass a custom timeout value in seconds
 $factory->createConnection('localhost?timeout=0.5');
 ```
 
+By default, the connection uses the `utf8` charset encoding. Note that
+MySQL's `utf8` encoding (also known as `utf8mb3`) predates what is now
+known as UTF-8 and for historical reasons doesn't support emojis and
+other characters. If you want full UTF-8 support, you can pass the
+charset encoding like this:
+
+```php
+$factory->createConnection('localhost?charset=utf8mb4');
+```
+
 #### createLazyConnection()
 
 Creates a new connection.
@@ -272,6 +282,16 @@ timeout) like this:
 
 ```php
 $factory->createLazyConnection('localhost?idle=0.1');
+```
+
+By default, the connection uses the `utf8` charset encoding. Note that
+MySQL's `utf8` encoding (also known as `utf8mb3`) predates what is now
+known as UTF-8 and for historical reasons doesn't support emojis and
+other characters. If you want full UTF-8 support, you can pass the
+charset encoding like this:
+
+```php
+$factory->createLazyConnection('localhost?charset=utf8mb4');
 ```
 
 ### ConnectionInterface

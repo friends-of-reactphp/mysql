@@ -13,6 +13,15 @@ class Query
 
     private $params = [];
 
+    /**
+     * Mapping from byte/character to escaped character string
+     *
+     * Note that this mapping assumes an ASCII-compatible charset encoding such
+     * as UTF-8, ISO 8859 and others.
+     *
+     * @var array<string,string>
+     * @see \React\MySQL\Commands\AuthenticateCommand::$charsetMap
+     */
     private $escapeChars = array(
             "\x00"   => "\\0",
             "\r"   => "\\r",
