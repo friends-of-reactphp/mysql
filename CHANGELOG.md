@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.5 (2021-07-19)
+
+*   Feature: Simplify usage by supporting new default loop.
+    (#134 by @clue)
+
+    ```php
+    // old (still supported)
+    $factory = new React\MySQL\Factory($loop);
+
+    // new (using default loop)
+    $factory = new React\MySQL\Factory();
+    ```
+
+*   Improve test setup, use GitHub actions for continuous integration (CI) and fix minor typo.
+    (#132 by @SimonFrings and #129 by @mmoreram)
+
 ## 0.5.4 (2019-05-21)
 
 *   Fix: Do not start idle timer when lazy connection is already closed.
