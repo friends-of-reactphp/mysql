@@ -89,6 +89,19 @@ class FactoryTest extends BaseTestCase
         $promise->then(null, $this->expectCallableOnce());
     }
 
+    public function testConnectWithInvalidCharsetWillRejectWithoutConnecting()
+    {
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->never())->method('connect');
+
+        $factory = new Factory($loop, $connector);
+        $promise = $factory->createConnection('localhost?charset=unknown');
+
+        $this->assertInstanceof('React\Promise\PromiseInterface', $promise);
+        $promise->then(null, $this->expectCallableOnce());
+    }
+
     public function testConnectWithInvalidHostRejectsWithConnectionError()
     {
         $loop = \React\EventLoop\Factory::create();
