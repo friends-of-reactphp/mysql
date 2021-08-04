@@ -4,7 +4,7 @@ namespace React\Tests\MySQL;
 
 use React\MySQL\ConnectionInterface;
 use React\MySQL\Factory;
-use React\Socket\Server;
+use React\Socket\SocketServer;
 use React\Promise\Promise;
 
 class FactoryTest extends BaseTestCase
@@ -140,13 +140,13 @@ class FactoryTest extends BaseTestCase
         $loop = \React\EventLoop\Factory::create();
         $factory = new Factory($loop);
 
-        $server = new Server(0, $loop);
-        $server->on('connection', function ($connection) use ($server) {
-            $server->close();
+        $socket = new SocketServer('127.0.0.1:0', array(), $loop);
+        $socket->on('connection', function ($connection) use ($socket) {
+            $socket->close();
             $connection->close();
         });
 
-        $parts = parse_url($server->getAddress());
+        $parts = parse_url($socket->getAddress());
         $uri = $this->getConnectionString(array('host' => $parts['host'], 'port' => $parts['port']));
 
         $promise = $factory->createConnection($uri);
