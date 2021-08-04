@@ -2,6 +2,7 @@
 
 namespace React\Tests\MySQL;
 
+use React\EventLoop\Loop;
 use React\MySQL\ConnectionInterface;
 use React\MySQL\Factory;
 use React\Socket\SocketServer;
@@ -104,21 +105,19 @@ class FactoryTest extends BaseTestCase
 
     public function testConnectWithInvalidHostRejectsWithConnectionError()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString(array('host' => 'example.invalid'));
         $promise = $factory->createConnection($uri);
 
         $promise->then(null, $this->expectCallableOnce());
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithInvalidPassRejectsWithAuthenticationError()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString(array('passwd' => 'invalidpass'));
         $promise = $factory->createConnection($uri);
@@ -132,15 +131,14 @@ class FactoryTest extends BaseTestCase
             )
         ));
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWillRejectWhenServerClosesConnection()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
-        $socket = new SocketServer('127.0.0.1:0', array(), $loop);
+        $socket = new SocketServer('127.0.0.1:0', array());
         $socket->on('connection', function ($connection) use ($socket) {
             $socket->close();
             $connection->close();
@@ -152,13 +150,12 @@ class FactoryTest extends BaseTestCase
         $promise = $factory->createConnection($uri);
         $promise->then(null, $this->expectCallableOnce());
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWillRejectOnExplicitTimeoutDespiteValidAuth()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString() . '?timeout=0';
 
@@ -173,13 +170,12 @@ class FactoryTest extends BaseTestCase
             )
         ));
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWillRejectOnDefaultTimeoutFromIniDespiteValidAuth()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
 
@@ -197,15 +193,14 @@ class FactoryTest extends BaseTestCase
             )
         ));
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthWillRunUntilQuit()
     {
         $this->expectOutputString('connected.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -215,15 +210,14 @@ class FactoryTest extends BaseTestCase
             });
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthAndWithoutDbNameWillRunUntilQuit()
     {
         $this->expectOutputString('connected.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString(array('dbname' => ''));
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -233,15 +227,14 @@ class FactoryTest extends BaseTestCase
             });
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthWillIgnoreNegativeTimeoutAndRunUntilQuit()
     {
         $this->expectOutputString('connected.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString() . '?timeout=-1';
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -251,15 +244,14 @@ class FactoryTest extends BaseTestCase
             });
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthCanPingAndThenQuit()
     {
         $this->expectOutputString('connected.ping.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -273,15 +265,14 @@ class FactoryTest extends BaseTestCase
 
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthCanQueuePingAndQuit()
     {
         $this->expectOutputString('connected.ping.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -294,15 +285,14 @@ class FactoryTest extends BaseTestCase
             });
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthQuitOnlyOnce()
     {
         $this->expectOutputString('connected.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -315,15 +305,14 @@ class FactoryTest extends BaseTestCase
             });
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthCanCloseOnlyOnce()
     {
         $this->expectOutputString('connected.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -339,15 +328,14 @@ class FactoryTest extends BaseTestCase
             $connection->close();
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectWithValidAuthCanCloseAndAbortPing()
     {
         $this->expectOutputString('connected.aborted pending (Connection lost).aborted queued (Connection lost).closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
@@ -368,7 +356,7 @@ class FactoryTest extends BaseTestCase
             $connection->close();
         }, 'printf')->then(null, 'printf');
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testCancelConnectWillCancelPendingConnection()
@@ -433,8 +421,7 @@ class FactoryTest extends BaseTestCase
     {
         $this->expectOutputString('closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = 'mysql://random:pass@host';
         $connection = $factory->createLazyConnection($uri);
@@ -448,8 +435,7 @@ class FactoryTest extends BaseTestCase
     {
         $this->expectOutputString('closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $connection = $factory->createLazyConnection($uri);
@@ -460,7 +446,7 @@ class FactoryTest extends BaseTestCase
             echo 'closed.';
         });
 
-        $loop->run();
+        Loop::run();
     }
 
     /**
@@ -468,21 +454,19 @@ class FactoryTest extends BaseTestCase
      */
     public function testConnectLazyWithValidAuthWillRunUntilIdleTimerAfterPingEvenWithoutQuit()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString() . '?idle=0';
         $connection = $factory->createLazyConnection($uri);
 
         $connection->ping();
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectLazyWithInvalidAuthWillRejectPingButWillNotEmitErrorOrClose()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString(array('passwd' => 'invalidpass'));
         $connection = $factory->createLazyConnection($uri);
@@ -492,15 +476,14 @@ class FactoryTest extends BaseTestCase
 
         $connection->ping()->then(null, $this->expectCallableOnce());
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testConnectLazyWithValidAuthWillPingBeforeQuitButNotAfter()
     {
         $this->expectOutputString('ping.closed.');
 
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $connection = $factory->createLazyConnection($uri);
@@ -517,6 +500,6 @@ class FactoryTest extends BaseTestCase
             echo 'never reached';
         });
 
-        $loop->run();
+        Loop::run();
     }
 }

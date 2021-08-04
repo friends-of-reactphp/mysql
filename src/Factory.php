@@ -95,7 +95,7 @@ class Factory
      * ```php
      * $promise = $factory->createConnection($url);
      *
-     * $loop->addTimer(3.0, function () use ($promise) {
+     * Loop::addTimer(3.0, function () use ($promise) {
      *     $promise->cancel();
      * });
      * ```

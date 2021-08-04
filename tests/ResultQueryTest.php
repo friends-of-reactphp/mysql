@@ -2,6 +2,7 @@
 
 namespace React\Tests\MySQL;
 
+use React\EventLoop\Loop;
 use React\MySQL\Io\Constants;
 use React\MySQL\QueryResult;
 use React\MySQL\Factory;
@@ -10,8 +11,7 @@ class ResultQueryTest extends BaseTestCase
 {
     public function testSelectStaticText()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select \'foo\'')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -22,7 +22,7 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function provideValuesThatWillBeReturnedAsIs()
@@ -54,8 +54,7 @@ class ResultQueryTest extends BaseTestCase
      */
     public function testSelectStaticValueWillBeReturnedAsIs($value)
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $expected = $value;
 
@@ -66,7 +65,7 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     /**
@@ -74,8 +73,7 @@ class ResultQueryTest extends BaseTestCase
      */
     public function testSelectStaticValueWillBeConvertedToString($value, $expected)
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select ?', [$value])->then(function (QueryResult $command) use ($expected) {
             $this->assertCount(1, $command->resultRows);
@@ -84,13 +82,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextWithQuestionMark()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select \'hello?\'')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -99,13 +96,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectLongStaticTextHasTypeStringWithValidLength()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $length = 40000;
         $value = str_repeat('.', $length);
@@ -117,13 +113,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextWithEmptyLabel()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select \'foo\' as ``')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -136,13 +131,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticNullHasTypeNull()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select null')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -154,13 +148,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoRows()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo" UNION select "bar"')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
@@ -171,13 +164,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoRowsWithNullHasTypeString()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo" UNION select null')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
@@ -191,13 +183,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticIntegerTwoRowsWithNullHasTypeLongButReturnsIntAsString()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select 0 UNION select null')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
@@ -211,13 +202,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoRowsWithIntegerHasTypeString()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo" UNION select 1')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
@@ -231,13 +221,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoRowsWithEmptyRow()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo" UNION select ""')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
@@ -248,13 +237,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextNoRows()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo" LIMIT 0')->then(function (QueryResult $command) {
             $this->assertCount(0, $command->resultRows);
@@ -264,13 +252,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoColumns()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo","bar"')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -281,13 +268,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoColumnsWithOneEmptyColumn()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo",""')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -298,13 +284,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoColumnsWithBothEmpty()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select \'\' as `first`, \'\' as `second`')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -317,13 +302,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectStaticTextTwoColumnsWithSameNameOverwritesValue()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select "foo" as `col`,"bar" as `col`')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -337,13 +321,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectCharsetDefaultsToUtf8()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('SELECT @@character_set_client')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -352,13 +335,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectWithExplcitCharsetReturnsCharset()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString() . '?charset=latin1';
         $connection = $factory->createLazyConnection($uri);
@@ -370,13 +352,12 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSimpleSelect()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         // re-create test "book" table
         $connection->query('DROP TABLE IF EXISTS book');
@@ -389,7 +370,7 @@ class ResultQueryTest extends BaseTestCase
         });
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     /**
@@ -397,8 +378,7 @@ class ResultQueryTest extends BaseTestCase
      */
     public function testSimpleSelectFromLazyConnectionWithoutDatabaseNameReturnsSameData()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString(array('dbname' => ''));
         $connection = $factory->createLazyConnection($uri);
@@ -408,13 +388,12 @@ class ResultQueryTest extends BaseTestCase
         })->done();
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testInvalidSelectShouldFail()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $options = $this->getConnectionOptions();
         $db = $options['dbname'];
@@ -427,13 +406,12 @@ class ResultQueryTest extends BaseTestCase
         );
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testInvalidMultiStatementsShouldFailToPreventSqlInjections()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $connection->query('select 1;select 2;')->then(
             $this->expectCallableNever(),
@@ -443,36 +421,34 @@ class ResultQueryTest extends BaseTestCase
         );
 
         $connection->quit();
-        $loop->run();
+        Loop::run();
     }
 
     public function testSelectAfterDelay()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
-        $loop->addTimer(0.1, function () use ($connection) {
+        Loop::addTimer(0.1, function () use ($connection) {
             $connection->query('select 1+1')->then(function (QueryResult $command) {
                 $this->assertEquals([['1+1' => 2]], $command->resultRows);
             });
             $connection->quit();
         });
 
-        $timeout = $loop->addTimer(1, function () use ($loop) {
-            $loop->stop();
+        $timeout = Loop::addTimer(1, function () {
+            Loop::stop();
             $this->fail('Test timeout');
         });
-        $connection->on('close', function () use ($loop, $timeout) {
-            $loop->cancelTimer($timeout);
+        $connection->on('close', function () use ($timeout) {
+            Loop::cancelTimer($timeout);
         });
 
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamStaticEmptyEmitsSingleRow()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $stream = $connection->queryStream('SELECT 1');
         $stream->on('data', $this->expectCallableOnceWith(array('1' => '1')));
@@ -480,14 +456,12 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('close', $this->expectCallableOnce());
 
         $connection->quit();
-
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamBoundVariableEmitsSingleRow()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $stream = $connection->queryStream('SELECT ? as value', array('test'));
         $stream->on('data', $this->expectCallableOnceWith(array('value' => 'test')));
@@ -495,14 +469,12 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('close', $this->expectCallableOnce());
 
         $connection->quit();
-
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamZeroRowsEmitsEndWithoutData()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $stream = $connection->queryStream('SELECT 1 LIMIT 0');
         $stream->on('data', $this->expectCallableNever());
@@ -510,14 +482,12 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('close', $this->expectCallableOnce());
 
         $connection->quit();
-
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamInvalidStatementEmitsError()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $stream = $connection->queryStream('SELECT');
         $stream->on('data', $this->expectCallableNever());
@@ -526,14 +496,12 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('close', $this->expectCallableOnce());
 
         $connection->quit();
-
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamDropStatementEmitsEndWithoutData()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $stream = $connection->queryStream('DROP TABLE IF exists helloworldtest1');
         $stream->on('data', $this->expectCallableNever());
@@ -541,14 +509,12 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('close', $this->expectCallableOnce());
 
         $connection->quit();
-
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamExplicitCloseEmitsCloseEventWithoutData()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $connection = $this->createConnection($loop);
+        $connection = $this->createConnection(Loop::get());
 
         $stream = $connection->queryStream('SELECT 1');
         $stream->on('data', $this->expectCallableNever());
@@ -557,14 +523,12 @@ class ResultQueryTest extends BaseTestCase
         $stream->close();
 
         $connection->quit();
-
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamFromLazyConnectionEmitsSingleRow()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $connection = $factory->createLazyConnection($uri);
@@ -576,14 +540,12 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('close', $this->expectCallableOnce());
 
         $connection->quit();
-
-        $loop->run();
+        Loop::run();
     }
 
     public function testQueryStreamFromLazyConnectionWillErrorWhenConnectionIsClosed()
     {
-        $loop = \React\EventLoop\Factory::create();
-        $factory = new Factory($loop);
+        $factory = new Factory();
 
         $uri = $this->getConnectionString();
         $connection = $factory->createLazyConnection($uri);
@@ -595,7 +557,5 @@ class ResultQueryTest extends BaseTestCase
         $stream->on('close', $this->expectCallableOnce());
 
         $connection->close();
-
-        $loop->run();
     }
 }
