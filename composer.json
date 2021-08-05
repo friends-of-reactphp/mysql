@@ -10,7 +10,7 @@
         "react/promise": "^2.7",
         "react/promise-stream": "^1.1",
         "react/promise-timer": "^1.5",
-        "react/socket": "^1.8"
+        "react/socket": "^1.9"
     },
     "require-dev": {
         "clue/block-react": "^1.2",
