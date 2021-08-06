@@ -57,7 +57,7 @@ class Connection extends EventEmitter implements ConnectionInterface
     /**
      * {@inheritdoc}
      */
-    public function query($sql, array $params = array())
+    public function query($sql, array $params = [])
     {
         $query = new Query($sql);
         if ($params) {
@@ -75,7 +75,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         $deferred = new Deferred();
 
         // store all result set rows until result set end
-        $rows = array();
+        $rows = [];
         $command->on('result', function ($row) use (&$rows) {
             $rows[] = $row;
         });
@@ -85,7 +85,7 @@ class Connection extends EventEmitter implements ConnectionInterface
             $result->resultRows = $rows;
             $result->warningCount = $command->warningCount;
 
-            $rows = array();
+            $rows = [];
 
             $deferred->resolve($result);
         });
@@ -106,7 +106,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         return $deferred->promise();
     }
 
-    public function queryStream($sql, $params = array())
+    public function queryStream($sql, $params = [])
     {
         $query = new Query($sql);
         if ($params) {
@@ -162,9 +162,9 @@ class Connection extends EventEmitter implements ConnectionInterface
         // reject all pending commands if connection is closed
         while (!$this->executor->isIdle()) {
             $command = $this->executor->dequeue();
-            $command->emit('error', array(
+            $command->emit('error', [
                 new \RuntimeException('Connection lost')
-            ));
+            ]);
         }
 
         $this->emit('close');

@@ -100,7 +100,7 @@ interface ConnectionInterface extends EventEmitterInterface
      * @param array  $params Parameters which should be bound to query
      * @return PromiseInterface Returns a Promise<QueryResult,Exception>
      */
-    public function query($sql, array $params = array());
+    public function query($sql, array $params = []);
 
     /**
      * Performs an async query and streams the rows of the result set.
@@ -161,7 +161,7 @@ interface ConnectionInterface extends EventEmitterInterface
      * @param array  $params Parameters which should be bound to query
      * @return ReadableStreamInterface
      */
-    public function queryStream($sql, $params = array());
+    public function queryStream($sql, $params = []);
 
     /**
      * Checks that the connection is alive.

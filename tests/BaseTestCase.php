@@ -21,7 +21,7 @@ class BaseTestCase extends TestCase
         ] + ($debug ? ['debug' => true] : []);
     }
 
-    protected function getConnectionString($params = array())
+    protected function getConnectionString($params = [])
     {
         $parts = $params + $this->getConnectionOptions();
 
@@ -56,7 +56,7 @@ SQL;
 
     protected function expectCallableOnce()
     {
-        $mock = $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        $mock = $this->getMockBuilder('stdClass')->setMethods(['__invoke'])->getMock();
         $mock->expects($this->once())->method('__invoke');
 
         return $mock;
@@ -64,7 +64,7 @@ SQL;
 
     protected function expectCallableOnceWith($value)
     {
-        $mock = $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        $mock = $this->getMockBuilder('stdClass')->setMethods(['__invoke'])->getMock();
         $mock->expects($this->once())->method('__invoke')->with($value);
 
         return $mock;
@@ -72,7 +72,7 @@ SQL;
 
     protected function expectCallableNever()
     {
-        $mock = $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        $mock = $this->getMockBuilder('stdClass')->setMethods(['__invoke'])->getMock();
         $mock->expects($this->never())->method('__invoke');
 
         return $mock;

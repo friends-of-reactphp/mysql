@@ -12,9 +12,9 @@ class QueryStreamTest extends BaseTestCase
         $connection = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
 
         $stream = new QueryStream($command, $connection);
-        $stream->on('data', $this->expectCallableOnceWith(array('key' => 'value')));
+        $stream->on('data', $this->expectCallableOnceWith(['key' => 'value']));
 
-        $command->emit('result', array(array('key' => 'value')));
+        $command->emit('result', [['key' => 'value']]);
     }
 
     public function testDataEventWillNotBeForwardedFromCommandResultAfterClosingStream()
@@ -26,7 +26,7 @@ class QueryStreamTest extends BaseTestCase
         $stream->on('data', $this->expectCallableNever());
         $stream->close();
 
-        $command->emit('result', array(array('key' => 'value')));
+        $command->emit('result', [['key' => 'value']]);
     }
 
     public function testEndEventWillBeForwardedFromCommandResult()
@@ -63,7 +63,7 @@ class QueryStreamTest extends BaseTestCase
         $stream->on('error', $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
         $stream->on('close', $this->expectCallableOnce());
 
-        $command->emit('error', array(new RuntimeException()));
+        $command->emit('error', [new RuntimeException()]);
     }
 
     public function testPauseForwardsToConnectionAfterResultStarted()
@@ -73,7 +73,7 @@ class QueryStreamTest extends BaseTestCase
         $connection->expects($this->once())->method('pause');
 
         $stream = new QueryStream($command, $connection);
-        $command->emit('result', array(array()));
+        $command->emit('result', [[]]);
 
         $stream->pause();
     }
@@ -87,7 +87,7 @@ class QueryStreamTest extends BaseTestCase
         $stream = new QueryStream($command, $connection);
         $stream->pause();
 
-        $command->emit('result', array(array()));
+        $command->emit('result', [[]]);
     }
 
     public function testPauseDoesNotForwardToConnectionWhenResultIsNotStarted()
@@ -118,7 +118,7 @@ class QueryStreamTest extends BaseTestCase
         $connection->expects($this->once())->method('resume');
 
         $stream = new QueryStream($command, $connection);
-        $command->emit('result', array(array()));
+        $command->emit('result', [[]]);
 
         $stream->resume();
     }
@@ -166,7 +166,7 @@ class QueryStreamTest extends BaseTestCase
         $connection->expects($this->once())->method('resume');
 
         $stream = new QueryStream($command, $connection);
-        $command->emit('result', array(array()));
+        $command->emit('result', [[]]);
         $stream->pause();
         $stream->close();
     }

@@ -22,7 +22,7 @@ class Query
      * @var array<string,string>
      * @see \React\MySQL\Commands\AuthenticateCommand::$charsetMap
      */
-    private $escapeChars = array(
+    private $escapeChars = [
             "\x00"   => "\\0",
             "\r"   => "\\r",
             "\n"   => "\\n",
@@ -34,7 +34,7 @@ class Query
             "\\"   => "\\\\",
             //"%"    => "\\%",
             //"_"    => "\\_",
-        );
+        ];
 
     public function __construct($sql)
     {
@@ -134,7 +134,7 @@ class Query
 
         return $sql;
         /*
-        $names    = array();
+        $names    = [];
         $inName   = false;
         $currName = '';
         $currIdx  = 0;
@@ -166,7 +166,7 @@ class Query
             $names[$currIdx] = $currName;
         }
 
-        $namedMarks = $unnamedMarks = array();
+        $namedMarks = $unnamedMarks = [];
         foreach ($this->params as $arg) {
             if (is_array($arg)) {
                 $namedMarks += $arg;
