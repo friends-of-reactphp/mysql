@@ -27,7 +27,7 @@ class ResultQueryTest extends BaseTestCase
 
     public function provideValuesThatWillBeReturnedAsIs()
     {
-        return array_map(function ($e) { return array($e); }, array(
+        return array_map(function ($e) { return [$e]; }, [
             'foo',
             'hello?',
             'FööBär',
@@ -36,17 +36,17 @@ class ResultQueryTest extends BaseTestCase
             "\0\1\2\3\4\5\6\7\8\xff",
             '',
             null
-        ));
+        ]);
     }
 
     public function provideValuesThatWillBeConvertedToString()
     {
-        return array(
-            array(1, '1'),
-            array(1.5, '1.5'),
-            array(true, '1'),
-            array(false, '0')
-        );
+        return [
+            [1, '1'],
+            [1.5, '1.5'],
+            [true, '1'],
+            [false, '0']
+        ];
     }
 
     /**
@@ -294,7 +294,7 @@ class ResultQueryTest extends BaseTestCase
         $connection->query('select \'\' as `first`, \'\' as `second`')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(2, $command->resultRows[0]);
-            $this->assertSame(array('', ''), array_values($command->resultRows[0]));
+            $this->assertSame(['', ''], array_values($command->resultRows[0]));
 
             $this->assertCount(2, $command->resultFields);
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
@@ -380,7 +380,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = $this->getConnectionString(array('dbname' => ''));
+        $uri = $this->getConnectionString(['dbname' => '']);
         $connection = $factory->createLazyConnection($uri);
 
         $connection->query('select * from test.book')->then(function (QueryResult $command) {
@@ -451,7 +451,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = $this->createConnection(Loop::get());
 
         $stream = $connection->queryStream('SELECT 1');
-        $stream->on('data', $this->expectCallableOnceWith(array('1' => '1')));
+        $stream->on('data', $this->expectCallableOnceWith(['1' => '1']));
         $stream->on('end', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
 
@@ -463,8 +463,8 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $stream = $connection->queryStream('SELECT ? as value', array('test'));
-        $stream->on('data', $this->expectCallableOnceWith(array('value' => 'test')));
+        $stream = $connection->queryStream('SELECT ? as value', ['test']);
+        $stream->on('data', $this->expectCallableOnceWith(['value' => 'test']));
         $stream->on('end', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
 

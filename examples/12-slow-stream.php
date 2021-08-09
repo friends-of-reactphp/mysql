@@ -72,4 +72,6 @@ $factory->createConnection($uri)->then(function (ConnectionInterface $connection
     });
 
     $connection->quit();
-}, 'printf');
+}, function (Exception $e) {
+    echo 'Error: ' . $e->getMessage() . PHP_EOL;
+});

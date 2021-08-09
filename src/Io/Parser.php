@@ -97,8 +97,8 @@ class Parser
 
     public function start()
     {
-        $this->stream->on('data', array($this, 'parse'));
-        $this->stream->on('close', array($this, 'onClose'));
+        $this->stream->on('data', [$this, 'parse']);
+        $this->stream->on('close', [$this, 'onClose']);
     }
 
     public function debug($message)
@@ -221,7 +221,7 @@ packet:
                 // Empty data packet during result set => row with only empty strings
                 $this->debug('Result set empty row data');
 
-                $row = array();
+                $row = [];
                 foreach ($this->resultFields as $field) {
                     $row[$field['name']] = '';
                 }
@@ -272,7 +272,7 @@ packet:
     {
         // $this->debug('row data: ' . json_encode($row));
         $command = $this->currCommand;
-        $command->emit('result', array($row));
+        $command->emit('result', [$row]);
     }
 
     private function onError(Exception $error)
@@ -283,7 +283,7 @@ packet:
             $command = $this->currCommand;
             $this->currCommand = null;
 
-            $command->emit('error', array($error));
+            $command->emit('error', [$error]);
         }
     }
 
@@ -322,9 +322,9 @@ packet:
             if ($command instanceof QuitCommand) {
                 $command->emit('success');
             } else {
-                $command->emit('error', array(
+                $command->emit('error', [
                     new \RuntimeException('Connection lost')
-                ));
+                ]);
             }
         }
     }

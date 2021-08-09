@@ -42,16 +42,16 @@ class Factory
      * [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
      *
      * ```php
-     * $connector = new React\Socket\Connector(array(
+     * $connector = new React\Socket\Connector([
      *     'dns' => '127.0.0.1',
-     *     'tcp' => array(
+     *     'tcp' => [
      *         'bindto' => '192.168.10.1:0'
-     *     ),
-     *     'tls' => array(
+     *     ],
+     *     'tls' => [
      *         'verify_peer' => false,
      *         'verify_peer_name' => false
-     *     )
-     * ));
+     *     ]
+     * ]);
      *
      * $factory = new React\MySQL\Factory(null, $connector);
      * ```
@@ -62,7 +62,7 @@ class Factory
     public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null)
     {
         $this->loop = $loop ?: Loop::get();
-        $this->connector = $connector ?: new Connector(array(), $this->loop);
+        $this->connector = $connector ?: new Connector([], $this->loop);
     }
 
     /**

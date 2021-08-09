@@ -18,11 +18,11 @@ class QueryTest extends TestCase
         $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
         /*
         $query = new Query('select * from test where id = :id and name = :name');
-        $sql   = $query->params(array(':id' => 100, ':name' => 'test'))->getSql();
+        $sql   = $query->params([':id' => 100, ':name' => 'test'])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
 
         $query = new Query('select * from test where id = :id and name = ?');
-        $sql   = $query->params('test', array(':id' => 100))->getSql();
+        $sql   = $query->params('test', [':id' => 100])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
         */
     }

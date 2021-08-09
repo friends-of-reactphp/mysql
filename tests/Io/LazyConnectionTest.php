@@ -30,7 +30,7 @@ class LazyConnectionTest extends BaseTestCase
     }
     public function testPingWillNotCloseConnectionWhenUnderlyingConnectionCloses()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
 
         $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
@@ -47,7 +47,7 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testPingWillCancelTimerWithoutClosingConnectionWhenUnderlyingConnectionCloses()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
 
         $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
@@ -68,7 +68,7 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testPingWillNotForwardErrorFromUnderlyingConnection()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
 
         $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
@@ -86,7 +86,7 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testPingFollowedByIdleTimerWillQuitUnderlyingConnection()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'quit', 'close'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
         $base->expects($this->once())->method('quit')->willReturn(\React\Promise\resolve());
         $base->expects($this->never())->method('close');
@@ -114,7 +114,7 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWhenQuitFails()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'quit', 'close'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
         $base->expects($this->once())->method('quit')->willReturn(\React\Promise\reject());
         $base->expects($this->once())->method('close');
@@ -142,7 +142,7 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testPingAfterIdleTimerWillCloseUnderlyingConnectionBeforeCreatingSecondConnection()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'quit', 'close'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
         $base->expects($this->once())->method('quit')->willReturn(new Promise(function () { }));
         $base->expects($this->once())->method('close');
@@ -517,7 +517,7 @@ class LazyConnectionTest extends BaseTestCase
     {
         $error = new \RuntimeException();
 
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'close'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturnCallback(function () use ($base, $error) {
             $base->emit('close');
             return \React\Promise\reject($error);
@@ -703,7 +703,7 @@ class LazyConnectionTest extends BaseTestCase
 
     public function testCloseAfterPingHasResolvedWillCloseUnderlyingConnectionWithoutTryingToCancelConnection()
     {
-        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(array('ping', 'close'))->disableOriginalConstructor()->getMock();
+        $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve());
         $base->expects($this->once())->method('close')->willReturnCallback(function () use ($base) {
             $base->emit('close');

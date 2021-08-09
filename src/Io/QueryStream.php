@@ -33,7 +33,7 @@ class QueryStream extends EventEmitter implements ReadableStreamInterface
             }
             $this->started = true;
 
-            $this->emit('data', array($row));
+            $this->emit('data', [$row]);
         });
         $command->on('end', function () {
             $this->emit('end');
@@ -46,7 +46,7 @@ class QueryStream extends EventEmitter implements ReadableStreamInterface
             $this->close();
         });
         $command->on('error', function ($err) {
-            $this->emit('error', array($err));
+            $this->emit('error', [$err]);
             $this->close();
         });
     }

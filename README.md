@@ -74,16 +74,16 @@ proxy servers etc.), you can explicitly pass a custom instance of the
 [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
 ```php
-$connector = new React\Socket\Connector(array(
+$connector = new React\Socket\Connector([
     'dns' => '127.0.0.1',
-    'tcp' => array(
+    'tcp' => [
         'bindto' => '192.168.10.1:0'
-    ),
-    'tls' => array(
+    ],
+    'tls' => [
         'verify_peer' => false,
         'verify_peer_name' => false
     )
-));
+]);
 
 $factory = new React\MySQL\Factory(null, $connector);
 ```
@@ -302,7 +302,7 @@ and sending your database queries.
 
 #### query()
 
-The `query(string $query, array $params = array()): PromiseInterface` method can be used to
+The `query(string $query, array $params = []): PromiseInterface` method can be used to
 perform an async query.
 
 This method returns a promise that will resolve with a `QueryResult` on
@@ -358,7 +358,7 @@ suited for exposing multiple possible results.
 
 #### queryStream()
 
-The `queryStream(string $sql, array $params = array()): ReadableStreamInterface` method can be used to
+The `queryStream(string $sql, array $params = []): ReadableStreamInterface` method can be used to
 perform an async query and stream the rows of the result set.
 
 This method returns a readable stream that will emit each row of the
@@ -513,7 +513,7 @@ See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
 This project aims to run on any platform and thus does not require any PHP
 extensions and supports running on legacy PHP 5.4 through current PHP 7+ and
 HHVM.
-It's *highly recommended to use PHP 7+* for this project.
+It's *highly recommended to use the latest supported PHP version* for this project.
 
 ## Tests
 
@@ -551,7 +551,7 @@ $ docker run -it --rm --net=host \
 To run the test suite, go to the project root and run:
 
 ```bash
-$ php vendor/bin/phpunit
+$ vendor/bin/phpunit
 ```
 
 ## License

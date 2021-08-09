@@ -33,7 +33,7 @@ class AuthenticateCommand extends AbstractCommand
      * @see self::$charsetNumber
      * @see \React\MySQL\Io\Query::$escapeChars
      */
-    private static $charsetMap = array(
+    private static $charsetMap = [
         'latin1' => 8,
         'latin2' => 9,
         'ascii' => 11,
@@ -42,7 +42,7 @@ class AuthenticateCommand extends AbstractCommand
         'latin7' => 41,
         'utf8mb4' => 45,
         'binary' => 63
-    );
+    ];
 
     /**
      * @param string $user

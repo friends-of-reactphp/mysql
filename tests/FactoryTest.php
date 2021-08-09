@@ -45,7 +45,7 @@ class FactoryTest extends BaseTestCase
 
     public function testConnectWillUseGivenUserInfoAsDatabaseCredentialsAfterUrldecoding()
     {
-        $connection = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $connection = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(['write'])->getMock();
         $connection->expects($this->once())->method('write')->with($this->stringContains("user!\0"));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
@@ -57,12 +57,12 @@ class FactoryTest extends BaseTestCase
 
         $promise->then($this->expectCallableNever(), $this->expectCallableNever());
 
-        $connection->emit('data', array("\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44)));
+        $connection->emit('data', ["\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44)]);
     }
 
     public function testConnectWillUseGivenPathAsDatabaseNameAfterUrldecoding()
     {
-        $connection = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $connection = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(['write'])->getMock();
         $connection->expects($this->once())->method('write')->with($this->stringContains("test database\0"));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
@@ -74,7 +74,7 @@ class FactoryTest extends BaseTestCase
 
         $promise->then($this->expectCallableNever(), $this->expectCallableNever());
 
-        $connection->emit('data', array("\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44)));
+        $connection->emit('data', ["\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44)]);
     }
 
     public function testConnectWithInvalidUriWillRejectWithoutConnecting()
@@ -107,7 +107,7 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = $this->getConnectionString(array('host' => 'example.invalid'));
+        $uri = $this->getConnectionString(['host' => 'example.invalid']);
         $promise = $factory->createConnection($uri);
 
         $promise->then(null, $this->expectCallableOnce());
@@ -119,7 +119,7 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = $this->getConnectionString(array('passwd' => 'invalidpass'));
+        $uri = $this->getConnectionString(['passwd' => 'invalidpass']);
         $promise = $factory->createConnection($uri);
 
         $promise->then(null, $this->expectCallableOnceWith(
@@ -138,14 +138,14 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $socket = new SocketServer('127.0.0.1:0', array());
+        $socket = new SocketServer('127.0.0.1:0', []);
         $socket->on('connection', function ($connection) use ($socket) {
             $socket->close();
             $connection->close();
         });
 
         $parts = parse_url($socket->getAddress());
-        $uri = $this->getConnectionString(array('host' => $parts['host'], 'port' => $parts['port']));
+        $uri = $this->getConnectionString(['host' => $parts['host'], 'port' => $parts['port']]);
 
         $promise = $factory->createConnection($uri);
         $promise->then(null, $this->expectCallableOnce());
@@ -219,7 +219,7 @@ class FactoryTest extends BaseTestCase
 
         $factory = new Factory();
 
-        $uri = $this->getConnectionString(array('dbname' => ''));
+        $uri = $this->getConnectionString(['dbname' => '']);
         $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
             echo 'connected.';
             $connection->quit()->then(function () {
@@ -468,7 +468,7 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = $this->getConnectionString(array('passwd' => 'invalidpass'));
+        $uri = $this->getConnectionString(['passwd' => 'invalidpass']);
         $connection = $factory->createLazyConnection($uri);
 
         $connection->on('error', $this->expectCallableNever());
