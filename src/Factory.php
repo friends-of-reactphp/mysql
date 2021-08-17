@@ -158,7 +158,11 @@ class Factory
      */
     public function createConnection($uri)
     {
-        $parts = parse_url('mysql://' . $uri);
+        if (strpos($uri, '://') === false) {
+            $uri = 'mysql://' . $uri;
+        }
+
+        $parts = parse_url($uri);
         if (!isset($parts['scheme'], $parts['host']) || $parts['scheme'] !== 'mysql') {
             return \React\Promise\reject(new \InvalidArgumentException('Invalid connect uri given'));
         }

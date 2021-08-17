@@ -32,6 +32,29 @@ class FactoryTest extends BaseTestCase
         $factory->createConnection('127.0.0.1');
     }
 
+    public function testConnectWillUseGivenScheme()
+    {
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $pending = $this->getMockBuilder('React\Promise\PromiseInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->once())->method('connect')->with('127.0.0.1:3306')->willReturn($pending);
+
+        $factory = new Factory($loop, $connector);
+        $factory->createConnection('mysql://127.0.0.1');
+    }
+
+    public function testConnectWillRejectWhenGivenInvalidScheme()
+    {
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+
+        $factory = new Factory($loop, $connector);
+
+        $promise = $factory->createConnection('foo://127.0.0.1');
+
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('InvalidArgumentException')));
+    }
+
     public function testConnectWillUseGivenHostAndGivenPort()
     {
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
