@@ -19,18 +19,23 @@ class Query
      * Note that this mapping assumes an ASCII-compatible charset encoding such
      * as UTF-8, ISO 8859 and others.
      *
+     * Note that `'` will be escaped as `''` instead of `\'` to provide some
+     * limited support for the `NO_BACKSLASH_ESCAPES` SQL mode. This assumes all
+     * strings will always be enclosed in `'` instead of `"` which is guaranteed
+     * as long as this class is only used internally for the `query()` method.
+     *
      * @var array<string,string>
      * @see \React\MySQL\Commands\AuthenticateCommand::$charsetMap
      */
     private $escapeChars = [
-            "\x00"   => "\\0",
-            "\r"   => "\\r",
-            "\n"   => "\\n",
-            "\t"   => "\\t",
+            //"\x00"   => "\\0",
+            //"\r"   => "\\r",
+            //"\n"   => "\\n",
+            //"\t"   => "\\t",
             //"\b"   => "\\b",
             //"\x1a" => "\\Z",
-            "'"    => "\'",
-            '"'    => '\"',
+            "'"    => "''",
+            //'"'    => '\"',
             "\\"   => "\\\\",
             //"%"    => "\\%",
             //"_"    => "\\_",
