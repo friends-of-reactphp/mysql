@@ -1,5 +1,8 @@
 <?php
 
+// $ php examples/11-interactive.php
+// $ MYSQL_URI=test:test@localhost/test php examples/11-interactive.php
+
 use React\MySQL\ConnectionInterface;
 use React\MySQL\QueryResult;
 use React\MySQL\Factory;
@@ -8,8 +11,7 @@ use React\Stream\ReadableResourceStream;
 require __DIR__ . '/../vendor/autoload.php';
 
 $factory = new Factory();
-
-$uri = 'test:test@localhost/test';
+$uri = getenv('MYSQL_URI') ?: 'test:test@localhost/test';
 
 // open a STDIN stream to read keyboard input (not supported on Windows)
 $stdin = new ReadableResourceStream(STDIN);

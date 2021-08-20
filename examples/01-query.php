@@ -1,18 +1,17 @@
 <?php
 
+// $ php examples/01-query.php
+// $ MYSQL_URI=test:test@localhost/test php examples/01-query.php "SELECT * FROM book"
+
 use React\MySQL\Factory;
 use React\MySQL\QueryResult;
 
 require __DIR__ . '/../vendor/autoload.php';
 
 $factory = new Factory();
+$connection = $factory->createLazyConnection(getenv('MYSQL_URI') ?: 'test:test@localhost/test');
 
-$uri = 'test:test@localhost/test';
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
-
-//create a lazy mysql connection for executing query
-$connection = $factory->createLazyConnection($uri);
-
 $connection->query($query)->then(function (QueryResult $command) {
     if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)

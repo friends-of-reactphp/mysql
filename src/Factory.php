@@ -163,8 +163,9 @@ class Factory
         }
 
         $parts = parse_url($uri);
+        $uri = preg_replace('#:[^:/]*@#', ':***@', $uri);
         if (!isset($parts['scheme'], $parts['host']) || $parts['scheme'] !== 'mysql') {
-            return \React\Promise\reject(new \InvalidArgumentException('Invalid connect uri given'));
+            return \React\Promise\reject(new \InvalidArgumentException('Invalid MySQL URI given'));
         }
 
         $args = [];
@@ -187,9 +188,11 @@ class Factory
             $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 3306)
         );
 
-        $deferred = new Deferred(function ($_, $reject) use ($connecting) {
+        $deferred = new Deferred(function ($_, $reject) use ($connecting, $uri) {
             // connection cancelled, start with rejecting attempt, then clean up
-            $reject(new \RuntimeException('Connection to database server cancelled'));
+            $reject(new \RuntimeException(
+                'Connection to ' . $uri . ' cancelled'
+            ));
 
             // either close successful connection or cancel pending connection attempt
             $connecting->then(function (SocketConnectionInterface $connection) {
@@ -198,7 +201,7 @@ class Factory
             $connecting->cancel();
         });
 
-        $connecting->then(function (SocketConnectionInterface $stream) use ($authCommand, $deferred) {
+        $connecting->then(function (SocketConnectionInterface $stream) use ($authCommand, $deferred, $uri) {
             $executor = new Executor();
             $parser = new Parser($stream, $executor);
 
@@ -209,12 +212,20 @@ class Factory
             $command->on('success', function () use ($deferred, $connection) {
                 $deferred->resolve($connection);
             });
-            $command->on('error', function ($error) use ($deferred, $stream) {
-                $deferred->reject($error);
+            $command->on('error', function (\Exception $error) use ($deferred, $stream, $uri) {
+                $deferred->reject(new \RuntimeException(
+                    'Connection to ' . $uri . ' failed during authentication: ' . $error->getMessage(),
+                    $error->getCode(),
+                    $error
+                ));
                 $stream->close();
             });
-        }, function ($error) use ($deferred) {
-            $deferred->reject(new \RuntimeException('Unable to connect to database server', 0, $error));
+        }, function (\Exception $error) use ($deferred, $uri) {
+            $deferred->reject(new \RuntimeException(
+                'Connection to ' . $uri . ' failed: ' . $error->getMessage(),
+                $error->getCode(),
+                $error
+            ));
         });
 
         // use timeout from explicit ?timeout=x parameter or default to PHP's default_socket_timeout (60)
@@ -223,10 +234,10 @@ class Factory
             return $deferred->promise();
         }
 
-        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) {
+        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) use ($uri) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
-                    'Connection to database server timed out after ' . $e->getTimeout() . ' seconds'
+                    'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds'
                 );
             }
             throw $e;

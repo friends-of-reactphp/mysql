@@ -33,9 +33,7 @@ This example runs a simple `SELECT` query and dumps all the records from a `book
 
 ```php
 $factory = new React\MySQL\Factory();
-
-$uri = 'test:test@localhost/test';
-$connection = $factory->createLazyConnection($uri);
+$connection = $factory->createLazyConnection('user:pass@localhost/bookstore');
 
 $connection->query('SELECT * FROM book')->then(
     function (QueryResult $command) {

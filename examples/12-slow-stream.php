@@ -1,6 +1,7 @@
 <?php
 
 // $ php examples/12-slow-stream.php "SHOW VARIABLES"
+// $ MYSQL_URI=test:test@localhost/test php examples/12-slow-stream.php "SELECT * FROM book"
 
 use React\EventLoop\Loop;
 use React\MySQL\ConnectionInterface;
@@ -9,8 +10,8 @@ use React\MySQL\Factory;
 require __DIR__ . '/../vendor/autoload.php';
 
 $factory = new Factory();
+$uri = getenv('MYSQL_URI') ?: 'test:test@localhost/test';
 
-$uri = 'test:test@localhost/test';
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
 
 //create a mysql connection for executing query

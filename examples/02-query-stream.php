@@ -1,19 +1,16 @@
 <?php
 
 // $ php examples/02-query-stream.php "SHOW VARIABLES"
+// $ MYSQL_URI=test:test@localhost/test php examples/02-query-stream.php "SELECT * FROM book"
 
 use React\MySQL\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
 $factory = new Factory();
+$connection = $factory->createLazyConnection(getenv('MYSQL_URI') ?: 'test:test@localhost/test');
 
-$uri = 'test:test@localhost/test';
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
-
-//create a lazy mysql connection for executing query
-$connection = $factory->createLazyConnection($uri);
-
 $stream = $connection->queryStream($query);
 
 $stream->on('data', function ($row) {

@@ -109,8 +109,14 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory($loop, $connector);
         $promise = $factory->createConnection('///');
 
-        $this->assertInstanceof('React\Promise\PromiseInterface', $promise);
-        $promise->then(null, $this->expectCallableOnce());
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('InvalidArgumentException'),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getMessage() === 'Invalid MySQL URI given';
+                })
+            )
+        ));
     }
 
     public function testConnectWithInvalidCharsetWillRejectWithoutConnecting()
@@ -149,7 +155,7 @@ class FactoryTest extends BaseTestCase
             $this->logicalAnd(
                 $this->isInstanceOf('Exception'),
                 $this->callback(function (\Exception $e) {
-                    return !!preg_match("/^Access denied for user '.*?'@'.*?' \(using password: YES\)$/", $e->getMessage());
+                    return !!preg_match("/^Connection to mysql:\/\/[^ ]* failed during authentication: Access denied for user '.*?'@'.*?' \(using password: YES\)$/", $e->getMessage());
                 })
             )
         ));
@@ -180,15 +186,17 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = $this->getConnectionString() . '?timeout=0';
+        $uri = 'mysql://' . $this->getConnectionString() . '?timeout=0';
 
         $promise = $factory->createConnection($uri);
+
+        $uri = preg_replace('/:[^:]*@/', ':***@', $uri);
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('Exception'),
-                $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to database server timed out after 0 seconds';
+                $this->callback(function (\Exception $e) use ($uri) {
+                    return $e->getMessage() === 'Connection to ' . $uri . ' timed out after 0 seconds';
                 })
             )
         ));
@@ -200,18 +208,20 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = $this->getConnectionString();
+        $uri = 'mysql://' . $this->getConnectionString();
 
         $old = ini_get('default_socket_timeout');
         ini_set('default_socket_timeout', '0');
         $promise = $factory->createConnection($uri);
         ini_set('default_socket_timeout', $old);
 
+        $uri = preg_replace('/:[^:]*@/', ':***@', $uri);
+
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('Exception'),
-                $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to database server timed out after 0 seconds';
+                $this->callback(function (\Exception $e) use ($uri) {
+                    return $e->getMessage() === 'Connection to ' . $uri . ' timed out after 0 seconds';
                 })
             )
         ));
@@ -382,7 +392,56 @@ class FactoryTest extends BaseTestCase
         Loop::run();
     }
 
-    public function testCancelConnectWillCancelPendingConnection()
+    public function testlConnectWillRejectWhenUnderlyingConnectorRejects()
+    {
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
+        $connector->expects($this->once())->method('connect')->willReturn(\React\Promise\reject(new \RuntimeException('Failed', 123)));
+
+        $factory = new Factory($loop, $connector);
+        $promise = $factory->createConnection('user:secret@127.0.0.1');
+
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
+        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
+            return ($e->getMessage() === 'Connection to mysql://user:***@127.0.0.1 failed: Failed');
+        })));
+        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
+            return ($e->getCode() === 123);
+        })));
+    }
+
+    public function provideUris()
+    {
+        return [
+            [
+                'localhost',
+                'mysql://localhost'
+            ],
+            [
+                'mysql://localhost',
+                'mysql://localhost'
+            ],
+            [
+                'mysql://user:pass@localhost',
+                'mysql://user:***@localhost'
+            ],
+            [
+                'mysql://user:@localhost',
+                'mysql://user:***@localhost'
+            ],
+            [
+                'mysql://user@localhost',
+                'mysql://user@localhost'
+            ]
+        ];
+    }
+
+    /**
+     * @dataProvider provideUris
+     * @param string $uri
+     * @param string $safe
+     */
+    public function testCancelConnectWillCancelPendingConnection($uri, $safe)
     {
         $pending = new Promise(function () { }, $this->expectCallableOnce());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
@@ -390,14 +449,18 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->willReturn($pending);
 
         $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('127.0.0.1');
+        $promise = $factory->createConnection($uri);
 
         $promise->cancel();
 
-        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
-        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
-            return ($e->getMessage() === 'Connection to database server cancelled');
-        })));
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) use ($safe) {
+                    return $e->getMessage() === 'Connection to ' . $safe . ' cancelled';
+                })
+            )
+        ));
     }
 
     public function testCancelConnectWillCancelPendingConnectionWithRuntimeException()
@@ -416,7 +479,7 @@ class FactoryTest extends BaseTestCase
 
         $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
         $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
-            return ($e->getMessage() === 'Connection to database server cancelled');
+            return ($e->getMessage() === 'Connection to mysql://127.0.0.1 cancelled');
         })));
     }
 
@@ -436,7 +499,7 @@ class FactoryTest extends BaseTestCase
 
         $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
         $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
-            return ($e->getMessage() === 'Connection to database server cancelled');
+            return ($e->getMessage() === 'Connection to mysql://127.0.0.1 cancelled');
         })));
     }
 
