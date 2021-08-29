@@ -25,12 +25,44 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($stream, $executor);
         $conn->quit();
-        $conn->query('SELECT 1')->then(null, $this->expectCallableOnce());
+        $promise = $conn->query('SELECT 1');
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closing (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
     }
 
-    /**
-     * @expectedException React\MySQL\Exception
-     */
+    public function testQueryAfterCloseRejectsImmediately()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor->expects($this->never())->method('enqueue');
+
+        $conn = new Connection($stream, $executor);
+        $conn->close();
+        $promise = $conn->query('SELECT 1');
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closed (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
+    }
+
     public function testQueryStreamAfterQuitThrows()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
@@ -39,7 +71,13 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($stream, $executor);
         $conn->quit();
-        $conn->queryStream('SELECT 1');
+
+        try {
+            $conn->queryStream('SELECT 1');
+        } catch (\RuntimeException $e) {
+            $this->assertEquals('Connection closing (ENOTCONN)', $e->getMessage());
+            $this->assertEquals(defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107, $e->getCode());
+        }
     }
 
     public function testPingAfterQuitRejectsImmediately()
@@ -50,7 +88,19 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($stream, $executor);
         $conn->quit();
-        $conn->ping()->then(null, $this->expectCallableOnce());
+        $promise = $conn->ping();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closing (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
     }
 
     public function testQuitAfterQuitRejectsImmediately()
@@ -61,6 +111,49 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($stream, $executor);
         $conn->quit();
-        $conn->quit()->then(null, $this->expectCallableOnce());
+        $promise = $conn->quit();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closing (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
+    }
+
+    public function testCloseStreamEmitsErrorEvent()
+    {
+        $closeHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('error', $this->anything()),
+            array('close', $this->callback(function ($arg) use (&$closeHandler) {
+                $closeHandler = $arg;
+                return true;
+            }))
+        );
+        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor->expects($this->never())->method('enqueue');
+
+        $conn = new Connection($stream, $executor);
+        $conn->on('error', $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closed by peer (ECONNRESET)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
+                })
+            )
+        ));
+
+        $this->assertNotNull($closeHandler);
+        $closeHandler();
     }
 }

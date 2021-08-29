@@ -307,7 +307,7 @@ packet:
         if ($command instanceof QueryCommand) {
             $command->affectedRows = $this->affectedRows;
             $command->insertId     = $this->insertId;
-            $command->warningCount    = $this->warningCount;
+            $command->warningCount = $this->warningCount;
             $command->message      = $this->message;
         }
         $command->emit('success');
@@ -322,9 +322,10 @@ packet:
             if ($command instanceof QuitCommand) {
                 $command->emit('success');
             } else {
-                $command->emit('error', [
-                    new \RuntimeException('Connection lost')
-                ]);
+                $command->emit('error', [new \RuntimeException(
+                    'Connection closing (ECONNABORTED)',
+                    \defined('SOCKET_ECONNABORTED') ? \SOCKET_ECONNABORTED : 103
+                )]);
             }
         }
     }

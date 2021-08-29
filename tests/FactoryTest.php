@@ -52,7 +52,17 @@ class FactoryTest extends BaseTestCase
 
         $promise = $factory->createConnection('foo://127.0.0.1');
 
-        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('InvalidArgumentException')));
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('InvalidArgumentException'),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getMessage() === 'Invalid MySQL URI given (EINVAL)';
+                }),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
+                })
+            )
+        ));
     }
 
     public function testConnectWillUseGivenHostAndGivenPort()
@@ -113,7 +123,10 @@ class FactoryTest extends BaseTestCase
             $this->logicalAnd(
                 $this->isInstanceOf('InvalidArgumentException'),
                 $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getMessage() === 'Invalid MySQL URI given';
+                    return $e->getMessage() === 'Invalid MySQL URI given (EINVAL)';
+                }),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
                 })
             )
         ));
@@ -153,9 +166,15 @@ class FactoryTest extends BaseTestCase
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
-                $this->isInstanceOf('Exception'),
-                $this->callback(function (\Exception $e) {
-                    return !!preg_match("/^Connection to mysql:\/\/[^ ]* failed during authentication: Access denied for user '.*?'@'.*?' \(using password: YES\)$/", $e->getMessage());
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return !!preg_match("/^Connection to mysql:\/\/[^ ]* failed during authentication: Access denied for user '.*?'@'.*?' \(using password: YES\) \(EACCES\)$/", $e->getMessage());
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_EACCES') ? SOCKET_EACCES : 13);
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return !!preg_match("/^Access denied for user '.*?'@'.*?' \(using password: YES\)$/", $e->getPrevious()->getMessage());
                 })
             )
         ));
@@ -177,7 +196,20 @@ class FactoryTest extends BaseTestCase
         $uri = $this->getConnectionString(['host' => $parts['host'], 'port' => $parts['port']]);
 
         $promise = $factory->createConnection($uri);
-        $promise->then(null, $this->expectCallableOnce());
+
+        $uri = preg_replace('/:[^:]*@/', ':***@', $uri);
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) use ($uri) {
+                    return $e->getMessage() === 'Connection to mysql://' . $uri . ' failed during authentication: Connection closed by peer (ECONNRESET)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
+                })
+            )
+        ));
 
         Loop::run();
     }
@@ -194,9 +226,12 @@ class FactoryTest extends BaseTestCase
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
-                $this->isInstanceOf('Exception'),
-                $this->callback(function (\Exception $e) use ($uri) {
-                    return $e->getMessage() === 'Connection to ' . $uri . ' timed out after 0 seconds';
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) use ($uri) {
+                    return $e->getMessage() === 'Connection to ' . $uri . ' timed out after 0 seconds (ETIMEDOUT)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ETIMEDOUT') ? SOCKET_ETIMEDOUT : 110);
                 })
             )
         ));
@@ -219,9 +254,12 @@ class FactoryTest extends BaseTestCase
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
-                $this->isInstanceOf('Exception'),
-                $this->callback(function (\Exception $e) use ($uri) {
-                    return $e->getMessage() === 'Connection to ' . $uri . ' timed out after 0 seconds';
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) use ($uri) {
+                    return $e->getMessage() === 'Connection to ' . $uri . ' timed out after 0 seconds (ETIMEDOUT)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ETIMEDOUT') ? SOCKET_ETIMEDOUT : 110);
                 })
             )
         ));
@@ -366,7 +404,7 @@ class FactoryTest extends BaseTestCase
 
     public function testConnectWithValidAuthCanCloseAndAbortPing()
     {
-        $this->expectOutputString('connected.aborted pending (Connection lost).aborted queued (Connection lost).closed.');
+        $this->expectOutputString('connected.aborted pending (Connection closing (ECONNABORTED)).aborted queued (Connection closing (ECONNABORTED)).closed.');
 
         $factory = new Factory();
 
@@ -401,13 +439,17 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory($loop, $connector);
         $promise = $factory->createConnection('user:secret@127.0.0.1');
 
-        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
-        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
-            return ($e->getMessage() === 'Connection to mysql://user:***@127.0.0.1 failed: Failed');
-        })));
-        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
-            return ($e->getCode() === 123);
-        })));
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection to mysql://user:***@127.0.0.1 failed: Failed';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === 123;
+                })
+            )
+        ));
     }
 
     public function provideUris()
@@ -457,7 +499,10 @@ class FactoryTest extends BaseTestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) use ($safe) {
-                    return $e->getMessage() === 'Connection to ' . $safe . ' cancelled';
+                    return $e->getMessage() === 'Connection to ' . $safe . ' cancelled (ECONNABORTED)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103);
                 })
             )
         ));
@@ -477,10 +522,17 @@ class FactoryTest extends BaseTestCase
 
         $promise->cancel();
 
-        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
-        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
-            return ($e->getMessage() === 'Connection to mysql://127.0.0.1 cancelled');
-        })));
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection to mysql://127.0.0.1 cancelled (ECONNABORTED)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103);
+                })
+            )
+        ));
     }
 
     public function testCancelConnectDuringAuthenticationWillCloseConnection()
@@ -497,10 +549,17 @@ class FactoryTest extends BaseTestCase
 
         $promise->cancel();
 
-        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
-        $promise->then(null, $this->expectCallableOnceWith($this->callback(function ($e) {
-            return ($e->getMessage() === 'Connection to mysql://127.0.0.1 cancelled');
-        })));
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection to mysql://127.0.0.1 cancelled (ECONNABORTED)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103);
+                })
+            )
+        ));
     }
 
     public function testConnectLazyWithAnyAuthWillQuitWithoutRunning()

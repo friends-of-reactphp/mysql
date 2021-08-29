@@ -165,7 +165,10 @@ class Factory
         $parts = parse_url($uri);
         $uri = preg_replace('#:[^:/]*@#', ':***@', $uri);
         if (!isset($parts['scheme'], $parts['host']) || $parts['scheme'] !== 'mysql') {
-            return \React\Promise\reject(new \InvalidArgumentException('Invalid MySQL URI given'));
+            return \React\Promise\reject(new \InvalidArgumentException(
+                'Invalid MySQL URI given (EINVAL)',
+                \defined('SOCKET_EINVAL') ? \SOCKET_EINVAL : 22
+            ));
         }
 
         $args = [];
@@ -191,7 +194,8 @@ class Factory
         $deferred = new Deferred(function ($_, $reject) use ($connecting, $uri) {
             // connection cancelled, start with rejecting attempt, then clean up
             $reject(new \RuntimeException(
-                'Connection to ' . $uri . ' cancelled'
+                'Connection to ' . $uri . ' cancelled (ECONNABORTED)',
+                \defined('SOCKET_ECONNABORTED') ? \SOCKET_ECONNABORTED : 103
             ));
 
             // either close successful connection or cancel pending connection attempt
@@ -213,9 +217,16 @@ class Factory
                 $deferred->resolve($connection);
             });
             $command->on('error', function (\Exception $error) use ($deferred, $stream, $uri) {
+                $const = '';
+                $errno = $error->getCode();
+                if ($error instanceof Exception) {
+                    $const = ' (EACCES)';
+                    $errno = \defined('SOCKET_EACCES') ? \SOCKET_EACCES : 13;
+                }
+
                 $deferred->reject(new \RuntimeException(
-                    'Connection to ' . $uri . ' failed during authentication: ' . $error->getMessage(),
-                    $error->getCode(),
+                    'Connection to ' . $uri . ' failed during authentication: ' . $error->getMessage() . $const,
+                    $errno,
                     $error
                 ));
                 $stream->close();
@@ -237,7 +248,8 @@ class Factory
         return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) use ($uri) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
-                    'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds'
+                    'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds (ETIMEDOUT)',
+                    \defined('SOCKET_ETIMEDOUT') ? \SOCKET_ETIMEDOUT : 110
                 );
             }
             throw $e;
