@@ -32,21 +32,16 @@ class ResultQueryTest extends BaseTestCase
             'hello?',
             'FööBär',
             'pile of 💩',
-            '<>&--\\\'";',
-            "\0\1\2\3\4\5\6\7\8\xff",
+            'Dave\'s Diner',
+            'Robert "Bobby"',
+            "first\r\nsecond",
+            'C:\\\\Users\\',
+            '<>&--\'";',
+            "\0\1\2\3\4\5\6\7\10\xff",
+            implode('', range("\x00", "\x2F")) . implode('', range("\x7f", "\xFF")),
             '',
             null
         ]);
-    }
-
-    public function provideValuesThatWillBeConvertedToString()
-    {
-        return [
-            [1, '1'],
-            [1.5, '1.5'],
-            [true, '1'],
-            [false, '0']
-        ];
     }
 
     /**
@@ -62,10 +57,45 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
-        });
+        })->then(null, 'printf');
 
         $connection->quit();
         Loop::run();
+    }
+
+    /**
+     * @dataProvider provideValuesThatWillBeReturnedAsIs
+     */
+    public function testSelectStaticValueWillBeReturnedAsIsWithNoBackslashEscapesSqlMode($value)
+    {
+        if (strpos($value, '\\') !== false) {
+            // TODO: strings such as '%\\' work as-is when string contains percent?!
+            $this->markTestIncomplete('Escaping backslash not supported when using NO_BACKSLASH_ESCAPES SQL mode');
+        }
+
+        $connection = $this->createConnection(Loop::get());
+
+        $expected = $value;
+
+        $connection->query('SET SQL_MODE="NO_BACKSLASH_ESCAPES"');
+        $connection->query('select ?', [$value])->then(function (QueryResult $command) use ($expected) {
+            $this->assertCount(1, $command->resultRows);
+            $this->assertCount(1, $command->resultRows[0]);
+            $this->assertSame($expected, reset($command->resultRows[0]));
+        })->then(null, 'printf');
+
+        $connection->quit();
+        Loop::run();
+    }
+
+    public function provideValuesThatWillBeConvertedToString()
+    {
+        return [
+            [1, '1'],
+            [1.5, '1.5'],
+            [true, '1'],
+            [false, '0']
+        ];
     }
 
     /**

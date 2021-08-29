@@ -66,12 +66,9 @@ class QueryTest extends TestCase
     {
         $query = new Query('');
         $this->assertEquals('\\\\', $query->escape('\\'));
-        $this->assertEquals('\"', $query->escape('"'));
-        $this->assertEquals("\'", $query->escape("'"));
-        $this->assertEquals("\\n", $query->escape("\n"));
-        $this->assertEquals("\\r", $query->escape("\r"));
-        $this->assertEquals("foo\\0bar", $query->escape("foo" . chr(0) . "bar"));
+        $this->assertEquals("''", $query->escape("'"));
+        $this->assertEquals("foo\0bar", $query->escape("foo" . chr(0) . "bar"));
         $this->assertEquals("n%3A", $query->escape("n%3A"));
-        //$this->assertEquals('§ä¨ì¥H¤U¤º®e\\\\§ä¨ì¥H¤U¤º®e', $query->escape('§ä¨ì¥H¤U¤º®e\\§ä¨ì¥H¤U¤º®e'));
+        $this->assertEquals('§ä¨ì¥H¤U¤º®e\\\\§ä¨ì¥H¤U¤º®e', $query->escape('§ä¨ì¥H¤U¤º®e\\§ä¨ì¥H¤U¤º®e'));
     }
 }
