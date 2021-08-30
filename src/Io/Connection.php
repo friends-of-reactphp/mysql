@@ -157,14 +157,25 @@ class Connection extends EventEmitter implements ConnectionInterface
         }
 
         $this->state = self::STATE_CLOSED;
+        $remoteClosed = $this->stream->isReadable() === false && $this->stream->isWritable() === false;
         $this->stream->close();
 
         // reject all pending commands if connection is closed
         while (!$this->executor->isIdle()) {
             $command = $this->executor->dequeue();
-            $command->emit('error', [
-                new \RuntimeException('Connection lost')
-            ]);
+            assert($command instanceof CommandInterface);
+
+            if ($remoteClosed) {
+                $command->emit('error', [new \RuntimeException(
+                    'Connection closed by peer (ECONNRESET)',
+                    \defined('SOCKET_ECONNRESET') ? \SOCKET_ECONNRESET : 104
+                )]);
+            } else {
+                $command->emit('error', [new \RuntimeException(
+                    'Connection closing (ECONNABORTED)',
+                    \defined('SOCKET_ECONNABORTED') ? \SOCKET_ECONNABORTED : 103
+                )]);
+            }
         }
 
         $this->emit('close');
@@ -189,7 +200,10 @@ class Connection extends EventEmitter implements ConnectionInterface
     public function handleConnectionClosed()
     {
         if ($this->state < self::STATE_CLOSEING) {
-            $this->emit('error', [new \RuntimeException('mysql server has gone away'), $this]);
+            $this->emit('error', [new \RuntimeException(
+                'Connection closed by peer (ECONNRESET)',
+                \defined('SOCKET_ECONNRESET') ? \SOCKET_ECONNRESET : 104
+            )]);
         }
 
         $this->close();
@@ -202,10 +216,13 @@ class Connection extends EventEmitter implements ConnectionInterface
      */
     protected function _doCommand(CommandInterface $command)
     {
-        if ($this->state === self::STATE_AUTHENTICATED) {
-            return $this->executor->enqueue($command);
-        } else {
-            throw new Exception("Can't send command");
+        if ($this->state !== self::STATE_AUTHENTICATED) {
+            throw new \RuntimeException(
+                'Connection ' . ($this->state === self::STATE_CLOSED ? 'closed' : 'closing'). ' (ENOTCONN)',
+                \defined('SOCKET_ENOTCONN') ? \SOCKET_ENOTCONN : 107
+            );
         }
+
+        return $this->executor->enqueue($command);
     }
 }

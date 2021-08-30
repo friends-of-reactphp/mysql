@@ -22,12 +22,23 @@ class ParserTest extends BaseTestCase
         $command = new QueryCommand();
         $command->on('error', $this->expectCallableOnce());
 
+        $error = null;
+        $command->on('error', function ($e) use (&$error) {
+            $error = $e;
+        });
+
         // hack to inject command as current command
         $ref = new \ReflectionProperty($parser, 'currCommand');
         $ref->setAccessible(true);
         $ref->setValue($parser, $command);
 
         $stream->close();
+
+        $this->assertInstanceOf('RuntimeException', $error);
+        assert($error instanceof \RuntimeException);
+
+        $this->assertEquals('Connection closing (ECONNABORTED)', $error->getMessage());
+        $this->assertEquals(defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103, $error->getCode());
     }
 
     public function testUnexpectedErrorWithoutCurrentCommandWillBeIgnored()
