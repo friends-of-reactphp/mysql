@@ -2,10 +2,10 @@
 
 namespace React\Tests\MySQL\Io;
 
-use PHPUnit\Framework\TestCase;
 use React\MySQL\Io\Buffer;
+use React\Tests\MySQL\BaseTestCase;
 
-class BufferTest extends TestCase
+class BufferTest extends BaseTestCase
 {
     public function testAppendAndReadBinary()
     {
@@ -16,15 +16,13 @@ class BufferTest extends TestCase
         $this->assertSame('hello', $buffer->read(5));
     }
 
-    /**
-     * @expectedException LogicException
-     */
     public function testReadBeyondLimitThrows()
     {
         $buffer = new Buffer();
 
         $buffer->append('hi');
 
+        $this->setExpectedException('LogicException');
         $buffer->read(3);
     }
 
@@ -38,27 +36,23 @@ class BufferTest extends TestCase
         $this->assertSame('i', $buffer->read(1));
     }
 
-    /**
-     * @expectedException LogicException
-     */
     public function testSkipZeroThrows()
     {
         $buffer = new Buffer();
 
         $buffer->append('hi');
 
+        $this->setExpectedException('LogicException');
         $buffer->skip(0);
     }
 
-    /**
-     * @expectedException LogicException
-     */
     public function testSkipBeyondLimitThrows()
     {
         $buffer = new Buffer();
 
         $buffer->append('hi');
 
+        $this->setExpectedException('LogicException');
         $buffer->skip(3);
     }
 
@@ -203,14 +197,12 @@ class BufferTest extends TestCase
         $this->assertEquals('world', $buffer->readStringNull());
     }
 
-    /**
-     * @expectedException LogicException
-     */
     public function testParseStringNullCharacterThrowsIfNullNotFound()
     {
         $buffer = new Buffer();
         $buffer->append("hello");
 
+        $this->setExpectedException('LogicException');
         $buffer->readStringNull();
     }
 }
