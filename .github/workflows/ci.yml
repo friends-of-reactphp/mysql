@@ -28,7 +28,10 @@ jobs:
       - run: composer install
       - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
       - run: bash tests/wait-for-mysql.sh
-      - run: MYSQL_USER=test MYSQL_PASSWORD=test vendor/bin/phpunit
+      - run: MYSQL_USER=test MYSQL_PASSWORD=test vendor/bin/phpunit --coverage-text
+        if: ${{ matrix.php >= 7.3 }}
+      - run: MYSQL_USER=test MYSQL_PASSWORD=test vendor/bin/phpunit --coverage-text -c phpunit.xml.legacy
+        if: ${{ matrix.php < 7.3 }}
 
   PHPUnit-hhvm:
     name: PHPUnit (HHVM)

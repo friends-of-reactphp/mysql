@@ -1,28 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- PHPUnit configuration file with new format for PHPUnit 9.3+ -->
+<!-- PHPUnit configuration file with old format for PHPUnit 9.2 or older -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          backupGlobals="false"
          backupStaticAttributes="false"
          bootstrap="vendor/autoload.php"
-         cacheResult="false"
+         colors="true"
          convertErrorsToExceptions="true"
          convertNoticesToExceptions="true"
          convertWarningsToExceptions="true"
-         colors="true"
          processIsolation="false"
          stopOnFailure="false"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd">
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/4.8/phpunit.xsd">
     <testsuites>
         <testsuite name="React.MySQL Test Suite">
             <directory>./tests/</directory>
         </testsuite>
     </testsuites>
-    <coverage>
-        <include>
+    <filter>
+        <whitelist>
             <directory>./src/</directory>
-        </include>
-    </coverage>
+        </whitelist>
+    </filter>
     <php>
         <env name="DB_HOST" value="127.0.0.1"/>
         <env name="DB_PORT" value="3306"/>
