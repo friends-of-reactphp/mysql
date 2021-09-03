@@ -795,9 +795,6 @@ class LazyConnectionTest extends BaseTestCase
         $ret->then($this->expectCallableNever(), $this->expectCallableOnce());
     }
 
-    /**
-     * @expectedException React\MySQL\Exception
-     */
     public function testQueryStreamThrowsAfterConnectionIsClosed()
     {
         $factory = $this->getMockBuilder('React\MySQL\Factory')->disableOriginalConstructor()->getMock();
@@ -806,6 +803,8 @@ class LazyConnectionTest extends BaseTestCase
         $connection = new LazyConnection($factory, '', $loop);
 
         $connection->close();
+
+        $this->setExpectedException('React\MySQL\Exception');
         $connection->queryStream('SELECT 1');
     }
 

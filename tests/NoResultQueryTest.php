@@ -7,7 +7,10 @@ use React\MySQL\QueryResult;
 
 class NoResultQueryTest extends BaseTestCase
 {
-    public function setUp()
+    /**
+     * @before
+     */
+    public function setUpDataTable()
     {
         $connection = $this->createConnection(Loop::get());
 
