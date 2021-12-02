@@ -14,8 +14,6 @@ class LazyConnectionPool extends EventEmitter implements ConnectionInterface
     const CS_ROUND_ROBIN = 'round-robin';
     const CS_BY_LOAD = 'load';
 
-    protected Factory $factory;
-    protected string $connectionURI;
     protected array $pool = [];
     protected int $poolSize;
     protected int $poolPointer = 0; // current connection in pool - RoundRobin
