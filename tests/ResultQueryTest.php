@@ -68,7 +68,7 @@ class ResultQueryTest extends BaseTestCase
      */
     public function testSelectStaticValueWillBeReturnedAsIsWithNoBackslashEscapesSqlMode($value)
     {
-        if (strpos($value, '\\') !== false) {
+        if ($value !== null && strpos($value, '\\') !== false) {
             // TODO: strings such as '%\\' work as-is when string contains percent?!
             $this->markTestIncomplete('Escaping backslash not supported when using NO_BACKSLASH_ESCAPES SQL mode');
         }

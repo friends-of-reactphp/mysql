@@ -9,7 +9,7 @@
         "react/event-loop": "^1.2",
         "react/promise": "^2.7",
         "react/promise-stream": "^1.1",
-        "react/promise-timer": "^1.5",
+        "react/promise-timer": "^1.8",
         "react/socket": "^1.9"
     },
     "require-dev": {

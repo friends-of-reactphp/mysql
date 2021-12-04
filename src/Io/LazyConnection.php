@@ -34,7 +34,7 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     public function __construct(Factory $factory, $uri, LoopInterface $loop)
     {
         $args = [];
-        \parse_str(\parse_url($uri, \PHP_URL_QUERY), $args);
+        \parse_str((string) \parse_url($uri, \PHP_URL_QUERY), $args);
         if (isset($args['idle'])) {
             $this->idlePeriod = (float)$args['idle'];
         }
