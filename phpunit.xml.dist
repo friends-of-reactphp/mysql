@@ -2,17 +2,11 @@
 
 <!-- PHPUnit configuration file with new format for PHPUnit 9.3+ -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         backupGlobals="false"
-         backupStaticAttributes="false"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          cacheResult="false"
-         convertErrorsToExceptions="true"
-         convertNoticesToExceptions="true"
-         convertWarningsToExceptions="true"
          colors="true"
-         processIsolation="false"
-         stopOnFailure="false"
-         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd">
+         convertDeprecationsToExceptions="true">
     <testsuites>
         <testsuite name="React.MySQL Test Suite">
             <directory>./tests/</directory>
