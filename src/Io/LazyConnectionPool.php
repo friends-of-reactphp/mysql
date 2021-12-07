@@ -31,6 +31,10 @@ class LazyConnectionPool extends EventEmitter implements ConnectionInterface
         }
     }
 
+    /**
+     * set the internal pool-pointer to the next valid connection on depending on the connectionSelector
+     * @return int
+     */
     protected function shiftPoolPointer(): int
     {
         switch ($this->connectionSelector) {
@@ -46,33 +50,39 @@ class LazyConnectionPool extends EventEmitter implements ConnectionInterface
         return $this->poolPointer;
     }
 
-    public function query($sql, array $params = array()): \React\Promise\PromiseInterface
+    /**
+     * @param callable $callback received an ConnectionInterface as parameter
+     * @return mixed
+     */
+    protected function pooledCallback(callable $callback)
     {
         $pointer = $this->shiftPoolPointer();
         $this->requestCounter[$pointer]++;
-        return $this->pool[$pointer]->query($sql, $params)->then(function ($result) use ($pointer) {
+        $connection = $this->pool[$pointer];
+        return $callback($connection)->then(function ($result) use ($pointer) {
             $this->requestCounter[$pointer]--;
             return $result;
+        });
+    }
+
+    public function query($sql, array $params = array()): \React\Promise\PromiseInterface
+    {
+        return $this->pooledCallback(function (ConnectionInterface $connection) use ($sql, $params) {
+            return $connection->query($sql, $params);
         });
     }
 
     public function queryStream($sql, $params = array()): \React\Stream\ReadableStreamInterface
     {
-        $pointer = $this->shiftPoolPointer();
-        $this->requestCounter[$pointer]++;
-        return $this->pool[$pointer]->queryStream($sql, $params)->then(function ($result) use ($pointer) {
-            $this->requestCounter[$pointer]--;
-            return $result;
+        return $this->pooledCallback(function (ConnectionInterface $connection) use ($sql, $params) {
+            return $connection->queryStream($sql, $params);
         });
     }
 
     public function ping(): \React\Promise\PromiseInterface
     {
-        $pointer = $this->shiftPoolPointer();
-        $this->requestCounter[$pointer]++;
-        return $this->pool[$pointer]->ping()->then(function ($result) use ($pointer) {
-            $this->requestCounter[$pointer]--;
-            return $result;
+        return $this->pooledCallback(function (ConnectionInterface $connection) {
+            return $connection->ping();
         });
     }
 
