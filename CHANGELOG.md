@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.5.6 (2021-12-14)
+
+*   Feature: Support optional `charset` parameter for full UTF-8 support (`utf8mb4`).
+    (#135 by @clue)
+
+    ```php
+    $db = $factory->createLazyConnection('localhost?charset=utf8mb4');
+    ```
+
+*   Feature: Improve error reporting, include MySQL URI and socket error codes in all connection errors.
+    (#141 by @clue and #138 by @SimonFrings)
+
+    For most common use cases this means that simply reporting the `Exception`
+    message should give the most relevant details for any connection issues:
+
+    ```php
+    $db->query($sql)->then(function (React\MySQL\QueryResult $result) {
+        // …
+    }, function (Exception $e) {
+        echo 'Error:' . $e->getMessage() . PHP_EOL;
+    });
+    ```
+
+*   Feature: Full support for PHP 8.1 release.
+    (#150 by @clue)
+
+*   Feature: Provide limited support for `NO_BACKSLASH_ESCAPES` SQL mode.
+    (#139 by @clue)
+
+*   Update project dependencies, simplify socket usage, and improve documentation.
+    (#136 and #137 by @SimonFrings)
+
+*   Improve test suite and add `.gitattributes` to exclude dev files from exports.
+    Run tests on PHPUnit 9 and PHP 8 and clean up test suite.
+    (#142 and #143 by @SimonFrings)
+
 ## 0.5.5 (2021-07-19)
 
 *   Feature: Simplify usage by supporting new default loop.

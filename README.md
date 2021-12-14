@@ -497,13 +497,13 @@ See also the [`close()`](#close) method.
 
 ## Install
 
-The recommended way to install this library is [through Composer](https://getcomposer.org).
+The recommended way to install this library is [through Composer](https://getcomposer.org/).
 [New to Composer?](https://getcomposer.org/doc/00-intro.md)
 
 This will install the latest supported version:
 
 ```bash
-$ composer require react/mysql:^0.5.5
+$ composer require react/mysql:^0.5.6
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
@@ -516,7 +516,7 @@ It's *highly recommended to use the latest supported PHP version* for this proje
 ## Tests
 
 To run the test suite, you first need to clone this repo and then install all
-dependencies [through Composer](https://getcomposer.org):
+dependencies [through Composer](https://getcomposer.org/):
 
 ```bash
 $ composer install
