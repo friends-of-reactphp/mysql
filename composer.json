@@ -7,10 +7,10 @@
         "php": ">=5.4.0",
         "evenement/evenement": "^3.0 || ^2.1 || ^1.1",
         "react/event-loop": "^1.2",
-        "react/promise": "^3@dev || ^2.7",
+        "react/promise": "^3 || ^2.7",
         "react/promise-stream": "^1.4",
         "react/promise-timer": "^1.9",
-        "react/socket": "dev-promise-3 as 1.12.0"
+        "react/socket": "^1.12"
     },
     "require-dev": {
         "clue/block-react": "^1.5",
@@ -25,11 +25,5 @@
         "psr-4": {
             "React\\Tests\\MySQL\\": "tests"
         }
-    },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/WyriHaximus-labs/socket"
-        }
-    ]
+    }
 }
