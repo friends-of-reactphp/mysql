@@ -27,6 +27,8 @@ jobs:
         with:
           php-version: ${{ matrix.php }}
           coverage: xdebug
+        env:
+          COMPOSER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: composer install
       - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
       - run: bash tests/wait-for-mysql.sh
@@ -39,6 +41,7 @@ jobs:
     name: PHPUnit (HHVM)
     runs-on: ubuntu-18.04
     continue-on-error: true
+    if: false # temporarily skipped until https://github.com/azjezz/setup-hhvm/issues/3 is addressed
     steps:
       - uses: actions/checkout@v2
       - uses: azjezz/setup-hhvm@v1

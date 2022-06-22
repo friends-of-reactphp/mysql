@@ -415,7 +415,7 @@ class ResultQueryTest extends BaseTestCase
 
         $connection->query('select * from test.book')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
-        })->done();
+        });
 
         $connection->quit();
         Loop::run();

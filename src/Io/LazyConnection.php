@@ -181,7 +181,7 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         // not already connecting => no need to connect, simply close virtual connection
         if ($this->connecting === null) {
             $this->close();
-            return \React\Promise\resolve();
+            return \React\Promise\resolve(null);
         }
 
         return $this->connecting()->then(function (ConnectionInterface $connection) {
