@@ -127,7 +127,7 @@ packet:
 
         $len = $this->buffer->length();
         if ($len < $this->pctSize) {
-            $this->debug('Buffer not enouth, return');
+            $this->debug('Waiting for complete packet with ' . $len . '/' . $this->pctSize . ' bytes');
 
             return;
         }
@@ -277,6 +277,9 @@ packet:
 
     private function onError(Exception $error)
     {
+        $this->rsState      = self::RS_STATE_HEADER;
+        $this->resultFields = [];
+
         // reject current command with error if we're currently executing any commands
         // ignore unsolicited server error in case we're not executing any commands (connection will be dropped)
         if ($this->currCommand !== null) {
