@@ -62,6 +62,43 @@ class Buffer
     }
 
     /**
+     * Reads data with given byte length from buffer into a new buffer
+     *
+     * This class keeps consumed data in memory for performance reasons and only
+     * advances the internal buffer position by default. Reading data into a new
+     * buffer will clear the data from the original buffer to free memory.
+     *
+     * @param int $len length in bytes, must be positive or zero
+     * @return self
+     * @throws \UnderflowException
+     */
+    public function readBuffer($len)
+    {
+        // happy path to return empty buffer without any memory access for zero length string
+        if ($len === 0) {
+            return new self();
+        }
+
+        // ensure buffer size contains $len bytes by checking target buffer position
+        if ($len < 0 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
+            throw new \UnderflowException('Not enough data in buffer to read ' . $len . ' bytes');
+        }
+
+        $buffer = new self();
+        $buffer->buffer = $this->read($len);
+
+        if (!isset($this->buffer[$this->bufferPos])) {
+            $this->buffer = '';
+        } else {
+            $this->buffer = \substr($this->buffer, $this->bufferPos);
+        }
+        $this->bufferPos = 0;
+
+        return $buffer;
+
+    }
+
+    /**
      * Skips binary string data with given byte length from buffer
      *
      * This method can be used instead of `read()` if you do not care about the
@@ -77,24 +114,6 @@ class Buffer
             throw new \LogicException('Not enough data in buffer');
         }
         $this->bufferPos += $len;
-    }
-
-    /**
-     * Clears all consumed data from the buffer
-     *
-     * This class keeps consumed data in memory for performance reasons and only
-     * advances the internal buffer position until this method is called.
-     *
-     * @return void
-     */
-    public function trim()
-    {
-        if (!isset($this->buffer[$this->bufferPos])) {
-            $this->buffer = '';
-        } else {
-            $this->buffer = \substr($this->buffer, $this->bufferPos);
-        }
-        $this->bufferPos = 0;
     }
 
     /**

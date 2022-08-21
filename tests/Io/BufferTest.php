@@ -36,6 +36,35 @@ class BufferTest extends BaseTestCase
         $this->assertSame('i', $buffer->read(1));
     }
 
+    public function testReadBufferEmptyIsNoop()
+    {
+        $buffer = new Buffer();
+
+        $new = $buffer->readBuffer(0);
+
+        $this->assertSame(0, $buffer->length());
+        $this->assertSame(0, $new->length());
+    }
+
+    public function testReadBufferReturnsBufferWithOriginalLengthAndClearsOriginalBuffer()
+    {
+        $buffer = new Buffer();
+        $buffer->append('foo');
+
+        $new = $buffer->readBuffer($buffer->length());
+
+        $this->assertSame(0, $buffer->length());
+        $this->assertSame(3, $new->length());
+    }
+
+    public function testReadBufferBeyondLimitThrows()
+    {
+        $buffer = new Buffer();
+
+        $this->setExpectedException('UnderflowException');
+        $buffer->readBuffer(3);
+    }
+
     public function testSkipZeroThrows()
     {
         $buffer = new Buffer();
@@ -54,23 +83,6 @@ class BufferTest extends BaseTestCase
 
         $this->setExpectedException('LogicException');
         $buffer->skip(3);
-    }
-
-    public function testTrimEmptyIsNoop()
-    {
-        $buffer = new Buffer();
-        $buffer->trim();
-
-        $this->assertSame(0, $buffer->length());
-    }
-
-    public function testTrimDoesNotChangeLength()
-    {
-        $buffer = new Buffer();
-        $buffer->append('a');
-        $buffer->trim();
-
-        $this->assertSame(1, $buffer->length());
     }
 
     public function testParseInt1()
