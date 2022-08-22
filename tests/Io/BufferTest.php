@@ -22,7 +22,7 @@ class BufferTest extends BaseTestCase
 
         $buffer->append('hi');
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->read(3);
     }
 
@@ -71,7 +71,7 @@ class BufferTest extends BaseTestCase
 
         $buffer->append('hi');
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->skip(0);
     }
 
@@ -81,7 +81,7 @@ class BufferTest extends BaseTestCase
 
         $buffer->append('hi');
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->skip(3);
     }
 
@@ -214,7 +214,7 @@ class BufferTest extends BaseTestCase
         $buffer = new Buffer();
         $buffer->append("hello");
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->readStringNull();
     }
 }

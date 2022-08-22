@@ -5,7 +5,7 @@ namespace React\MySQL\Io;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
-use React\MySQL\Exception;
+use React\MySQL\Exception as MysqlException;
 use React\Stream\DuplexStreamInterface;
 
 /**
@@ -24,6 +24,13 @@ class Parser
 
     const STATE_STANDBY = 0;
     const STATE_BODY    = 1;
+
+    /**
+     * The packet header always consists of 4 bytes, 3 bytes packet length + 1 byte sequence number
+     *
+     * @var integer
+     */
+    const PACKET_SIZE_HEADER = 4;
 
     /**
      * Keeps a reference to the command that is currently being processed.
@@ -63,7 +70,20 @@ class Parser
     protected $serverStatus;
 
     protected $rsState = 0;
-    protected $pctSize = 0;
+
+    /**
+     * Packet size expected in number of bytes
+     *
+     * Depending on `self::$state`, the Parser excepts either a packet header
+     * (always 4 bytes) or the packet contents (n bytes determined by prior
+     * packet header).
+     *
+     * @var int
+     * @see self::$state
+     * @see self::PACKET_SIZE_HEADER
+     */
+    private $pctSize = self::PACKET_SIZE_HEADER;
+
     protected $resultFields = [];
 
     protected $insertId;
@@ -97,7 +117,7 @@ class Parser
 
     public function start()
     {
-        $this->stream->on('data', [$this, 'parse']);
+        $this->stream->on('data', [$this, 'handleData']);
         $this->stream->on('close', [$this, 'onClose']);
     }
 
@@ -110,31 +130,53 @@ class Parser
         }
     }
 
-    public function parse($data)
+    /** @var string $data */
+    public function handleData($data)
     {
         $this->buffer->append($data);
-packet:
-        if ($this->state === self::STATE_STANDBY) {
-            if ($this->buffer->length() < 4) {
+
+        if ($this->debug) {
+            $this->debug('Received ' . strlen($data) . ' byte(s), buffer now has ' . ($len = $this->buffer->length()) . ' byte(s): ' . wordwrap(bin2hex($b = $this->buffer->read($len)), 2, ' ', true)); $this->buffer->append($b); // @codeCoverageIgnore
+        }
+
+        while ($this->buffer->length() >= $this->pctSize) {
+            if ($this->state === self::STATE_STANDBY) {
+                $this->pctSize = $this->buffer->readInt3();
+                //printf("packet size:%d\n", $this->pctSize);
+                $this->state = self::STATE_BODY;
+                $this->seq = $this->buffer->readInt1() + 1;
+            }
+
+            $len = $this->buffer->length();
+            if ($len < $this->pctSize) {
+                $this->debug('Waiting for complete packet with ' . $len . '/' . $this->pctSize . ' bytes');
+
                 return;
             }
 
-            $this->pctSize = $this->buffer->readInt3();
-            //printf("packet size:%d\n", $this->pctSize);
-            $this->state = self::STATE_BODY;
-            $this->seq = $this->buffer->readInt1() + 1;
+            $packet = $this->buffer->readBuffer($this->pctSize);
+            $this->state = self::STATE_STANDBY;
+            $this->pctSize = self::PACKET_SIZE_HEADER;
+
+            try {
+                $this->parsePacket($packet);
+            } catch (\UnderflowException $e) {
+                $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet: ' . $e->getMessage(), 0, $e));
+                $this->stream->close();
+                return;
+            }
+
+            if ($packet->length() !== 0) {
+                $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet with ' . $packet->length() . ' unknown byte(s)'));
+                $this->stream->close();
+                return;
+            }
         }
+    }
 
-        $len = $this->buffer->length();
-        if ($len < $this->pctSize) {
-            $this->debug('Waiting for complete packet with ' . $len . '/' . $this->pctSize . ' bytes');
-
-            return;
-        }
-
-        $packet = $this->buffer->readBuffer($this->pctSize);
-        $this->state = self::STATE_STANDBY;
-
+    /** @return void */
+    private function parsePacket(Buffer $packet)
+    {
         if ($this->debug) {
             $this->debug('Parse packet#' . $this->seq . ' with ' . ($len = $packet->length()) . ' bytes: ' . wordwrap(bin2hex($b = $packet->read($len)), 2, ' ', true)); $packet->append($b); // @codeCoverageIgnore
         }
@@ -146,7 +188,7 @@ packet:
                 $this->phase   = self::PHASE_AUTH_ERR;
 
                 $code = $packet->readInt2();
-                $exception = new Exception($packet->read($packet->length()), $code);
+                $exception = new MysqlException($packet->read($packet->length()), $code);
                 $this->debug(sprintf("Error Packet:%d %s\n", $code, $exception->getMessage()));
 
                 // error during init phase also means we're not currently executing any command
@@ -186,7 +228,7 @@ packet:
                 // error packet
                 $code = $packet->readInt2();
                 $packet->skip(6); // skip SQL state
-                $exception = new Exception($packet->read($packet->length()), $code);
+                $exception = new MysqlException($packet->read($packet->length()), $code);
                 $this->debug(sprintf("Error Packet:%d %s\n", $code, $exception->getMessage()));
 
                 $this->onError($exception);
@@ -266,10 +308,6 @@ packet:
                 }
             }
         }
-
-        // finished parsing packet, continue with next packet
-        assert($packet->length() === 0);
-        goto packet;
     }
 
     private function onResultRow($row)
@@ -279,7 +317,7 @@ packet:
         $command->emit('result', [$row]);
     }
 
-    private function onError(Exception $error)
+    private function onError(\Exception $error)
     {
         $this->rsState      = self::RS_STATE_HEADER;
         $this->resultFields = [];

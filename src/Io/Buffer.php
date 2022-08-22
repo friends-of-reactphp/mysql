@@ -37,7 +37,7 @@ class Buffer
      *
      * @param int $len length in bytes, must be positive or zero
      * @return string
-     * @throws \LogicException
+     * @throws \UnderflowException
      */
     public function read($len)
     {
@@ -53,7 +53,7 @@ class Buffer
 
         // ensure buffer size contains $len bytes by checking target buffer position
         if ($len < 0 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
-            throw new \LogicException('Not enough data in buffer to read ' . $len . ' bytes');
+            throw new \UnderflowException('Not enough data in buffer to read ' . $len . ' bytes');
         }
         $buffer = \substr($this->buffer, $this->bufferPos, $len);
         $this->bufferPos += $len;
@@ -106,12 +106,12 @@ class Buffer
      *
      * @param int $len length in bytes, must be positve and non-zero
      * @return void
-     * @throws \LogicException
+     * @throws \UnderflowException
      */
     public function skip($len)
     {
         if ($len < 1 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
-            throw new \LogicException('Not enough data in buffer');
+            throw new \UnderflowException('Not enough data in buffer');
         }
         $this->bufferPos += $len;
     }
@@ -220,13 +220,13 @@ class Buffer
      * Reads string until NULL character
      *
      * @return string
-     * @throws \LogicException
+     * @throws \UnderflowException
      */
     public function readStringNull()
     {
         $pos = \strpos($this->buffer, "\0", $this->bufferPos);
         if ($pos === false) {
-            throw new \LogicException('Missing NULL character');
+            throw new \UnderflowException('Missing NULL character');
         }
 
         $ret = $this->read($pos - $this->bufferPos);
