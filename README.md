@@ -1,6 +1,6 @@
 # MySQL
 
-[![CI status](https://github.com/friends-of-reactphp/mysql/workflows/CI/badge.svg)](https://github.com/friends-of-reactphp/mysql/actions)
+[![CI status](https://github.com/friends-of-reactphp/mysql/actions/workflows/ci.yml/badge.svg)](https://github.com/friends-of-reactphp/mysql/actions)
 
 Async MySQL database client for [ReactPHP](https://reactphp.org/).
 

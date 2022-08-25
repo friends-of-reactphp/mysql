@@ -44,6 +44,7 @@ jobs:
       - uses: azjezz/setup-hhvm@v1
         with:
           version: lts-3.30
+      - run: composer self-update --2.2 # downgrade Composer for HHVM
       - run: hhvm $(which composer) require phpunit/phpunit:^5 --dev --no-interaction
       - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
       - run: bash tests/wait-for-mysql.sh
