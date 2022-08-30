@@ -128,7 +128,7 @@ class Connection extends EventEmitter implements ConnectionInterface
                     $reject($reason);
                 })
                 ->on('success', function () use ($resolve) {
-                    $resolve();
+                    $resolve(null);
                 });
         });
     }
@@ -144,7 +144,7 @@ class Connection extends EventEmitter implements ConnectionInterface
                     $this->state = self::STATE_CLOSED;
                     $this->emit('end', [$this]);
                     $this->emit('close', [$this]);
-                    $resolve();
+                    $resolve(null);
                 });
             $this->state = self::STATE_CLOSEING;
         });
