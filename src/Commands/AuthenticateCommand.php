@@ -51,8 +51,13 @@ class AuthenticateCommand extends AbstractCommand
      * @param string $charset
      * @throws \InvalidArgumentException for invalid/unknown charset name
      */
-    public function __construct($user, $passwd, $dbname, $charset)
-    {
+    public function __construct(
+        $user,
+        #[\SensitiveParameter]
+        $passwd,
+        $dbname,
+        $charset
+    ) {
         if (!isset(self::$charsetMap[$charset])) {
             throw new \InvalidArgumentException('Unsupported charset selected');
         }

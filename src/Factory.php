@@ -156,8 +156,10 @@ class Factory
      * @param string $uri
      * @return PromiseInterface Promise<ConnectionInterface, Exception>
      */
-    public function createConnection($uri)
-    {
+    public function createConnection(
+        #[\SensitiveParameter]
+        $uri
+    ) {
         if (strpos($uri, '://') === false) {
             $uri = 'mysql://' . $uri;
         }
@@ -374,8 +376,10 @@ class Factory
      * @param string $uri
      * @return ConnectionInterface
      */
-    public function createLazyConnection($uri)
-    {
+    public function createLazyConnection(
+        #[\SensitiveParameter]
+        $uri
+    ) {
         return new LazyConnection($this, $uri, $this->loop);
     }
 }
