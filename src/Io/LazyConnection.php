@@ -31,8 +31,12 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     private $idleTimer;
     private $pending = 0;
 
-    public function __construct(Factory $factory, $uri, LoopInterface $loop)
-    {
+    public function __construct(
+        Factory $factory,
+        #[\SensitiveParameter]
+        $uri,
+        LoopInterface $loop
+    ) {
         $args = [];
         \parse_str((string) \parse_url($uri, \PHP_URL_QUERY), $args);
         if (isset($args['idle'])) {
