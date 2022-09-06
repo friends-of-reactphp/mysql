@@ -132,7 +132,7 @@ class ParserTest extends BaseTestCase
 
         $stream->write("\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44));
         $stream->write("\x01\0\0\1" . "\x01");
-        $stream->write("\x1E\0\0\2" . "\x03" . "def" . "\0" . "\0" . "\0" . "\x09" . "sleep(10)" . "\0" . "\xC0" . "\x3F\0" . "\1\0\0\0" . "\3" . "\x81\0". "\0" . "\0\0");
+        $stream->write("\x1F\0\0\2" . "\x03" . "def" . "\0" . "\0" . "\0" . "\x09" . "sleep(10)" . "\0" . "\xC0" . "\x3F\0" . "\1\0\0\0" . "\3" . "\x81\0". "\0" . "\0\0");
         $stream->write("\x05\0\0\3" . "\xFE" . "\0\0\2\0");
         $stream->write("\x28\0\0\4" . "\xFF" . "\x25\x05" . "#abcde" . "Query execution was interrupted");
 
@@ -147,6 +147,72 @@ class ParserTest extends BaseTestCase
         $ref = new \ReflectionProperty($parser, 'resultFields');
         $ref->setAccessible(true);
         $this->assertEquals([], $ref->getValue($parser));
+    }
+
+    public function testReceivingInvalidPacketWithMissingDataShouldEmitErrorAndCloseConnection()
+    {
+        $stream = new ThroughStream();
+
+        $command = new QueryCommand();
+        $command->on('error', $this->expectCallableOnce());
+
+        $error = null;
+        $command->on('error', function ($e) use (&$error) {
+            $error = $e;
+        });
+
+        $executor = new Executor();
+        $executor->enqueue($command);
+
+        $parser = new Parser(new CompositeStream($stream, new ThroughStream()), $executor);
+        $parser->start();
+
+        // hack to inject command as current command
+        $ref = new \ReflectionProperty($parser, 'currCommand');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, $command);
+
+        $stream->on('close', $this->expectCallableOnce());
+
+        $stream->write("\x32\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 43));
+
+        $this->assertTrue($error instanceof \UnexpectedValueException);
+        $this->assertEquals('Unexpected protocol error, received malformed packet: Not enough data in buffer', $error->getMessage());
+        $this->assertEquals(0, $error->getCode());
+        $this->assertInstanceOf('UnderflowException', $error->getPrevious());
+    }
+
+    public function testReceivingInvalidPacketWithExcessiveDataShouldEmitErrorAndCloseConnection()
+    {
+        $stream = new ThroughStream();
+
+        $command = new QueryCommand();
+        $command->on('error', $this->expectCallableOnce());
+
+        $error = null;
+        $command->on('error', function ($e) use (&$error) {
+            $error = $e;
+        });
+
+        $executor = new Executor();
+        $executor->enqueue($command);
+
+        $parser = new Parser(new CompositeStream($stream, new ThroughStream()), $executor);
+        $parser->start();
+
+        // hack to inject command as current command
+        $ref = new \ReflectionProperty($parser, 'currCommand');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, $command);
+
+        $stream->on('close', $this->expectCallableOnce());
+
+        $stream->write("\x34\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 45));
+
+        $this->assertTrue($error instanceof \UnexpectedValueException);
+        $this->assertEquals('Unexpected protocol error, received malformed packet with 1 unknown byte(s)', $error->getMessage());
+        $this->assertEquals(0, $error->getCode());
+        $this->assertNull($error->getPrevious());
     }
 
     public function testReceivingIncompleteErrorFrameDuringHandshakeShouldNotEmitError()

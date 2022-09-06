@@ -22,7 +22,7 @@ class BufferTest extends BaseTestCase
 
         $buffer->append('hi');
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->read(3);
     }
 
@@ -36,13 +36,42 @@ class BufferTest extends BaseTestCase
         $this->assertSame('i', $buffer->read(1));
     }
 
+    public function testReadBufferEmptyIsNoop()
+    {
+        $buffer = new Buffer();
+
+        $new = $buffer->readBuffer(0);
+
+        $this->assertSame(0, $buffer->length());
+        $this->assertSame(0, $new->length());
+    }
+
+    public function testReadBufferReturnsBufferWithOriginalLengthAndClearsOriginalBuffer()
+    {
+        $buffer = new Buffer();
+        $buffer->append('foo');
+
+        $new = $buffer->readBuffer($buffer->length());
+
+        $this->assertSame(0, $buffer->length());
+        $this->assertSame(3, $new->length());
+    }
+
+    public function testReadBufferBeyondLimitThrows()
+    {
+        $buffer = new Buffer();
+
+        $this->setExpectedException('UnderflowException');
+        $buffer->readBuffer(3);
+    }
+
     public function testSkipZeroThrows()
     {
         $buffer = new Buffer();
 
         $buffer->append('hi');
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->skip(0);
     }
 
@@ -52,25 +81,8 @@ class BufferTest extends BaseTestCase
 
         $buffer->append('hi');
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->skip(3);
-    }
-
-    public function testTrimEmptyIsNoop()
-    {
-        $buffer = new Buffer();
-        $buffer->trim();
-
-        $this->assertSame(0, $buffer->length());
-    }
-
-    public function testTrimDoesNotChangeLength()
-    {
-        $buffer = new Buffer();
-        $buffer->append('a');
-        $buffer->trim();
-
-        $this->assertSame(1, $buffer->length());
     }
 
     public function testParseInt1()
@@ -202,7 +214,7 @@ class BufferTest extends BaseTestCase
         $buffer = new Buffer();
         $buffer->append("hello");
 
-        $this->setExpectedException('LogicException');
+        $this->setExpectedException('UnderflowException');
         $buffer->readStringNull();
     }
 }

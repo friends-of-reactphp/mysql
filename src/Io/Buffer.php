@@ -37,7 +37,7 @@ class Buffer
      *
      * @param int $len length in bytes, must be positive or zero
      * @return string
-     * @throws \LogicException
+     * @throws \UnderflowException
      */
     public function read($len)
     {
@@ -53,12 +53,49 @@ class Buffer
 
         // ensure buffer size contains $len bytes by checking target buffer position
         if ($len < 0 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
-            throw new \LogicException('Not enough data in buffer to read ' . $len . ' bytes');
+            throw new \UnderflowException('Not enough data in buffer to read ' . $len . ' bytes');
         }
         $buffer = \substr($this->buffer, $this->bufferPos, $len);
         $this->bufferPos += $len;
 
         return $buffer;
+    }
+
+    /**
+     * Reads data with given byte length from buffer into a new buffer
+     *
+     * This class keeps consumed data in memory for performance reasons and only
+     * advances the internal buffer position by default. Reading data into a new
+     * buffer will clear the data from the original buffer to free memory.
+     *
+     * @param int $len length in bytes, must be positive or zero
+     * @return self
+     * @throws \UnderflowException
+     */
+    public function readBuffer($len)
+    {
+        // happy path to return empty buffer without any memory access for zero length string
+        if ($len === 0) {
+            return new self();
+        }
+
+        // ensure buffer size contains $len bytes by checking target buffer position
+        if ($len < 0 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
+            throw new \UnderflowException('Not enough data in buffer to read ' . $len . ' bytes');
+        }
+
+        $buffer = new self();
+        $buffer->buffer = $this->read($len);
+
+        if (!isset($this->buffer[$this->bufferPos])) {
+            $this->buffer = '';
+        } else {
+            $this->buffer = \substr($this->buffer, $this->bufferPos);
+        }
+        $this->bufferPos = 0;
+
+        return $buffer;
+
     }
 
     /**
@@ -69,32 +106,14 @@ class Buffer
      *
      * @param int $len length in bytes, must be positve and non-zero
      * @return void
-     * @throws \LogicException
+     * @throws \UnderflowException
      */
     public function skip($len)
     {
         if ($len < 1 || !isset($this->buffer[$this->bufferPos + $len - 1])) {
-            throw new \LogicException('Not enough data in buffer');
+            throw new \UnderflowException('Not enough data in buffer');
         }
         $this->bufferPos += $len;
-    }
-
-    /**
-     * Clears all consumed data from the buffer
-     *
-     * This class keeps consumed data in memory for performance reasons and only
-     * advances the internal buffer position until this method is called.
-     *
-     * @return void
-     */
-    public function trim()
-    {
-        if (!isset($this->buffer[$this->bufferPos])) {
-            $this->buffer = '';
-        } else {
-            $this->buffer = \substr($this->buffer, $this->bufferPos);
-        }
-        $this->bufferPos = 0;
     }
 
     /**
@@ -201,13 +220,13 @@ class Buffer
      * Reads string until NULL character
      *
      * @return string
-     * @throws \LogicException
+     * @throws \UnderflowException
      */
     public function readStringNull()
     {
         $pos = \strpos($this->buffer, "\0", $this->bufferPos);
         if ($pos === false) {
-            throw new \LogicException('Missing NULL character');
+            throw new \UnderflowException('Missing NULL character');
         }
 
         $ret = $this->read($pos - $this->bufferPos);

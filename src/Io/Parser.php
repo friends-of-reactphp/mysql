@@ -5,7 +5,7 @@ namespace React\MySQL\Io;
 use React\MySQL\Commands\AuthenticateCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
-use React\MySQL\Exception;
+use React\MySQL\Exception as MysqlException;
 use React\Stream\DuplexStreamInterface;
 
 /**
@@ -24,6 +24,13 @@ class Parser
 
     const STATE_STANDBY = 0;
     const STATE_BODY    = 1;
+
+    /**
+     * The packet header always consists of 4 bytes, 3 bytes packet length + 1 byte sequence number
+     *
+     * @var integer
+     */
+    const PACKET_SIZE_HEADER = 4;
 
     /**
      * Keeps a reference to the command that is currently being processed.
@@ -63,7 +70,20 @@ class Parser
     protected $serverStatus;
 
     protected $rsState = 0;
-    protected $pctSize = 0;
+
+    /**
+     * Packet size expected in number of bytes
+     *
+     * Depending on `self::$state`, the Parser excepts either a packet header
+     * (always 4 bytes) or the packet contents (n bytes determined by prior
+     * packet header).
+     *
+     * @var int
+     * @see self::$state
+     * @see self::PACKET_SIZE_HEADER
+     */
+    private $pctSize = self::PACKET_SIZE_HEADER;
+
     protected $resultFields = [];
 
     protected $insertId;
@@ -97,7 +117,7 @@ class Parser
 
     public function start()
     {
-        $this->stream->on('data', [$this, 'parse']);
+        $this->stream->on('data', [$this, 'handleData']);
         $this->stream->on('close', [$this, 'onClose']);
     }
 
@@ -110,37 +130,65 @@ class Parser
         }
     }
 
-    public function parse($data)
+    /** @var string $data */
+    public function handleData($data)
     {
         $this->buffer->append($data);
-packet:
-        if ($this->state === self::STATE_STANDBY) {
-            if ($this->buffer->length() < 4) {
+
+        if ($this->debug) {
+            $this->debug('Received ' . strlen($data) . ' byte(s), buffer now has ' . ($len = $this->buffer->length()) . ' byte(s): ' . wordwrap(bin2hex($b = $this->buffer->read($len)), 2, ' ', true)); $this->buffer->append($b); // @codeCoverageIgnore
+        }
+
+        while ($this->buffer->length() >= $this->pctSize) {
+            if ($this->state === self::STATE_STANDBY) {
+                $this->pctSize = $this->buffer->readInt3();
+                //printf("packet size:%d\n", $this->pctSize);
+                $this->state = self::STATE_BODY;
+                $this->seq = $this->buffer->readInt1() + 1;
+            }
+
+            $len = $this->buffer->length();
+            if ($len < $this->pctSize) {
+                $this->debug('Waiting for complete packet with ' . $len . '/' . $this->pctSize . ' bytes');
+
                 return;
             }
 
-            $this->pctSize = $this->buffer->readInt3();
-            //printf("packet size:%d\n", $this->pctSize);
-            $this->state = self::STATE_BODY;
-            $this->seq = $this->buffer->readInt1() + 1;
+            $packet = $this->buffer->readBuffer($this->pctSize);
+            $this->state = self::STATE_STANDBY;
+            $this->pctSize = self::PACKET_SIZE_HEADER;
+
+            try {
+                $this->parsePacket($packet);
+            } catch (\UnderflowException $e) {
+                $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet: ' . $e->getMessage(), 0, $e));
+                $this->stream->close();
+                return;
+            }
+
+            if ($packet->length() !== 0) {
+                $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet with ' . $packet->length() . ' unknown byte(s)'));
+                $this->stream->close();
+                return;
+            }
+        }
+    }
+
+    /** @return void */
+    private function parsePacket(Buffer $packet)
+    {
+        if ($this->debug) {
+            $this->debug('Parse packet#' . $this->seq . ' with ' . ($len = $packet->length()) . ' bytes: ' . wordwrap(bin2hex($b = $packet->read($len)), 2, ' ', true)); $packet->append($b); // @codeCoverageIgnore
         }
 
-        $len = $this->buffer->length();
-        if ($len < $this->pctSize) {
-            $this->debug('Waiting for complete packet with ' . $len . '/' . $this->pctSize . ' bytes');
-
-            return;
-        }
-        $this->state = self::STATE_STANDBY;
-        //$this->stream->bufferSize = 4;
         if ($this->phase === 0) {
-            $response = $this->buffer->readInt1();
+            $response = $packet->readInt1();
             if ($response === 0xFF) {
                 // error packet before handshake means we did not exchange capabilities and error does not include SQL state
                 $this->phase   = self::PHASE_AUTH_ERR;
 
-                $code = $this->buffer->readInt2();
-                $exception = new Exception($this->buffer->read($this->pctSize - $len + $this->buffer->length()), $code);
+                $code = $packet->readInt2();
+                $exception = new MysqlException($packet->read($packet->length()), $code);
                 $this->debug(sprintf("Error Packet:%d %s\n", $code, $exception->getMessage()));
 
                 // error during init phase also means we're not currently executing any command
@@ -155,32 +203,32 @@ packet:
             $this->debug(sprintf("Protocal Version: %d", $this->protocalVersion));
 
             $options = &$this->connectOptions;
-            $options['serverVersion'] = $this->buffer->readStringNull();
-            $options['threadId']      = $this->buffer->readInt4();
-            $this->scramble           = $this->buffer->read(8); // 1st part
-            $this->buffer->skip(1); // filler
-            $options['ServerCaps']    = $this->buffer->readInt2(); // 1st part
-            $options['serverLang']    = $this->buffer->readInt1();
-            $options['serverStatus']  = $this->buffer->readInt2();
-            $options['ServerCaps']   += $this->buffer->readInt2() << 16; // 2nd part
-            $this->buffer->skip(11); // plugin length, 6 + 4 filler
-            $this->scramble          .= $this->buffer->read(12); // 2nd part
-            $this->buffer->skip(1);
+            $options['serverVersion'] = $packet->readStringNull();
+            $options['threadId']      = $packet->readInt4();
+            $this->scramble           = $packet->read(8); // 1st part
+            $packet->skip(1); // filler
+            $options['ServerCaps']    = $packet->readInt2(); // 1st part
+            $options['serverLang']    = $packet->readInt1();
+            $options['serverStatus']  = $packet->readInt2();
+            $options['ServerCaps']   += $packet->readInt2() << 16; // 2nd part
+            $packet->skip(11); // plugin length, 6 + 4 filler
+            $this->scramble          .= $packet->read(12); // 2nd part
+            $packet->skip(1);
 
             if ($this->connectOptions['ServerCaps'] & Constants::CLIENT_PLUGIN_AUTH) {
-                $this->buffer->readStringNull(); // skip authentication plugin name
+                $packet->readStringNull(); // skip authentication plugin name
             }
 
             // init completed, continue with sending AuthenticateCommand
             $this->nextRequest(true);
         } else {
-            $fieldCount = $this->buffer->readInt1();
+            $fieldCount = $packet->readInt1();
 
             if ($fieldCount === 0xFF) {
                 // error packet
-                $code = $this->buffer->readInt2();
-                $this->buffer->skip(6); // skip SQL state
-                $exception = new Exception($this->buffer->read($this->pctSize - $len + $this->buffer->length()), $code);
+                $code = $packet->readInt2();
+                $packet->skip(6); // skip SQL state
+                $exception = new MysqlException($packet->read($packet->length()), $code);
                 $this->debug(sprintf("Error Packet:%d %s\n", $code, $exception->getMessage()));
 
                 $this->onError($exception);
@@ -193,19 +241,19 @@ packet:
                     $this->phase = self::PHASE_HANDSHAKED;
                 }
 
-                $this->affectedRows = $this->buffer->readIntLen();
-                $this->insertId     = $this->buffer->readIntLen();
-                $this->serverStatus = $this->buffer->readInt2();
-                $this->warningCount    = $this->buffer->readInt2();
+                $this->affectedRows = $packet->readIntLen();
+                $this->insertId     = $packet->readIntLen();
+                $this->serverStatus = $packet->readInt2();
+                $this->warningCount = $packet->readInt2();
 
-                $this->message      = $this->buffer->read($this->pctSize - $len + $this->buffer->length());
+                $this->message      = $packet->read($packet->length());
 
                 $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarningCount:%d", $this->affectedRows, $this->insertId, $this->warningCount));
                 $this->onSuccess();
                 $this->nextRequest();
             } elseif ($fieldCount === 0xFE) {
                 // EOF Packet
-                $this->buffer->skip(4); // warn, status
+                $packet->skip(4); // warn, status
                 if ($this->rsState === self::RS_STATE_ROW) {
                     // finalize this result set (all rows completed)
                     $this->debug('Result set done');
@@ -217,55 +265,49 @@ packet:
                     $this->debug('Result set next part');
                     ++$this->rsState;
                 }
-            } elseif ($fieldCount === 0x00 && $this->pctSize === 1) {
-                // Empty data packet during result set => row with only empty strings
-                $this->debug('Result set empty row data');
-
-                $row = [];
-                foreach ($this->resultFields as $field) {
-                    $row[$field['name']] = '';
-                }
-                $this->onResultRow($row);
             } else {
                 // Data packet
-                $this->buffer->prepend($this->buffer->buildInt1($fieldCount));
+                $packet->prepend($packet->buildInt1($fieldCount));
 
                 if ($this->rsState === self::RS_STATE_HEADER) {
-                    $this->debug('Result set header packet');
-                    $this->buffer->readIntLen(); // extra
+                    $columns = $packet->readIntLen(); // extra
+                    $this->debug('Result set with ' . $columns . ' column(s)');
                     $this->rsState = self::RS_STATE_FIELD;
                 } elseif ($this->rsState === self::RS_STATE_FIELD) {
-                    $this->debug('Result set field packet');
                     $field = [
-                        'catalog'   => $this->buffer->readStringLen(),
-                        'db'        => $this->buffer->readStringLen(),
-                        'table'     => $this->buffer->readStringLen(),
-                        'org_table' => $this->buffer->readStringLen(),
-                        'name'      => $this->buffer->readStringLen(),
-                        'org_name'  => $this->buffer->readStringLen()
+                        'catalog'   => $packet->readStringLen(),
+                        'db'        => $packet->readStringLen(),
+                        'table'     => $packet->readStringLen(),
+                        'org_table' => $packet->readStringLen(),
+                        'name'      => $packet->readStringLen(),
+                        'org_name'  => $packet->readStringLen()
                     ];
 
-                    $this->buffer->skip(1); // 0xC0
-                    $field['charset']     = $this->buffer->readInt2();
-                    $field['length']      = $this->buffer->readInt4();
-                    $field['type']        = $this->buffer->readInt1();
-                    $field['flags']       = $this->buffer->readInt2();
-                    $field['decimals']    = $this->buffer->readInt1();
-                    $this->buffer->skip(2); // unused
+                    $packet->skip(1); // 0xC0
+                    $field['charset']     = $packet->readInt2();
+                    $field['length']      = $packet->readInt4();
+                    $field['type']        = $packet->readInt1();
+                    $field['flags']       = $packet->readInt2();
+                    $field['decimals']    = $packet->readInt1();
+                    $packet->skip(2); // unused
+
+                    if ($this->debug) {
+                        $this->debug('Result set column: ' . json_encode($field, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_INVALID_UTF8_SUBSTITUTE)); // @codeCoverageIgnore
+                    }
                     $this->resultFields[] = $field;
                 } elseif ($this->rsState === self::RS_STATE_ROW) {
-                    $this->debug('Result set row data');
                     $row = [];
                     foreach ($this->resultFields as $field) {
-                        $row[$field['name']] = $this->buffer->readStringLen();
+                        $row[$field['name']] = $packet->readStringLen();
+                    }
+
+                    if ($this->debug) {
+                        $this->debug('Result set row: ' . json_encode($row, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_INVALID_UTF8_SUBSTITUTE)); // @codeCoverageIgnore
                     }
                     $this->onResultRow($row);
                 }
             }
         }
-
-        $this->buffer->trim();
-        goto packet;
     }
 
     private function onResultRow($row)
@@ -275,7 +317,7 @@ packet:
         $command->emit('result', [$row]);
     }
 
-    private function onError(Exception $error)
+    private function onError(\Exception $error)
     {
         $this->rsState      = self::RS_STATE_HEADER;
         $this->resultFields = [];
