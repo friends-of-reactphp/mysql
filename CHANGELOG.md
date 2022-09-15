@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.7 (2022-09-15)
+
+*   Feature: Full support for PHP 8.2.
+    (#161 by @clue)
+
+*   Feature: Mark passwords and URIs as `#[\SensitiveParameter]` (PHP 8.2+).
+    (#162 by @clue)
+
+*   Feature: Forward compatibility with upcoming Promise v3.
+    (#157 by @clue)
+
+*   Feature / Fix: Improve protocol parser, emit parser errors and close invalid connections.
+    (#158 and #159 by @clue)
+
+*   Improve test suite, fix legacy HHVM build by downgrading Composer.
+    (#160 by @clue)
+
 ## 0.5.6 (2021-12-14)
 
 *   Feature: Support optional `charset` parameter for full UTF-8 support (`utf8mb4`).

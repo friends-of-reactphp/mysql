@@ -503,7 +503,7 @@ The recommended way to install this library is [through Composer](https://getcom
 This will install the latest supported version:
 
 ```bash
-$ composer require react/mysql:^0.5.6
+composer require react/mysql:^0.5.7
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
@@ -519,7 +519,7 @@ To run the test suite, you first need to clone this repo and then install all
 dependencies [through Composer](https://getcomposer.org/):
 
 ```bash
-$ composer install
+composer install
 ```
 
 The test suite contains a number of functional integration tests that send
@@ -530,18 +530,18 @@ to not use a production database!
 You can change your test database credentials by passing these ENV variables:
 
 ```bash
-$ export DB_HOST=localhost
-$ export DB_PORT=3306
-$ export DB_USER=test
-$ export DB_PASSWD=test
-$ export DB_DBNAME=test
+export DB_HOST=localhost
+export DB_PORT=3306
+export DB_USER=test
+export DB_PASSWD=test
+export DB_DBNAME=test
 ```
 
 For example, to create an empty test database, you can also use a temporary
 [`mysql` Docker image](https://hub.docker.com/_/mysql/) like this:
 
 ```bash
-$ docker run -it --rm --net=host \
+docker run -it --rm --net=host \
     -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test \
     -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
 ```
@@ -549,7 +549,7 @@ $ docker run -it --rm --net=host \
 To run the test suite, go to the project root and run:
 
 ```bash
-$ vendor/bin/phpunit
+vendor/bin/phpunit
 ```
 
 ## License
