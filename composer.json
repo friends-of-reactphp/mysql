@@ -13,7 +13,7 @@
         "react/socket": "^1.12"
     },
     "require-dev": {
-        "clue/block-react": "^1.5",
+        "react/async": "^4 || ^3 || ^2",
         "phpunit/phpunit": "^9.3 || ^5.7 || ^4.8.35"
     },
     "autoload": {
