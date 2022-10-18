@@ -361,7 +361,7 @@ class ResultQueryTest extends BaseTestCase
         $connection->query('SELECT @@character_set_client')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
-            $this->assertSame('utf8', reset($command->resultRows[0]));
+            $this->assertSame('utf8mb4', reset($command->resultRows[0]));
         });
 
         $connection->quit();
