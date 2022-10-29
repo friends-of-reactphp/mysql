@@ -143,11 +143,10 @@ class Factory
      * $factory->createConnection('localhost?timeout=0.5');
      * ```
      *
-     * By default, the connection uses the `utf8` charset encoding. Note that
-     * MySQL's `utf8` encoding (also known as `utf8mb3`) predates what is now
-     * known as UTF-8 and for historical reasons doesn't support emojis and
-     * other characters. If you want full UTF-8 support, you can pass the
-     * charset encoding like this:
+     * By default, the connection provides full UTF-8 support (using the
+     * `utf8mb4` charset encoding). This should usually not be changed for most
+     * applications nowadays, but for legacy reasons you can change this to use
+     * a different ASCII-compatible charset encoding like this:
      *
      * ```php
      * $factory->createConnection('localhost?charset=utf8mb4');
@@ -183,7 +182,7 @@ class Factory
                 isset($parts['user']) ? rawurldecode($parts['user']) : 'root',
                 isset($parts['pass']) ? rawurldecode($parts['pass']) : '',
                 isset($parts['path']) ? rawurldecode(ltrim($parts['path'], '/')) : '',
-                isset($args['charset']) ? $args['charset'] : 'utf8'
+                isset($args['charset']) ? $args['charset'] : 'utf8mb4'
             );
         } catch (\InvalidArgumentException $e) {
             return \React\Promise\reject($e);
@@ -363,11 +362,10 @@ class Factory
      * $factory->createLazyConnection('localhost?idle=0.1');
      * ```
      *
-     * By default, the connection uses the `utf8` charset encoding. Note that
-     * MySQL's `utf8` encoding (also known as `utf8mb3`) predates what is now
-     * known as UTF-8 and for historical reasons doesn't support emojis and
-     * other characters. If you want full UTF-8 support, you can pass the
-     * charset encoding like this:
+     * By default, the connection provides full UTF-8 support (using the
+     * `utf8mb4` charset encoding). This should usually not be changed for most
+     * applications nowadays, but for legacy reasons you can change this to use
+     * a different ASCII-compatible charset encoding like this:
      *
      * ```php
      * $factory->createLazyConnection('localhost?charset=utf8mb4');
