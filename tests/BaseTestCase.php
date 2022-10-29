@@ -37,7 +37,7 @@ class BaseTestCase extends TestCase
         $factory = new Factory($loop);
         $promise = $factory->createConnection($this->getConnectionString());
 
-        return \Clue\React\Block\await($promise, $loop, 10.0);
+        return \React\Async\await(\React\Promise\Timer\timeout($promise, 10.0));
     }
 
     protected function getDataTable()
