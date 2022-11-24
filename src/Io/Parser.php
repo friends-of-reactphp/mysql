@@ -175,10 +175,14 @@ class Parser
             } else {
                 $packet = $this->buffer->readBuffer($this->pctSize);
             }
+            /**
+             * Remember last packet size as splitted packets may have ended with 0 length packet.
+             */
+            $lastPctSize = $this->pctSize;
             $this->state = self::STATE_STANDBY;
             $this->pctSize = self::PACKET_SIZE_HEADER;
 
-            if ($this->packet === null && $packet->length() == 0xffffff) {
+            if ($this->packet === null && $packet->length() == 0xffffff && $lastPctSize > 0) {
                 /**
                  * Start reading splitted packets
                  */
@@ -406,17 +410,28 @@ class Parser
     {
         /**
          * If packet is longer than 0xffffff, we should split and send many packets
+         *
          */
-        if (\strlen($packet) > 0xffffff) {
+        $packet_len = \strlen($packet);
+        if ($packet_len >= 0xffffff) {
             $ret = null;
-            while (\strlen($packet) > 0) {
-                $part = substr($packet, 0, 0xffffff);
-                $ret = $this->stream->write($this->buffer->buildInt3(\strlen($part)) . $this->buffer->buildInt1($this->seq++) . $part);
-                $packet = substr($packet, strlen($part));
+            while ($packet_len > 0) {
+                $part = \substr($packet, 0, 0xffffff);
+                $part_len = \strlen($part);
+                $ret = $this->stream->write($this->buffer->buildInt3($part_len) . $this->buffer->buildInt1($this->seq++) . $part);
+                $packet = \substr($packet, $part_len);
+                $packet_len = \strlen($packet);
+                /**
+                 * If last part was exactly 0xffffff in size, we need to send an empty packet to signal end
+                 * of packet splitting.
+                 */
+                if (\strlen($packet) == 0 && $part_len == 0xffffff) {
+                    $ret = $this->stream->write($this->buffer->buildInt3(0) . $this->buffer->buildInt1($this->seq++));
+                }
             }
             return $ret;
         } else {
-            return $this->stream->write($this->buffer->buildInt3(\strlen($packet)) . $this->buffer->buildInt1($this->seq++) . $packet);
+            return $this->stream->write($this->buffer->buildInt3($packet_len) . $this->buffer->buildInt1($this->seq++) . $packet);
         }
     }
 
