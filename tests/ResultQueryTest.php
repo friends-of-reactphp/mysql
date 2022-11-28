@@ -606,9 +606,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($text, reset($command->resultRows[0]));
-
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
-        });
+        })->done();
 
         $connection->quit();
         Loop::run();
@@ -632,9 +630,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($text, reset($command->resultRows[0]));
-
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
-        });
+        })->done();
 
         $connection->quit();
         Loop::run();
@@ -654,9 +650,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($text, reset($command->resultRows[0]));
-
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
-        });
+        })->done();
 
         $connection->quit();
         Loop::run();
@@ -680,9 +674,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($text, reset($command->resultRows[0]));
-
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
-        });
+        })->done();
 
         $connection->quit();
         Loop::run();
