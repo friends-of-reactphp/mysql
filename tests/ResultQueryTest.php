@@ -589,37 +589,20 @@ class ResultQueryTest extends BaseTestCase
         $connection->close();
     }
 
-    /**
-     * This should not trigger splitted packets sending
-     */
-    public function testSelectStaticTextSplitPacketsExactlyBelow16MiB()
-    {
-        $connection = $this->createConnection(Loop::get());
-
-        /**
-         * This should be exactly below 16MiB packet
-         *
-         * x03 + "select ''" = len(10)
-         */
-        $text = str_repeat('A', 0xffffff - 11);
-        $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
-            $this->assertCount(1, $command->resultRows);
-            $this->assertCount(1, $command->resultRows[0]);
-            $this->assertSame($text, reset($command->resultRows[0]));
-        })->done();
-
-        $connection->quit();
-        Loop::run();
-    }
-
-    protected function checkMaxAllowedPacket($connection): \React\Promise\PromiseInterface
+    protected function checkMaxAllowedPacket($connection, $min = 0x1100000): \React\Promise\PromiseInterface
     {
         return $connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\'')->then(
-            function ($res) use ($connection) {
-                $min = 0x1100000; // 17 MiB
-                $current_max_allowed_packet = $res->resultRows[0]['Value'];
-                if ($current_max_allowed_packet < $min) {
-                    return $connection->query('SET GLOBAL max_allowed_packet = ?', [$min]);
+            function ($res) use ($min, $connection) {
+                $current = $res->resultRows[0]['Value'];
+                if ($current < $min) {
+                    return $connection->query('SET GLOBAL max_allowed_packet = ?', [$min])->otherwise(
+                        function (\Throwable $e) use ($min, $current) {
+                            throw new \Exception(
+                                'Cannot set max_allowed_packet to: ' . $min . ' ' .
+                                'current: ' . $current . ' error: ' . $e->getMessage()
+                            );
+                        }
+                    );
                 }
                 return \React\Promise\resolve();
             }
@@ -628,6 +611,42 @@ class ResultQueryTest extends BaseTestCase
                 return true;
             }
         );
+    }
+
+    /**
+     * This should not trigger splitted packets sending
+     */
+    public function testSelectStaticTextSplitPacketsExactlyBelow16MiB()
+    {
+        $connection = $this->createConnection(Loop::get());
+
+        $promise = $this->checkMaxAllowedPacket($connection, 0x1000000); // 16MiB
+
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly below 16MiB packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 11);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
+
+        Loop::run();
     }
 
     /**
