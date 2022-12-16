@@ -592,7 +592,7 @@ class ResultQueryTest extends BaseTestCase
     /**
      * This should not trigger splitted packets sending
      */
-    public function testSelectStaticTextSplittedPacketsExactlyBelow16MiB()
+    public function testSelectStaticTextSplitPacketsExactlyBelow16MiB()
     {
         $connection = $this->createConnection(Loop::get());
 
@@ -612,13 +612,33 @@ class ResultQueryTest extends BaseTestCase
         Loop::run();
     }
 
+    protected function checkMaxAllowedPacket($connection): bool
+    {
+        $min = 0x1100000; // 17 MiB
+        $res = \React\Async\await($connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\''));
+        $current_max_allowed_packet = $res->resultRows[0]['Value'];
+        if ($current_max_allowed_packet < $min) {
+            try {
+                \React\Async\await($connection->query('SET GLOBAL max_allowed_packet = ?', [0x1100000]));
+            } catch (\Throwable $e) {
+                fwrite(STDERR, "checkMaxAllowedPacket: " . $e->getMessage() . "\n");
+            }
+        }
+        return true;
+    }
+
     /**
      * This should trigger splitted packets sending and
      * will send additional empty packet to signal to the server that splitted packets has ended.
      */
-    public function testSelectStaticTextSplittedPacketsExactly16MiB()
+    public function testSelectStaticTextSplitPacketsExactly16MiB()
     {
         $connection = $this->createConnection(Loop::get());
+
+        if ($this->checkMaxAllowedPacket($connection) === false) {
+            $this->markTestIncomplete('Cannot test split-packet. max_allowed_packet too low and cannot be adjusted');
+            return;
+        }
 
         /**
          * This should be exactly at 16MiB packet
@@ -636,9 +656,14 @@ class ResultQueryTest extends BaseTestCase
         Loop::run();
     }
 
-    public function testSelectStaticTextSplittedPacketsAbove16MiB()
+    public function testSelectStaticTextSplitPacketsAbove16MiB()
     {
         $connection = $this->createConnection(Loop::get());
+
+        if ($this->checkMaxAllowedPacket($connection) === false) {
+            $this->markTestIncomplete('Cannot test split-packet. max_allowed_packet too low and cannot be adjusted');
+            return;
+        }
 
         /**
          * This should be exactly at 16MiB + 10 packet
@@ -659,9 +684,14 @@ class ResultQueryTest extends BaseTestCase
     /**
      * Here we force the server to send us an empty packet when splitted packets are to be ended.
      */
-    public function testSelectStaticTextSplittedPacketsExactly16MiBResponse()
+    public function testSelectStaticTextSplitPacketsExactly16MiBResponse()
     {
         $connection = $this->createConnection(Loop::get());
+
+        if ($this->checkMaxAllowedPacket($connection) === false) {
+            $this->markTestIncomplete('Cannot test split-packet. max_allowed_packet too low and cannot be adjusted');
+            return;
+        }
 
         /**
          * Server response will be exatctly 16MiB, so server will send another empty packet
