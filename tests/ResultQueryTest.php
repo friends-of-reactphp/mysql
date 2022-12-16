@@ -614,12 +614,12 @@ class ResultQueryTest extends BaseTestCase
 
     protected function checkMaxAllowedPacket($connection): \React\Promise\PromiseInterface
     {
-        $min = 0x1100000; // 17 MiB
         return $connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\'')->then(
-            function ($res) {
+            function ($res) use ($connection) {
+                $min = 0x1100000; // 17 MiB
                 $current_max_allowed_packet = $res->resultRows[0]['Value'];
                 if ($current_max_allowed_packet < $min) {
-                    return $connection->query('SET GLOBAL max_allowed_packet = ?', [0x1100000]);
+                    return $connection->query('SET GLOBAL max_allowed_packet = ?', [$min]);
                 }
                 return \React\Promise\resolve();
             }
@@ -655,8 +655,8 @@ class ResultQueryTest extends BaseTestCase
                 })->done();
             }
         )->otherwise(
-            function () {
-                $this->markTestIncomplete('Could not adjust max_allowed_packet');
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
             }
         )->always(
             function () use ($connection) {
@@ -688,8 +688,8 @@ class ResultQueryTest extends BaseTestCase
                 })->done();
             }
         )->otherwise(
-            function () {
-                $this->markTestIncomplete('Could not adjust max_allowed_packet');
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
             }
         )->always(
             function () use ($connection) {
@@ -725,8 +725,8 @@ class ResultQueryTest extends BaseTestCase
                 })->done();
             }
         )->otherwise(
-            function () {
-                $this->markTestIncomplete('Could not adjust max_allowed_packet');
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
             }
         )->always(
             function () use ($connection) {
