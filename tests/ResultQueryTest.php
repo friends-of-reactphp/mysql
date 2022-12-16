@@ -612,19 +612,22 @@ class ResultQueryTest extends BaseTestCase
         Loop::run();
     }
 
-    protected function checkMaxAllowedPacket($connection): bool
+    protected function checkMaxAllowedPacket($connection): \React\Promise\PromiseInterface
     {
         $min = 0x1100000; // 17 MiB
-        $res = \React\Async\await($connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\''));
-        $current_max_allowed_packet = $res->resultRows[0]['Value'];
-        if ($current_max_allowed_packet < $min) {
-            try {
-                \React\Async\await($connection->query('SET GLOBAL max_allowed_packet = ?', [0x1100000]));
-            } catch (\Throwable $e) {
-                fwrite(STDERR, "checkMaxAllowedPacket: " . $e->getMessage() . "\n");
+        return $connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\'')->then(
+            function ($res) {
+                $current_max_allowed_packet = $res->resultRows[0]['Value'];
+                if ($current_max_allowed_packet < $min) {
+                    return $connection->query('SET GLOBAL max_allowed_packet = ?', [0x1100000]);
+                }
+                return \React\Promise\resolve();
             }
-        }
-        return true;
+        )->then(
+            function () {
+                return true;
+            }
+        );
     }
 
     /**
@@ -635,24 +638,32 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        if ($this->checkMaxAllowedPacket($connection) === false) {
-            $this->markTestIncomplete('Cannot test split-packet. max_allowed_packet too low and cannot be adjusted');
-            return;
-        }
+        $promise = $this->checkMaxAllowedPacket($connection);
 
-        /**
-         * This should be exactly at 16MiB packet
-         *
-         * x03 + "select ''" = len(10)
-         */
-        $text = str_repeat('A', 0xffffff - 10);
-        $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
-            $this->assertCount(1, $command->resultRows);
-            $this->assertCount(1, $command->resultRows[0]);
-            $this->assertSame($text, reset($command->resultRows[0]));
-        })->done();
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly at 16MiB packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 10);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function () {
+                $this->markTestIncomplete('Could not adjust max_allowed_packet');
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
 
-        $connection->quit();
         Loop::run();
     }
 
@@ -660,24 +671,32 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        if ($this->checkMaxAllowedPacket($connection) === false) {
-            $this->markTestIncomplete('Cannot test split-packet. max_allowed_packet too low and cannot be adjusted');
-            return;
-        }
+        $promise = $this->checkMaxAllowedPacket($connection);
 
-        /**
-         * This should be exactly at 16MiB + 10 packet
-         *
-         * x03 + "select ''" = len(10)
-         */
-        $text = str_repeat('A', 0xffffff);
-        $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
-            $this->assertCount(1, $command->resultRows);
-            $this->assertCount(1, $command->resultRows[0]);
-            $this->assertSame($text, reset($command->resultRows[0]));
-        })->done();
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly at 16MiB + 10 packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function () {
+                $this->markTestIncomplete('Could not adjust max_allowed_packet');
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
 
-        $connection->quit();
         Loop::run();
     }
 
@@ -688,25 +707,33 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        if ($this->checkMaxAllowedPacket($connection) === false) {
-            $this->markTestIncomplete('Cannot test split-packet. max_allowed_packet too low and cannot be adjusted');
-            return;
-        }
+        $promise = $this->checkMaxAllowedPacket($connection);
 
-        /**
-         * Server response will be exatctly 16MiB, so server will send another empty packet
-         * to signal end of splitted packets.
-         *
-         * x03 + "select ''" = len(10)
-         */
-        $text = str_repeat('A', 0xffffff - 4);
-        $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
-            $this->assertCount(1, $command->resultRows);
-            $this->assertCount(1, $command->resultRows[0]);
-            $this->assertSame($text, reset($command->resultRows[0]));
-        })->done();
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * Server response will be exatctly 16MiB, so server will send another empty packet
+                 * to signal end of splitted packets.
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 4);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function () {
+                $this->markTestIncomplete('Could not adjust max_allowed_packet');
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
 
-        $connection->quit();
         Loop::run();
     }
 }
