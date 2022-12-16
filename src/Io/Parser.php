@@ -154,7 +154,6 @@ class Parser
             $len = $this->buffer->length();
             if ($len < $this->pctSize) {
                 $this->debug('Waiting for complete packet with ' . $len . '/' . $this->pctSize . ' bytes');
-
                 return;
             }
 
@@ -195,7 +194,6 @@ class Parser
                     $this->stream->close();
                     return;
                 }
-                
                 if ($packet->length() !== 0) {
                     $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet with ' . $packet->length() . ' unknown byte(s)'));
                     $this->stream->close();
