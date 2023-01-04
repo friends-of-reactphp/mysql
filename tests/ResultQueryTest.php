@@ -589,7 +589,7 @@ class ResultQueryTest extends BaseTestCase
         $connection->close();
     }
 
-    protected function checkMaxAllowedPacket($connection, $min = 0x1100000): \React\Promise\PromiseInterface
+    protected function checkMaxAllowedPacket($connection, $min = 0x1100000)
     {
         return $connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\'')->then(
             function ($res) use ($min, $connection) {
