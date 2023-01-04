@@ -29,7 +29,7 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: xdebug
       - run: composer install
-      - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
+      - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5 --max-allowed-packet=17825792
       - run: bash tests/wait-for-mysql.sh
       - run: MYSQL_USER=test MYSQL_PASSWORD=test vendor/bin/phpunit --coverage-text
         if: ${{ matrix.php >= 7.3 }}
@@ -47,6 +47,6 @@ jobs:
           version: lts-3.30
       - run: composer self-update --2.2 # downgrade Composer for HHVM
       - run: hhvm $(which composer) require phpunit/phpunit:^5 --dev --no-interaction
-      - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
+      - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5 --max-allowed-packet=17825792
       - run: bash tests/wait-for-mysql.sh
       - run: MYSQL_USER=test MYSQL_PASSWORD=test hhvm vendor/bin/phpunit
