@@ -104,7 +104,7 @@ class Parser
      */
     protected $executor;
     /**
-     * Packet for packet splitting
+     * Current packet for split packet paring
      */
     protected $packet = null;
 
@@ -175,15 +175,15 @@ class Parser
                 $packet = $this->buffer->readBuffer($this->pctSize);
             }
             /**
-             * Remember last packet size as splitted packets may have ended with 0 length packet.
+             * Remember last packet size as split packets may have ended with 0 length packet.
              */
             $lastPctSize = $this->pctSize;
             $this->state = self::STATE_STANDBY;
             $this->pctSize = self::PACKET_SIZE_HEADER;
 
-            if ($this->packet === null && $packet->length() == 0xffffff && $lastPctSize > 0) {
+            if ($this->packet === null && $packet->length() === 0xffffff && $lastPctSize > 0) {
                 /**
-                 * Start reading splitted packets
+                 * Start reading split packets
                  */
                 $this->packet = $packet;
             } elseif ($packet !== null) {
@@ -423,7 +423,7 @@ class Parser
                  * If last part was exactly 0xffffff in size, we need to send an empty packet to signal end
                  * of packet splitting.
                  */
-                if (\strlen($packet) == 0 && $part_len == 0xffffff) {
+                if (\strlen($packet) === 0 && $part_len === 0xffffff) {
                     $ret = $this->stream->write($this->buffer->buildInt3(0) . $this->buffer->buildInt1($this->seq++));
                 }
             }

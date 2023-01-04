@@ -650,8 +650,8 @@ class ResultQueryTest extends BaseTestCase
     }
 
     /**
-     * This should trigger splitted packets sending and
-     * will send additional empty packet to signal to the server that splitted packets has ended.
+     * This should trigger split packets sending and
+     * will send additional empty packet to signal to the server that split packets has ended.
      */
     public function testSelectStaticTextSplitPacketsExactly16MiB()
     {
@@ -720,7 +720,7 @@ class ResultQueryTest extends BaseTestCase
     }
 
     /**
-     * Here we force the server to send us an empty packet when splitted packets are to be ended.
+     * Here we force the server to send us an empty packet when split packets are to be ended.
      */
     public function testSelectStaticTextSplitPacketsExactly16MiBResponse()
     {
@@ -732,7 +732,7 @@ class ResultQueryTest extends BaseTestCase
             function () use ($connection) {
                 /**
                  * Server response will be exatctly 16MiB, so server will send another empty packet
-                 * to signal end of splitted packets.
+                 * to signal end of split packets.
                  *
                  * x03 + "select ''" = len(10)
                  */
