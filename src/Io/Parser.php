@@ -103,6 +103,10 @@ class Parser
      * @var Executor
      */
     protected $executor;
+    /**
+     * Current packet for split packet paring
+     */
+    protected $packet = null;
 
     public function __construct(DuplexStreamInterface $stream, Executor $executor)
     {
@@ -150,26 +154,51 @@ class Parser
             $len = $this->buffer->length();
             if ($len < $this->pctSize) {
                 $this->debug('Waiting for complete packet with ' . $len . '/' . $this->pctSize . ' bytes');
-
                 return;
             }
 
-            $packet = $this->buffer->readBuffer($this->pctSize);
+            if ($this->packet !== null) {
+                /**
+                 * We are in packet splitting
+                 * Append data
+                 */
+                $packet = null;
+                $this->packet->append($this->buffer->read($this->pctSize));
+                if ($this->pctSize < 0xffffff) {
+                    /**
+                     * We're done
+                     */
+                    $packet = $this->packet;
+                    $this->packet = null;
+                }
+            } else {
+                $packet = $this->buffer->readBuffer($this->pctSize);
+            }
+            /**
+             * Remember last packet size as split packets may have ended with 0 length packet.
+             */
+            $lastPctSize = $this->pctSize;
             $this->state = self::STATE_STANDBY;
             $this->pctSize = self::PACKET_SIZE_HEADER;
 
-            try {
-                $this->parsePacket($packet);
-            } catch (\UnderflowException $e) {
-                $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet: ' . $e->getMessage(), 0, $e));
-                $this->stream->close();
-                return;
-            }
-
-            if ($packet->length() !== 0) {
-                $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet with ' . $packet->length() . ' unknown byte(s)'));
-                $this->stream->close();
-                return;
+            if ($this->packet === null && $packet->length() === 0xffffff && $lastPctSize > 0) {
+                /**
+                 * Start reading split packets
+                 */
+                $this->packet = $packet;
+            } elseif ($packet !== null) {
+                try {
+                    $this->parsePacket($packet);
+                } catch (\UnderflowException $e) {
+                    $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet: ' . $e->getMessage(), 0, $e));
+                    $this->stream->close();
+                    return;
+                }
+                if ($packet->length() !== 0) {
+                    $this->onError(new \UnexpectedValueException('Unexpected protocol error, received malformed packet with ' . $packet->length() . ' unknown byte(s)'));
+                    $this->stream->close();
+                    return;
+                }
             }
         }
     }
@@ -251,7 +280,7 @@ class Parser
                 $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarningCount:%d", $this->affectedRows, $this->insertId, $this->warningCount));
                 $this->onSuccess();
                 $this->nextRequest();
-            } elseif ($fieldCount === 0xFE) {
+            } elseif ($fieldCount === 0xFE && $packet->length() < 0xfffffe) {
                 // EOF Packet
                 $packet->skip(4); // warn, status
                 if ($this->rsState === self::RS_STATE_ROW) {
@@ -377,7 +406,31 @@ class Parser
 
     public function sendPacket($packet)
     {
-        return $this->stream->write($this->buffer->buildInt3(\strlen($packet)) . $this->buffer->buildInt1($this->seq++) . $packet);
+        /**
+         * If packet is longer than 0xffffff, we should split and send many packets
+         *
+         */
+        $packet_len = \strlen($packet);
+        if ($packet_len >= 0xffffff) {
+            $ret = null;
+            while ($packet_len > 0) {
+                $part = \substr($packet, 0, 0xffffff);
+                $part_len = \strlen($part);
+                $ret = $this->stream->write($this->buffer->buildInt3($part_len) . $this->buffer->buildInt1($this->seq++) . $part);
+                $packet = \substr($packet, $part_len);
+                $packet_len = \strlen($packet);
+                /**
+                 * If last part was exactly 0xffffff in size, we need to send an empty packet to signal end
+                 * of packet splitting.
+                 */
+                if (\strlen($packet) === 0 && $part_len === 0xffffff) {
+                    $ret = $this->stream->write($this->buffer->buildInt3(0) . $this->buffer->buildInt1($this->seq++));
+                }
+            }
+            return $ret;
+        } else {
+            return $this->stream->write($this->buffer->buildInt3($packet_len) . $this->buffer->buildInt1($this->seq++) . $packet);
+        }
     }
 
     protected function nextRequest($isHandshake = false)

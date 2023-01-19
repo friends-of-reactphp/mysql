@@ -588,4 +588,164 @@ class ResultQueryTest extends BaseTestCase
 
         $connection->close();
     }
+
+    protected function checkMaxAllowedPacket($connection, $min = 0x1100000)
+    {
+        return $connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\'')->then(
+            function ($res) use ($min, $connection) {
+                $current = $res->resultRows[0]['Value'];
+                if ($current < $min) {
+                    throw new \Exception('max_allowed_packet too low: current: ' . $current . ' min: ' . $min);
+                }
+                return \React\Promise\resolve();
+            }
+        )->then(
+            function () {
+                return true;
+            }
+        );
+    }
+
+    /**
+     * This should not trigger splitted packets sending
+     */
+    public function testSelectStaticTextSplitPacketsExactlyBelow16MiB()
+    {
+        $connection = $this->createConnection(Loop::get());
+
+        $promise = $this->checkMaxAllowedPacket($connection, 0x1000000); // 16MiB
+
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly below 16MiB packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 11);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
+
+        Loop::run();
+    }
+
+    /**
+     * This should trigger split packets sending and
+     * will send additional empty packet to signal to the server that split packets has ended.
+     */
+    public function testSelectStaticTextSplitPacketsExactly16MiB()
+    {
+        $connection = $this->createConnection(Loop::get());
+
+        $promise = $this->checkMaxAllowedPacket($connection);
+
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly at 16MiB packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 10);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
+
+        Loop::run();
+    }
+
+    public function testSelectStaticTextSplitPacketsAbove16MiB()
+    {
+        $connection = $this->createConnection(Loop::get());
+
+        $promise = $this->checkMaxAllowedPacket($connection);
+
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly at 16MiB + 10 packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
+
+        Loop::run();
+    }
+
+    /**
+     * Here we force the server to send us an empty packet when split packets are to be ended.
+     */
+    public function testSelectStaticTextSplitPacketsExactly16MiBResponse()
+    {
+        $connection = $this->createConnection(Loop::get());
+
+        $promise = $this->checkMaxAllowedPacket($connection);
+
+        $promise->then(
+            function () use ($connection) {
+                /**
+                 * Server response will be exatctly 16MiB, so server will send another empty packet
+                 * to signal end of split packets.
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 4);
+                $connection->query('select \'' . $text . '\'')->then(function (QueryResult $command) use ($text) {
+                    $this->assertCount(1, $command->resultRows);
+                    $this->assertCount(1, $command->resultRows[0]);
+                    $this->assertSame($text, reset($command->resultRows[0]));
+                })->done();
+            }
+        )->otherwise(
+            function (\Throwable $e) {
+                $this->markTestIncomplete('checkMaxAllowedPacket: ' . $e->getMessage());
+            }
+        )->always(
+            function () use ($connection) {
+                $connection->quit();
+            }
+        )->done();
+
+        Loop::run();
+    }
 }
