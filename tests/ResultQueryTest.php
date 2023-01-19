@@ -595,14 +595,7 @@ class ResultQueryTest extends BaseTestCase
             function ($res) use ($min, $connection) {
                 $current = $res->resultRows[0]['Value'];
                 if ($current < $min) {
-                    return $connection->query('SET GLOBAL max_allowed_packet = ?', [$min])->otherwise(
-                        function (\Throwable $e) use ($min, $current) {
-                            throw new \Exception(
-                                'Cannot set max_allowed_packet to: ' . $min . ' ' .
-                                'current: ' . $current . ' error: ' . $e->getMessage()
-                            );
-                        }
-                    );
+                    throw new \Exception('max_allowed_packet too low: current: ' . $current . ' min: ' . $min);
                 }
                 return \React\Promise\resolve();
             }

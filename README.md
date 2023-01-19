@@ -551,7 +551,7 @@ For example, to create an empty test database, you can also use a temporary
 ```bash
 docker run -it --rm --net=host \
     -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test \
-    -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
+    -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5 --max-allowed-packet=20M
 ```
 
 To run the test suite, go to the project root and run:
