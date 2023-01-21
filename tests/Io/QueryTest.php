@@ -35,29 +35,40 @@ class QueryTest extends TestCase
             'name' => 'test'
         ])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
+    }
 
+    public function testNamedParamsWithPrefix()
+    {
         $query = new Query('select * from test where id = :id and name = :name');
         $sql   = $query->bindParamsFromArray([
             ':id' => 100,
             ':name' => 'test'
         ])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
+    }
 
+    public function testNamedParamsWithInClause()
+    {
         $query = new Query('select * from test where id in (:in) and name = :name');
         $sql   = $query->bindParamsFromArray([
             'in' => [1, 2],
             'name' => 'test'
         ])->getSql();
         $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
+    }
 
-        // mixed named & ?
+    public function testMixedNamedParams()
+    {
         $query = new Query('select * from test where id in (?) and name = :name');
         $sql   = $query->bindParamsFromArray([
             [1, 2],
             'name' => 'test'
         ])->getSql();
         $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
+    }
 
+    public function testMixedNamedParamsWithInClause()
+    {
         $query = new Query('select * from test where id in (:in) and name = ?');
         $sql   = $query->bindParamsFromArray([
             'in' => [1, 2],
