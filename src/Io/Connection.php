@@ -81,7 +81,7 @@ class Connection extends EventEmitter implements ConnectionInterface
         });
         $command->on('end', function () use ($command, $deferred, &$rows) {
             $result = new QueryResult();
-            $result->resultFields = $command->resultFields;
+            $result->resultFields = $command->fields;
             $result->resultRows = $rows;
             $result->warningCount = $command->warningCount;
 

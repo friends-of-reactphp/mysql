@@ -337,7 +337,8 @@ class Parser
         $command = $this->currCommand;
         $this->currCommand = null;
 
-        $command->resultFields = $this->resultFields;
+        assert($command instanceof QueryCommand);
+        $command->fields = $this->resultFields;
         $command->emit('end');
 
         $this->rsState      = self::RS_STATE_HEADER;
@@ -353,7 +354,6 @@ class Parser
             $command->affectedRows = $this->affectedRows;
             $command->insertId     = $this->insertId;
             $command->warningCount = $this->warningCount;
-            $command->message      = $this->message;
         }
         $command->emit('success');
     }
