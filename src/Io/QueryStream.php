@@ -15,7 +15,6 @@ use React\Stream\WritableStreamInterface;
  */
 class QueryStream extends EventEmitter implements ReadableStreamInterface
 {
-    private $query;
     private $connection;
     private $started = false;
     private $closed = false;
@@ -23,7 +22,6 @@ class QueryStream extends EventEmitter implements ReadableStreamInterface
 
     public function __construct(QueryCommand $command, ConnectionInterface $connection)
     {
-        $this->command = $command;
         $this->connection = $connection;
 
         // forward result set rows until result set end

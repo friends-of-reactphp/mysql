@@ -7,7 +7,7 @@ on:
 jobs:
   PHPUnit:
     name: PHPUnit (PHP ${{ matrix.php }})
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         php:
@@ -23,30 +23,31 @@ jobs:
           - 5.5
           - 5.4
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
           coverage: xdebug
+          ini-file: development
       - run: composer install
       - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
       - run: bash tests/wait-for-mysql.sh
-      - run: MYSQL_USER=test MYSQL_PASSWORD=test vendor/bin/phpunit --coverage-text
+      - run: vendor/bin/phpunit --coverage-text
         if: ${{ matrix.php >= 7.3 }}
-      - run: MYSQL_USER=test MYSQL_PASSWORD=test vendor/bin/phpunit --coverage-text -c phpunit.xml.legacy
+      - run: vendor/bin/phpunit --coverage-text -c phpunit.xml.legacy
         if: ${{ matrix.php < 7.3 }}
 
   PHPUnit-hhvm:
     name: PHPUnit (HHVM)
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v2
-      - uses: azjezz/setup-hhvm@v1
+      - uses: actions/checkout@v3
+      - run: cp "$(which composer)" composer.phar && ./composer.phar self-update --2.2 # downgrade Composer for HHVM
+      - name: Run hhvm composer.phar install
+        uses: docker://hhvm/hhvm:3.30-lts-latest
         with:
-          version: lts-3.30
-      - run: composer self-update --2.2 # downgrade Composer for HHVM
-      - run: hhvm $(which composer) require phpunit/phpunit:^5 --dev --no-interaction
+          args: hhvm composer.phar install
       - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
       - run: bash tests/wait-for-mysql.sh
-      - run: MYSQL_USER=test MYSQL_PASSWORD=test hhvm vendor/bin/phpunit
+      - run: docker run -i --rm --workdir=/data -v "$(pwd):/data" --net=host hhvm/hhvm:3.30-lts-latest hhvm vendor/bin/phpunit
