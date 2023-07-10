@@ -17,8 +17,6 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame('foo', reset($command->resultRows[0]));
-
-            $this->assertInstanceOf('React\MySQL\Connection', $conn);
         });
 
         $connection->quit();
@@ -57,7 +55,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
-        })->then(null, 'printf');
+        });
 
         $connection->quit();
         Loop::run();
@@ -82,7 +80,7 @@ class ResultQueryTest extends BaseTestCase
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
-        })->then(null, 'printf');
+        });
 
         $connection->quit();
         Loop::run();
@@ -138,7 +136,7 @@ class ResultQueryTest extends BaseTestCase
 
         $connection->query('SELECT ?', [$value])->then(function (QueryResult $command) use ($length) {
             $this->assertCount(1, $command->resultFields);
-            $this->assertEquals($length * 3, $command->resultFields[0]['length']);
+            $this->assertEquals($length * 4, $command->resultFields[0]['length']);
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
         });
 
@@ -430,7 +428,7 @@ class ResultQueryTest extends BaseTestCase
 
         $connection->query('select * from invalid_table')->then(
             $this->expectCallableNever(),
-            function (\Exception $error) {
+            function (\Exception $error) use ($db) {
                 $this->assertEquals("Table '$db.invalid_table' doesn't exist", $error->getMessage());
             }
         );
@@ -446,7 +444,13 @@ class ResultQueryTest extends BaseTestCase
         $connection->query('select 1;select 2;')->then(
             $this->expectCallableNever(),
             function (\Exception $error) {
-                $this->assertContains("You have an error in your SQL syntax", $error->getMessage());
+                if (method_exists($this, 'assertStringContainsString')) {
+                    // PHPUnit 9+
+                    $this->assertStringContainsString("You have an error in your SQL syntax", $error->getMessage());
+                } else {
+                    // legacy PHPUnit < 9
+                    $this->assertContains("You have an error in your SQL syntax", $error->getMessage());
+                }
             }
         );
 

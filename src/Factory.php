@@ -202,6 +202,8 @@ class Factory
             // either close successful connection or cancel pending connection attempt
             $connecting->then(function (SocketConnectionInterface $connection) {
                 $connection->close();
+            }, function () {
+                // ignore to avoid reporting unhandled rejection
             });
             $connecting->cancel();
         });

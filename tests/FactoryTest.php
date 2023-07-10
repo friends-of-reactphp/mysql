@@ -279,7 +279,7 @@ class FactoryTest extends BaseTestCase
             $connection->quit()->then(function () {
                 echo 'closed.';
             });
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
@@ -296,7 +296,7 @@ class FactoryTest extends BaseTestCase
             $connection->quit()->then(function () {
                 echo 'closed.';
             });
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
@@ -313,7 +313,7 @@ class FactoryTest extends BaseTestCase
             $connection->quit()->then(function () {
                 echo 'closed.';
             });
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
@@ -333,8 +333,7 @@ class FactoryTest extends BaseTestCase
                     echo 'closed.';
                 });
             });
-
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
@@ -354,14 +353,14 @@ class FactoryTest extends BaseTestCase
             $connection->quit()->then(function () {
                 echo 'closed.';
             });
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
 
     public function testConnectWithValidAuthQuitOnlyOnce()
     {
-        $this->expectOutputString('connected.closed.');
+        $this->expectOutputString('connected.rejected.closed.');
 
         $factory = new Factory();
 
@@ -372,9 +371,11 @@ class FactoryTest extends BaseTestCase
                 echo 'closed.';
             });
             $connection->quit()->then(function () {
-                echo 'closed.';
+                echo 'never reached.';
+            }, function () {
+                echo 'rejected.';
             });
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
@@ -397,7 +398,7 @@ class FactoryTest extends BaseTestCase
 
             $connection->close();
             $connection->close();
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
@@ -425,7 +426,7 @@ class FactoryTest extends BaseTestCase
                 echo 'aborted queued (' . $e->getMessage() . ').';
             });
             $connection->close();
-        }, 'printf')->then(null, 'printf');
+        });
 
         Loop::run();
     }
@@ -626,7 +627,7 @@ class FactoryTest extends BaseTestCase
 
     public function testConnectLazyWithValidAuthWillPingBeforeQuitButNotAfter()
     {
-        $this->expectOutputString('ping.closed.');
+        $this->expectOutputString('rejected.ping.closed.');
 
         $factory = new Factory();
 
@@ -643,6 +644,8 @@ class FactoryTest extends BaseTestCase
 
         $connection->ping()->then(function () {
             echo 'never reached';
+        }, function () {
+            echo 'rejected.';
         });
 
         Loop::run();

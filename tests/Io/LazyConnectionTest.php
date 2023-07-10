@@ -24,10 +24,13 @@ class LazyConnectionTest extends BaseTestCase
         $connection->on('error', $this->expectCallableNever());
         $connection->on('close', $this->expectCallableNever());
 
-        $connection->ping();
+        $promise = $connection->ping();
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
 
         $deferred->reject(new \RuntimeException());
     }
+
     public function testPingWillNotCloseConnectionWhenUnderlyingConnectionCloses()
     {
         $base = $this->getMockBuilder('React\MySQL\Io\LazyConnection')->setMethods(['ping'])->disableOriginalConstructor()->getMock();
@@ -678,7 +681,10 @@ class LazyConnectionTest extends BaseTestCase
         $connection->on('error', $this->expectCallableNever());
         $connection->on('close', $this->expectCallableOnce());
 
-        $connection->ping();
+        $promise = $connection->ping();
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
+
         $connection->close();
     }
 

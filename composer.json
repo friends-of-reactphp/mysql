@@ -8,7 +8,7 @@
         "evenement/evenement": "^3.0 || ^2.1 || ^1.1",
         "react/event-loop": "^1.2",
         "react/promise": "^3 || ^2.7",
-        "react/promise-stream": "^1.4",
+        "react/promise-stream": "^1.6",
         "react/promise-timer": "^1.9",
         "react/socket": "^1.12"
     },
