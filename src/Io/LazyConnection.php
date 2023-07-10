@@ -220,6 +220,8 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
         if ($this->connecting !== null) {
             $this->connecting->then(function (ConnectionInterface $connection) {
                 $connection->close();
+            }, function () {
+                // ignore to avoid reporting unhandled rejection
             });
             if ($this->connecting !== null) {
                 $this->connecting->cancel();
