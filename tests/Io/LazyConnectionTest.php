@@ -218,7 +218,7 @@ class LazyConnectionTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->with(60.0, $this->anything());
+        $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything());
 
         $connection = new LazyConnection($factory, '', $loop);
 

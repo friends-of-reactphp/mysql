@@ -602,7 +602,7 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = $this->getConnectionString() . '?idle=0';
+        $uri = $this->getConnectionString();
         $connection = $factory->createLazyConnection($uri);
 
         $connection->ping();
