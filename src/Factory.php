@@ -276,9 +276,11 @@ class Factory
      * interface with your MySQL database. Internally, it lazily creates the
      * underlying database connection only on demand once the first request is
      * invoked on this instance and will queue all outstanding requests until
-     * the underlying connection is ready. Additionally, it will only keep this
-     * underlying connection in an "idle" state for 60s by default and will
-     * automatically end the underlying connection when it is no longer needed.
+     * the underlying connection is ready. This underlying connection will be
+     * reused for all requests until it is closed. By default, idle connections
+     * will be held open for 1ms (0.001s) when not used. The next request will
+     * either reuse the existing connection or will automatically create a new
+     * underlying connection if this idle time is expired.
      *
      * From a consumer side this means that you can start sending queries to the
      * database right away while the underlying connection may still be
@@ -351,17 +353,17 @@ class Factory
      * $factory->createLazyConnection('localhost?timeout=0.5');
      * ```
      *
-     * By default, this method will keep "idle" connection open for 60s and will
-     * then end the underlying connection. The next request after an "idle"
-     * connection ended will automatically create a new underlying connection.
-     * This ensure you always get a "fresh" connection and as such should not be
-     * confused with a "keepalive" or "heartbeat" mechanism, as this will not
-     * actively try to probe the connection. You can explicitly pass a custom
-     * idle timeout value in seconds (or use a negative number to not apply a
-     * timeout) like this:
+     * By default, idle connections will be held open for 1ms (0.001s) when not
+     * used. The next request will either reuse the existing connection or will
+     * automatically create a new underlying connection if this idle time is
+     * expired. This ensures you always get a "fresh" connection and as such
+     * should not be confused with a "keepalive" or "heartbeat" mechanism, as
+     * this will not actively try to probe the connection. You can explicitly
+     * pass a custom idle timeout value in seconds (or use a negative number to
+     * not apply a timeout) like this:
      *
      * ```php
-     * $factory->createLazyConnection('localhost?idle=0.1');
+     * $factory->createLazyConnection('localhost?idle=10.0');
      * ```
      *
      * By default, the connection provides full UTF-8 support (using the

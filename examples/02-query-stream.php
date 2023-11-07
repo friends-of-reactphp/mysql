@@ -24,5 +24,3 @@ $stream->on('error', function (Exception $e) {
 $stream->on('close', function () {
     echo 'CLOSED' . PHP_EOL;
 });
-
-$connection->quit();

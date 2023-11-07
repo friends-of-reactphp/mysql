@@ -27,7 +27,7 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     private $disconnecting;
 
     private $loop;
-    private $idlePeriod = 60.0;
+    private $idlePeriod = 0.001;
     private $idleTimer;
     private $pending = 0;
 

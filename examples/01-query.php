@@ -29,5 +29,3 @@ $connection->query($query)->then(function (QueryResult $command) {
     // the query was not executed successfully
     echo 'Error: ' . $error->getMessage() . PHP_EOL;
 });
-
-$connection->quit();
