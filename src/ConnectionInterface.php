@@ -98,7 +98,8 @@ interface ConnectionInterface extends EventEmitterInterface
      *
      * @param string $sql    SQL statement
      * @param array  $params Parameters which should be bound to query
-     * @return PromiseInterface Returns a Promise<QueryResult,Exception>
+     * @return PromiseInterface<QueryResult>
+     *     Resolves with a `QueryResult` on success or rejects with an `Exception` on error.
      */
     public function query($sql, array $params = []);
 
@@ -180,7 +181,8 @@ interface ConnectionInterface extends EventEmitterInterface
      * });
      * ```
      *
-     * @return PromiseInterface Returns a Promise<true,Exception>
+     * @return PromiseInterface<void>
+     *     Resolves with a `void` value on success or rejects with an `Exception` on error.
      */
     public function ping();
 
@@ -198,7 +200,8 @@ interface ConnectionInterface extends EventEmitterInterface
      * $connection->quit();
      * ```
      *
-     * @return PromiseInterface Returns a Promise<void,Exception>
+     * @return PromiseInterface<void>
+     *     Resolves with a `void` value on success or rejects with an `Exception` on error.
      */
     public function quit();
 

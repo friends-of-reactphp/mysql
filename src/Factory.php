@@ -153,7 +153,8 @@ class Factory
      * ```
      *
      * @param string $uri
-     * @return PromiseInterface Promise<ConnectionInterface, Exception>
+     * @return PromiseInterface<ConnectionInterface>
+     *     Resolves with a `ConnectionInterface` on success or rejects with an `Exception` on error.
      */
     public function createConnection(
         #[\SensitiveParameter]
