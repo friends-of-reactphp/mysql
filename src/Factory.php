@@ -77,7 +77,7 @@ class Factory
      *         // client connection established (and authenticated)
      *     },
      *     function (Exception $e) {
-     *         // an error occured while trying to connect or authorize client
+     *         // an error occurred while trying to connect or authorize client
      *     }
      * );
      * ```
@@ -285,7 +285,7 @@ class Factory
      * From a consumer side this means that you can start sending queries to the
      * database right away while the underlying connection may still be
      * outstanding. Because creating this underlying connection may take some
-     * time, it will enqueue all oustanding commands and will ensure that all
+     * time, it will enqueue all outstanding commands and will ensure that all
      * commands will be executed in correct order once the connection is ready.
      * In other words, this "virtual" connection behaves just like a "real"
      * connection as described in the `ConnectionInterface` and frees you from

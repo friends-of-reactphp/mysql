@@ -21,7 +21,7 @@ use React\Socket\ConnectionInterface as SocketConnectionInterface;
 class Connection extends EventEmitter implements ConnectionInterface
 {
     const STATE_AUTHENTICATED       = 5;
-    const STATE_CLOSEING            = 6;
+    const STATE_CLOSING             = 6;
     const STATE_CLOSED              = 7;
 
     /**
@@ -146,7 +146,7 @@ class Connection extends EventEmitter implements ConnectionInterface
                     $this->emit('close', [$this]);
                     $resolve(null);
                 });
-            $this->state = self::STATE_CLOSEING;
+            $this->state = self::STATE_CLOSING;
         });
     }
 
@@ -199,7 +199,7 @@ class Connection extends EventEmitter implements ConnectionInterface
      */
     public function handleConnectionClosed()
     {
-        if ($this->state < self::STATE_CLOSEING) {
+        if ($this->state < self::STATE_CLOSING) {
             $this->emit('error', [new \RuntimeException(
                 'Connection closed by peer (ECONNRESET)',
                 \defined('SOCKET_ECONNRESET') ? \SOCKET_ECONNRESET : 104

@@ -104,7 +104,7 @@ class Buffer
      * This method can be used instead of `read()` if you do not care about the
      * bytes that will be skipped.
      *
-     * @param int $len length in bytes, must be positve and non-zero
+     * @param int $len length in bytes, must be positive and non-zero
      * @return void
      * @throws \UnderflowException
      */

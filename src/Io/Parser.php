@@ -89,7 +89,7 @@ class Parser
     protected $insertId;
     protected $affectedRows;
 
-    public $protocalVersion = 0;
+    public $protocolVersion = 0;
 
     private $buffer;
 
@@ -199,8 +199,8 @@ class Parser
             }
 
             $this->phase = self::PHASE_GOT_INIT;
-            $this->protocalVersion = $response;
-            $this->debug(sprintf("Protocal Version: %d", $this->protocalVersion));
+            $this->protocolVersion = $response;
+            $this->debug(sprintf("Protocol Version: %d", $this->protocolVersion));
 
             $options = &$this->connectOptions;
             $options['serverVersion'] = $packet->readStringNull();

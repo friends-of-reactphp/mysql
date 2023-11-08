@@ -18,7 +18,7 @@ $query = isset($argv[1]) ? $argv[1] : 'select * from book';
 $factory->createConnection($uri)->then(function (ConnectionInterface $connection) use ($query) {
     // The protocol parser reads rather large chunked from the underlying connection
     // and as such can yield multiple (dozens to hundreds) rows from a single data
-    // chunk. We try to artifically limit the stream chunk size here to try to
+    // chunk. We try to artificially limit the stream chunk size here to try to
     // only ever read a single row so we can demonstrate throttling this stream.
     // It goes without saying this is only a hack! Real world applications rarely
     // have the need to limit the chunk size. As an alternative, consider using

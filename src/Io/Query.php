@@ -47,7 +47,7 @@ class Query
     }
 
     /**
-     * Binding params for the query, mutiple arguments support.
+     * Binding params for the query, multiple arguments support.
      *
      * @param  mixed              $param
      * @return self
@@ -69,7 +69,7 @@ class Query
     }
 
     /**
-     * Binding params for the query, mutiple arguments support.
+     * Binding params for the query, multiple arguments support.
      *
      * @param  mixed              $param
      * @return self
@@ -116,7 +116,7 @@ class Query
                 $value = 'NULL';
                 break;
             default:
-                throw new \InvalidArgumentException(sprintf('Not supportted value type of %s.', $type));
+                throw new \InvalidArgumentException(sprintf('Not supported value type of %s.', $type));
                 break;
         }
 
