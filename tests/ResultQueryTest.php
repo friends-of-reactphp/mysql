@@ -366,7 +366,7 @@ class ResultQueryTest extends BaseTestCase
         Loop::run();
     }
 
-    public function testSelectWithExplcitCharsetReturnsCharset()
+    public function testSelectWithExplicitCharsetReturnsCharset()
     {
         $factory = new Factory();
 

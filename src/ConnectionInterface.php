@@ -209,7 +209,7 @@ interface ConnectionInterface extends EventEmitterInterface
      * Force-close the connection.
      *
      * Unlike the `quit()` method, this method will immediately force-close the
-     * connection and reject all oustanding commands.
+     * connection and reject all outstanding commands.
      *
      * ```php
      * $connection->close();
