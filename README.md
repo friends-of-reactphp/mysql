@@ -99,7 +99,7 @@ $factory = new React\MySQL\Factory(null, $connector);
 
 #### createConnection()
 
-The `createConnection(string $url): PromiseInterface<ConnectionInterface, Exception>` method can be used to
+The `createConnection(string $url): PromiseInterface<ConnectionInterface>` method can be used to
 create a new [`ConnectionInterface`](#connectioninterface).
 
 It helps with establishing a TCP/IP connection to your MySQL database
@@ -311,7 +311,7 @@ and sending your database queries.
 
 #### query()
 
-The `query(string $query, array $params = []): PromiseInterface` method can be used to
+The `query(string $query, array $params = []): PromiseInterface<QueryResult>` method can be used to
 perform an async query.
 
 This method returns a promise that will resolve with a `QueryResult` on
@@ -424,7 +424,7 @@ suited for exposing multiple possible results.
 
 #### ping()
 
-The `ping(): PromiseInterface<void, Exception>` method can be used to
+The `ping(): PromiseInterface<void>` method can be used to
 check that the connection is alive.
 
 This method returns a promise that will resolve (with a void value) on
@@ -443,7 +443,7 @@ $connection->ping()->then(function () {
 
 #### quit()
 
-The `quit(): PromiseInterface<void, Exception>` method can be used to
+The `quit(): PromiseInterface<void>` method can be used to
 quit (soft-close) the connection.
 
 This method returns a promise that will resolve (with a void value) on
