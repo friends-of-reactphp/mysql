@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.6.0 (2023-11-10)
+
+*   Feature: Improve Promise v3 support and use template types.
+    (#183 and #178 by @clue)
+
+*   Feature: Full PHP 8.3 compatibility.
+    (#180 by @clue)
+
+*   Feature / BC break: Update default charset encoding to `utf8mb4` for full UTF-8 support.
+    (#165 by @clue)
+
+    This feature updates the MySQL client to use `utf8mb4` as the default charset
+    encoding for full UTF-8 support instead of the legacy `utf8mb3` charset encoding.
+    For legacy reasons you can still change this to use a different ASCII-compatible
+    charset encoding like this:
+
+    ```php
+    $factory->createConnection('localhost?charset=utf8mb4');
+    ```
+
+*   Feature: Reduce default idle time to 1ms.
+    (#182 by @clue)
+
+    The idle time defines the time the client is willing to keep the underlying
+    connection alive before automatically closing it. The default idle time was
+    previously 60s and can be configured for more specific requirements like this:
+
+    ```php
+    $factory->createConnection('localhost?idle=10.0');
+    ```
+
+*   Minor documentation improvements.
+    (#184 by @yadaiio)
+
+*   Improve test suite, update to use reactphp/async and report failed assertions.
+    (#164 and #170 by @clue, #163 by @dinooo13 and #181 by @SimonFrings)
+
 ## 0.5.7 (2022-09-15)
 
 *   Feature: Full support for PHP 8.2.

@@ -4,15 +4,6 @@
 
 Async MySQL database client for [ReactPHP](https://reactphp.org/).
 
-> **Development version:** This branch contains the code for the upcoming 0.6 release.
-> For the code of the current stable 0.5 release, check out the
-> [`0.5.x` branch](https://github.com/friends-of-reactphp/mysql/tree/0.5.x).
->
-> The upcoming 0.6 release will be the way forward for this package.
-> However, we will still actively support 0.5.x for those not yet
-> on the latest version.
-> See also [installation instructions](#install) for more details.
-
 This is a MySQL database driver for [ReactPHP](https://reactphp.org/).
 It implements the MySQL protocol and allows you to access your existing MySQL
 database.
@@ -511,11 +502,11 @@ See also the [`close()`](#close) method.
 The recommended way to install this library is [through Composer](https://getcomposer.org/).
 [New to Composer?](https://getcomposer.org/doc/00-intro.md)
 
-Once released, this project will follow [SemVer](https://semver.org/).
-At the moment, this will install the latest development version:
+This project follows [SemVer](https://semver.org/).
+This will install the latest supported version:
 
 ```bash
-composer require react/mysql:^0.6@dev
+composer require react/mysql:^0.6
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
