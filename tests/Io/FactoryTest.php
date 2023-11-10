@@ -1,12 +1,13 @@
 <?php
 
-namespace React\Tests\MySQL;
+namespace React\Tests\MySQL\Io;
 
 use React\EventLoop\Loop;
 use React\MySQL\ConnectionInterface;
-use React\MySQL\Factory;
-use React\Socket\SocketServer;
+use React\MySQL\Io\Factory;
 use React\Promise\Promise;
+use React\Socket\SocketServer;
+use React\Tests\MySQL\BaseTestCase;
 
 class FactoryTest extends BaseTestCase
 {
@@ -561,93 +562,5 @@ class FactoryTest extends BaseTestCase
                 })
             )
         ));
-    }
-
-    public function testConnectLazyWithAnyAuthWillQuitWithoutRunning()
-    {
-        $this->expectOutputString('closed.');
-
-        $factory = new Factory();
-
-        $uri = 'mysql://random:pass@host';
-        $connection = $factory->createLazyConnection($uri);
-
-        $connection->quit()->then(function () {
-            echo 'closed.';
-        });
-    }
-
-    public function testConnectLazyWithValidAuthWillRunUntilQuitAfterPing()
-    {
-        $this->expectOutputString('closed.');
-
-        $factory = new Factory();
-
-        $uri = $this->getConnectionString();
-        $connection = $factory->createLazyConnection($uri);
-
-        $connection->ping();
-
-        $connection->quit()->then(function () {
-            echo 'closed.';
-        });
-
-        Loop::run();
-    }
-
-    /**
-     * @doesNotPerformAssertions
-     */
-    public function testConnectLazyWithValidAuthWillRunUntilIdleTimerAfterPingEvenWithoutQuit()
-    {
-        $factory = new Factory();
-
-        $uri = $this->getConnectionString();
-        $connection = $factory->createLazyConnection($uri);
-
-        $connection->ping();
-
-        Loop::run();
-    }
-
-    public function testConnectLazyWithInvalidAuthWillRejectPingButWillNotEmitErrorOrClose()
-    {
-        $factory = new Factory();
-
-        $uri = $this->getConnectionString(['passwd' => 'invalidpass']);
-        $connection = $factory->createLazyConnection($uri);
-
-        $connection->on('error', $this->expectCallableNever());
-        $connection->on('close', $this->expectCallableNever());
-
-        $connection->ping()->then(null, $this->expectCallableOnce());
-
-        Loop::run();
-    }
-
-    public function testConnectLazyWithValidAuthWillPingBeforeQuitButNotAfter()
-    {
-        $this->expectOutputString('rejected.ping.closed.');
-
-        $factory = new Factory();
-
-        $uri = $this->getConnectionString();
-        $connection = $factory->createLazyConnection($uri);
-
-        $connection->ping()->then(function () {
-            echo 'ping.';
-        });
-
-        $connection->quit()->then(function () {
-            echo 'closed.';
-        });
-
-        $connection->ping()->then(function () {
-            echo 'never reached';
-        }, function () {
-            echo 'rejected.';
-        });
-
-        Loop::run();
     }
 }

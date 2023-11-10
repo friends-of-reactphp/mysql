@@ -3,6 +3,7 @@
 namespace React\Tests\MySQL;
 
 use React\EventLoop\Loop;
+use React\MySQL\MysqlClient;
 use React\MySQL\QueryResult;
 
 class NoResultQueryTest extends BaseTestCase
@@ -98,6 +99,85 @@ CREATE TABLE IF NOT EXISTS `book` (
         });
         $connection->ping()->then(function () {
             echo '2';
+        });
+
+        Loop::run();
+    }
+
+
+    public function testQuitWithAnyAuthWillQuitWithoutRunning()
+    {
+        $this->expectOutputString('closed.');
+
+        $uri = 'mysql://random:pass@host';
+        $connection = new MysqlClient($uri);
+
+        $connection->quit()->then(function () {
+            echo 'closed.';
+        });
+    }
+
+    public function testPingWithValidAuthWillRunUntilQuitAfterPing()
+    {
+        $this->expectOutputString('closed.');
+
+        $uri = $this->getConnectionString();
+        $connection = new MysqlClient($uri);
+
+        $connection->ping();
+
+        $connection->quit()->then(function () {
+            echo 'closed.';
+        });
+
+        Loop::run();
+    }
+
+    /**
+     * @doesNotPerformAssertions
+     */
+    public function testPingWithValidAuthWillRunUntilIdleTimerAfterPingEvenWithoutQuit()
+    {
+        $uri = $this->getConnectionString();
+        $connection = new MysqlClient($uri);
+
+        $connection->ping();
+
+        Loop::run();
+    }
+
+    public function testPingWithInvalidAuthWillRejectPingButWillNotEmitErrorOrClose()
+    {
+        $uri = $this->getConnectionString(['passwd' => 'invalidpass']);
+        $connection = new MysqlClient($uri);
+
+        $connection->on('error', $this->expectCallableNever());
+        $connection->on('close', $this->expectCallableNever());
+
+        $connection->ping()->then(null, $this->expectCallableOnce());
+
+        Loop::run();
+    }
+
+    public function testPingWithValidAuthWillPingBeforeQuitButNotAfter()
+    {
+        $this->expectOutputString('rejected.ping.closed.');
+
+        $uri = $this->getConnectionString();
+        $connection = new MysqlClient($uri);
+
+        $connection->ping()->then(function () {
+            echo 'ping.';
+        });
+
+        $connection->quit()->then(function () {
+            echo 'closed.';
+        });
+
+        $connection->ping()->then(function () {
+            echo 'never reached';
+        }, function () {
+            echo 'rejected.';
         });
 
         Loop::run();

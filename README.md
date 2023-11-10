@@ -22,9 +22,8 @@ It is written in pure PHP and does not require any extensions.
 
 * [Quickstart example](#quickstart-example)
 * [Usage](#usage)
-  * [Factory](#factory)
-    * [createConnection()](#createconnection)
-    * [createLazyConnection()](#createlazyconnection)
+  * [MysqlClient](#mysqlclient)
+    * [__construct()](#__construct)
   * [ConnectionInterface](#connectioninterface)
     * [query()](#query)
     * [queryStream()](#querystream)
@@ -45,11 +44,10 @@ This example runs a simple `SELECT` query and dumps all the records from a `book
 
 require __DIR__ . '/vendor/autoload.php';
 
-$factory = new React\MySQL\Factory();
-$connection = $factory->createLazyConnection('user:pass@localhost/bookstore');
+$mysql = new React\MySQL\MysqlClient('user:pass@localhost/bookstore');
 
-$connection->query('SELECT * FROM book')->then(
-    function (QueryResult $command) {
+$mysql->query('SELECT * FROM book')->then(
+    function (React\MySQL\QueryResult $command) {
         print_r($command->resultFields);
         print_r($command->resultRows);
         echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
@@ -64,137 +62,13 @@ See also the [examples](examples).
 
 ## Usage
 
-### Factory
+### MysqlClient
 
-The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
-
-```php
-$factory = new React\MySQL\Factory();
-```
-
-This class takes an optional `LoopInterface|null $loop` parameter that can be used to
-pass the event loop instance to use for this object. You can use a `null` value
-here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
-This value SHOULD NOT be given unless you're sure you want to explicitly use a
-given event loop instance.
-
-If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
-proxy servers etc.), you can explicitly pass a custom instance of the
-[`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
+The `MysqlClient` is responsible for exchanging messages with your MySQL server
+and keeps track of pending queries.
 
 ```php
-$connector = new React\Socket\Connector([
-    'dns' => '127.0.0.1',
-    'tcp' => [
-        'bindto' => '192.168.10.1:0'
-    ],
-    'tls' => [
-        'verify_peer' => false,
-        'verify_peer_name' => false
-    )
-]);
-
-$factory = new React\MySQL\Factory(null, $connector);
-```
-
-#### createConnection()
-
-The `createConnection(string $url): PromiseInterface<ConnectionInterface>` method can be used to
-create a new [`ConnectionInterface`](#connectioninterface).
-
-It helps with establishing a TCP/IP connection to your MySQL database
-and issuing the initial authentication handshake.
-
-```php
-$factory->createConnection($url)->then(
-    function (ConnectionInterface $connection) {
-        // client connection established (and authenticated)
-    },
-    function (Exception $e) {
-        // an error occurred while trying to connect or authorize client
-    }
-);
-```
-
-The method returns a [Promise](https://github.com/reactphp/promise) that
-will resolve with a [`ConnectionInterface`](#connectioninterface)
-instance on success or will reject with an `Exception` if the URL is
-invalid or the connection or authentication fails.
-
-The returned Promise is implemented in such a way that it can be
-cancelled when it is still pending. Cancelling a pending promise will
-reject its value with an Exception and will cancel the underlying TCP/IP
-connection attempt and/or MySQL authentication.
-
-```php
-$promise = $factory->createConnection($url);
-
-Loop::addTimer(3.0, function () use ($promise) {
-    $promise->cancel();
-});
-```
-
-The `$url` parameter must contain the database host, optional
-authentication, port and database to connect to:
-
-```php
-$factory->createConnection('user:secret@localhost:3306/database');
-```
-
-Note that both the username and password must be URL-encoded (percent-encoded)
-if they contain special characters:
-
-```php
-$user = 'he:llo';
-$pass = 'p@ss';
-
-$promise = $factory->createConnection(
-    rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
-);
-```
-
-You can omit the port if you're connecting to default port `3306`:
-
-```php
-$factory->createConnection('user:secret@localhost/database');
-```
-
-If you do not include authentication and/or database, then this method
-will default to trying to connect as user `root` with an empty password
-and no database selected. This may be useful when initially setting up a
-database, but likely to yield an authentication error in a production system:
-
-```php
-$factory->createConnection('localhost');
-```
-
-This method respects PHP's `default_socket_timeout` setting (default 60s)
-as a timeout for establishing the connection and waiting for successful
-authentication. You can explicitly pass a custom timeout value in seconds
-(or use a negative number to not apply a timeout) like this:
-
-```php
-$factory->createConnection('localhost?timeout=0.5');
-```
-
-By default, the connection provides full UTF-8 support (using the
-`utf8mb4` charset encoding). This should usually not be changed for most
-applications nowadays, but for legacy reasons you can change this to use
-a different ASCII-compatible charset encoding like this:
-
-```php
-$factory->createConnection('localhost?charset=utf8mb4');
-```
-
-#### createLazyConnection()
-
-Creates a new connection.
-
-It helps with establishing a TCP/IP connection to your MySQL database
-and issuing the initial authentication handshake.
-
-```php
-$connection = $factory->createLazyConnection($url);
+$connection = new React\MySQL\MysqlClient($uri);
 
 $connection->query(…);
 ```
@@ -215,9 +89,6 @@ database right away while the underlying connection may still be
 outstanding. Because creating this underlying connection may take some
 time, it will enqueue all outstanding commands and will ensure that all
 commands will be executed in correct order once the connection is ready.
-In other words, this "virtual" connection behaves just like a "real"
-connection as described in the `ConnectionInterface` and frees you from
-having to deal with its async resolution.
 
 If the underlying database connection fails, it will reject all
 outstanding commands and will return to the initial "idle" state. This
@@ -234,15 +105,16 @@ and no further commands can be enqueued. Similarly, calling `quit()` on
 this instance when not currently connected will succeed immediately and
 will not have to wait for an actual underlying connection.
 
-Depending on your particular use case, you may prefer this method or the
-underlying `createConnection()` which resolves with a promise. For many
-simple use cases it may be easier to create a lazy connection.
+#### __construct()
 
-The `$url` parameter must contain the database host, optional
+The `new MysqlClient(string $uri, ConnectorInterface $connector = null, LoopInterface $loop = null)` constructor can be used to
+create a new `MysqlClient` instance.
+
+The `$uri` parameter must contain the database host, optional
 authentication, port and database to connect to:
 
 ```php
-$factory->createLazyConnection('user:secret@localhost:3306/database');
+$mysql = new React\MySQL\MysqlClient('user:secret@localhost:3306/database');
 ```
 
 Note that both the username and password must be URL-encoded (percent-encoded)
@@ -252,7 +124,7 @@ if they contain special characters:
 $user = 'he:llo';
 $pass = 'p@ss';
 
-$connection = $factory->createLazyConnection(
+$mysql = new React\MySQL\MysqlClient(
     rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
 );
 ```
@@ -260,7 +132,7 @@ $connection = $factory->createLazyConnection(
 You can omit the port if you're connecting to default port `3306`:
 
 ```php
-$factory->createLazyConnection('user:secret@localhost/database');
+$mysql = new React\MySQL\MysqlClient('user:secret@localhost/database');
 ```
 
 If you do not include authentication and/or database, then this method
@@ -269,7 +141,7 @@ and no database selected. This may be useful when initially setting up a
 database, but likely to yield an authentication error in a production system:
 
 ```php
-$factory->createLazyConnection('localhost');
+$mysql = new React\MySQL\MysqlClient('localhost');
 ```
 
 This method respects PHP's `default_socket_timeout` setting (default 60s)
@@ -278,7 +150,7 @@ successful authentication. You can explicitly pass a custom timeout value
 in seconds (or use a negative number to not apply a timeout) like this:
 
 ```php
-$factory->createLazyConnection('localhost?timeout=0.5');
+$mysql = new React\MySQL\MysqlClient('localhost?timeout=0.5');
 ```
 
 By default, idle connections will be held open for 1ms (0.001s) when not
@@ -291,7 +163,7 @@ pass a custom idle timeout value in seconds (or use a negative number to
 not apply a timeout) like this:
 
 ```php
-$factory->createLazyConnection('localhost?idle=10.0');
+$mysql = new React\MySQL\MysqlClient('localhost?idle=10.0');
 ```
 
 By default, the connection provides full UTF-8 support (using the
@@ -300,8 +172,33 @@ applications nowadays, but for legacy reasons you can change this to use
 a different ASCII-compatible charset encoding like this:
 
 ```php
-$factory->createLazyConnection('localhost?charset=utf8mb4');
+$mysql = new React\MySQL\MysqlClient('localhost?charset=utf8mb4');
 ```
+
+If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
+proxy servers etc.), you can explicitly pass a custom instance of the
+[`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
+
+```php
+$connector = new React\Socket\Connector([
+    'dns' => '127.0.0.1',
+    'tcp' => [
+        'bindto' => '192.168.10.1:0'
+    ],
+    'tls' => [
+        'verify_peer' => false,
+        'verify_peer_name' => false
+    )
+]);
+
+$mysql = new React\MySQL\MysqlClient('user:secret@localhost:3306/database', $connector);
+```
+
+This class takes an optional `LoopInterface|null $loop` parameter that can be used to
+pass the event loop instance to use for this object. You can use a `null` value
+here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
+This value SHOULD NOT be given unless you're sure you want to explicitly use a
+given event loop instance.
 
 ### ConnectionInterface
 

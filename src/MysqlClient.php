@@ -1,19 +1,17 @@
 <?php
 
-namespace React\MySQL\Io;
+namespace React\MySQL;
 
-use React\MySQL\ConnectionInterface;
 use Evenement\EventEmitter;
-use React\MySQL\Exception;
-use React\MySQL\Factory;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
-use React\MySQL\QueryResult;
+use React\MySQL\Io\Factory;
+use React\Socket\ConnectorInterface;
 
 /**
- * @internal
- * @see \React\MySQL\Factory::createLazyConnection()
+ * @final
  */
-class LazyConnection extends EventEmitter implements ConnectionInterface
+class MysqlClient extends EventEmitter implements ConnectionInterface
 {
     private $factory;
     private $uri;
@@ -32,10 +30,10 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
     private $pending = 0;
 
     public function __construct(
-        Factory $factory,
         #[\SensitiveParameter]
         $uri,
-        LoopInterface $loop
+        ConnectorInterface $connector = null,
+        LoopInterface $loop = null
     ) {
         $args = [];
         \parse_str((string) \parse_url($uri, \PHP_URL_QUERY), $args);
@@ -43,9 +41,9 @@ class LazyConnection extends EventEmitter implements ConnectionInterface
             $this->idlePeriod = (float)$args['idle'];
         }
 
-        $this->factory = $factory;
+        $this->factory = new Factory($loop, $connector);
         $this->uri = $uri;
-        $this->loop = $loop;
+        $this->loop = $loop ?: Loop::get();
     }
 
     private function connecting()
