@@ -26,7 +26,7 @@ class Factory
     private $connector;
 
     /**
-     * The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
+     * The `Factory` is responsible for creating an internal `Connection` instance.
      *
      * ```php
      * $factory = new React\MySQL\Io\Factory();
@@ -74,7 +74,7 @@ class Factory
      *
      * ```php
      * $factory->createConnection($url)->then(
-     *     function (ConnectionInterface $connection) {
+     *     function (Connection $connection) {
      *         // client connection established (and authenticated)
      *     },
      *     function (Exception $e) {
@@ -84,7 +84,7 @@ class Factory
      * ```
      *
      * The method returns a [Promise](https://github.com/reactphp/promise) that
-     * will resolve with a [`ConnectionInterface`](#connectioninterface)
+     * will resolve with an internal `Connection`
      * instance on success or will reject with an `Exception` if the URL is
      * invalid or the connection or authentication fails.
      *
@@ -154,8 +154,8 @@ class Factory
      * ```
      *
      * @param string $uri
-     * @return PromiseInterface<ConnectionInterface>
-     *     Resolves with a `ConnectionInterface` on success or rejects with an `Exception` on error.
+     * @return PromiseInterface<Connection>
+     *     Resolves with a `Connection` on success or rejects with an `Exception` on error.
      */
     public function createConnection(
         #[\SensitiveParameter]

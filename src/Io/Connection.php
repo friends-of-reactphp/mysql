@@ -7,7 +7,6 @@ use React\MySQL\Commands\CommandInterface;
 use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
-use React\MySQL\ConnectionInterface;
 use React\MySQL\Exception;
 use React\MySQL\QueryResult;
 use React\Promise\Deferred;
@@ -16,9 +15,9 @@ use React\Socket\ConnectionInterface as SocketConnectionInterface;
 
 /**
  * @internal
- * @see ConnectionInterface
+ * @see \React\MySQL\MysqlClient
  */
-class Connection extends EventEmitter implements ConnectionInterface
+class Connection extends EventEmitter
 {
     const STATE_AUTHENTICATED       = 5;
     const STATE_CLOSING             = 6;

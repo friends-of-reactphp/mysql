@@ -3,7 +3,7 @@
 namespace React\Tests\MySQL\Io;
 
 use React\EventLoop\Loop;
-use React\MySQL\ConnectionInterface;
+use React\MySQL\Io\Connection;
 use React\MySQL\Io\Factory;
 use React\Promise\Promise;
 use React\Socket\SocketServer;
@@ -275,7 +275,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString();
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->quit()->then(function () {
                 echo 'closed.';
@@ -292,7 +292,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString(['dbname' => '']);
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->quit()->then(function () {
                 echo 'closed.';
@@ -309,7 +309,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString() . '?timeout=-1';
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->quit()->then(function () {
                 echo 'closed.';
@@ -326,7 +326,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString();
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->ping()->then(function () use ($connection) {
                 echo 'ping.';
@@ -346,7 +346,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString();
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->ping()->then(function () {
                 echo 'ping.';
@@ -366,7 +366,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString();
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->quit()->then(function () {
                 echo 'closed.';
@@ -388,7 +388,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString();
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->on('close', function () {
                 echo 'closed.';
@@ -411,7 +411,7 @@ class FactoryTest extends BaseTestCase
         $factory = new Factory();
 
         $uri = $this->getConnectionString();
-        $factory->createConnection($uri)->then(function (ConnectionInterface $connection) {
+        $factory->createConnection($uri)->then(function (Connection $connection) {
             echo 'connected.';
             $connection->on('close', function () {
                 echo 'closed.';

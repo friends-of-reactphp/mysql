@@ -4,7 +4,7 @@ namespace React\Tests\MySQL;
 
 use PHPUnit\Framework\TestCase;
 use React\EventLoop\LoopInterface;
-use React\MySQL\ConnectionInterface;
+use React\MySQL\Io\Connection;
 use React\MySQL\Io\Factory;
 
 class BaseTestCase extends TestCase
@@ -30,7 +30,7 @@ class BaseTestCase extends TestCase
 
     /**
      * @param LoopInterface $loop
-     * @return ConnectionInterface
+     * @return Connection
      */
     protected function createConnection(LoopInterface $loop)
     {
