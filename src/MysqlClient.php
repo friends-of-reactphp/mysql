@@ -51,13 +51,16 @@ class MysqlClient extends EventEmitter
 {
     private $factory;
     private $uri;
-    private $connecting;
     private $closed = false;
     private $busy = false;
 
-    /**
-     * @var Connection|null
-     */
+    /** @var PromiseInterface<Connection>|null */
+    private $connecting;
+
+    /** @var ?Connection */
+    private $connection;
+
+    /** @var ?Connection */
     private $disconnecting;
 
     private $loop;
@@ -82,8 +85,15 @@ class MysqlClient extends EventEmitter
         $this->loop = $loop ?: Loop::get();
     }
 
-    private function connecting()
+    /**
+     * @return PromiseInterface<Connection>
+     */
+    private function getConnection()
     {
+        if ($this->connection !== null && $this->disconnecting === null) {
+            return \React\Promise\resolve($this->connection);
+        }
+
         if ($this->connecting !== null) {
             return $this->connecting;
         }
@@ -96,9 +106,12 @@ class MysqlClient extends EventEmitter
 
         $this->connecting = $connecting = $this->factory->createConnection($this->uri);
         $this->connecting->then(function (Connection $connection) {
+            $this->connection = $connection;
+            $this->connecting = null;
+
             // connection completed => remember only until closed
             $connection->on('close', function () {
-                $this->connecting = null;
+                $this->connection = null;
 
                 if ($this->idleTimer !== null) {
                     $this->loop->cancelTimer($this->idleTimer);
@@ -127,23 +140,20 @@ class MysqlClient extends EventEmitter
     {
         --$this->pending;
 
-        if ($this->pending < 1 && $this->idlePeriod >= 0 && $this->connecting !== null) {
+        if ($this->pending < 1 && $this->idlePeriod >= 0 && $this->connection !== null) {
             $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
-                $this->connecting->then(function (Connection $connection) {
-                    $this->disconnecting = $connection;
-                    $connection->quit()->then(
-                        function () {
-                            // successfully disconnected => remove reference
-                            $this->disconnecting = null;
-                        },
-                        function () {
-                            // soft-close failed but will close anyway => remove reference
-                            $this->disconnecting = null;
-                        }
-                    );
-                });
-                $this->connecting = null;
                 $this->idleTimer = null;
+                $this->disconnecting = $this->connection;
+                $this->connection->quit()->then(
+                    function () {
+                        // successfully disconnected => remove reference
+                        $this->disconnecting = null;
+                    },
+                    function () {
+                        // soft-close failed but will close anyway => remove reference
+                        $this->disconnecting = null;
+                    }
+                );
             });
         }
     }
@@ -213,7 +223,7 @@ class MysqlClient extends EventEmitter
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
-        return $this->connecting()->then(function (Connection $connection) use ($sql, $params) {
+        return $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
             $this->awake();
             return $connection->query($sql, $params)->then(
                 function (MysqlResult $result) {
@@ -294,7 +304,7 @@ class MysqlClient extends EventEmitter
         }
 
         return \React\Promise\Stream\unwrapReadable(
-            $this->connecting()->then(function (Connection $connection) use ($sql, $params) {
+            $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
                 $stream = $connection->queryStream($sql, $params);
 
                 $this->awake();
@@ -333,7 +343,7 @@ class MysqlClient extends EventEmitter
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
-        return $this->connecting()->then(function (Connection $connection) {
+        return $this->getConnection()->then(function (Connection $connection) {
             $this->awake();
             return $connection->ping()->then(
                 function () {
@@ -376,13 +386,13 @@ class MysqlClient extends EventEmitter
         }
 
         // not already connecting => no need to connect, simply close virtual connection
-        if ($this->connecting === null) {
+        if ($this->connection === null && $this->connecting === null) {
             $this->close();
             return \React\Promise\resolve(null);
         }
 
         return new Promise(function (callable $resolve, callable $reject) {
-            $this->connecting()->then(function (Connection $connection) use ($resolve, $reject) {
+            $this->getConnection()->then(function (Connection $connection) use ($resolve, $reject) {
                 $this->awake();
                 // soft-close connection and emit close event afterwards both on success or on error
                 $connection->quit()->then(
@@ -428,22 +438,17 @@ class MysqlClient extends EventEmitter
         $this->closed = true;
 
         // force-close connection if still waiting for previous disconnection
+        // either close active connection or cancel pending connection attempt
+        // below branches are exclusive, there can only be a single connection
         if ($this->disconnecting !== null) {
             $this->disconnecting->close();
             $this->disconnecting = null;
-        }
-
-        // either close active connection or cancel pending connection attempt
-        if ($this->connecting !== null) {
-            $this->connecting->then(function (Connection $connection) {
-                $connection->close();
-            }, function () {
-                // ignore to avoid reporting unhandled rejection
-            });
-            if ($this->connecting !== null) {
-                $this->connecting->cancel();
-                $this->connecting = null;
-            }
+        } elseif ($this->connection !== null) {
+            $this->connection->close();
+            $this->connection = null;
+        } elseif ($this->connecting !== null) {
+            $this->connecting->cancel();
+            $this->connecting = null;
         }
 
         if ($this->idleTimer !== null) {
