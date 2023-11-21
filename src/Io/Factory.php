@@ -1,21 +1,22 @@
 <?php
 
-namespace React\MySQL;
+namespace React\MySQL\Io;
 
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\MySQL\Commands\AuthenticateCommand;
-use React\MySQL\Io\Connection;
-use React\MySQL\Io\Executor;
-use React\MySQL\Io\Parser;
+use React\MySQL\Exception;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use React\Promise\Timer\TimeoutException;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
-use React\MySQL\Io\LazyConnection;
 
+/**
+ * @internal
+ * @see \React\MySQL\MysqlClient
+ */
 class Factory
 {
     /** @var LoopInterface */
@@ -25,10 +26,10 @@ class Factory
     private $connector;
 
     /**
-     * The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
+     * The `Factory` is responsible for creating an internal `Connection` instance.
      *
      * ```php
-     * $factory = new React\MySQL\Factory();
+     * $factory = new React\MySQL\Io\Factory();
      * ```
      *
      * This class takes an optional `LoopInterface|null $loop` parameter that can be used to
@@ -73,7 +74,7 @@ class Factory
      *
      * ```php
      * $factory->createConnection($url)->then(
-     *     function (ConnectionInterface $connection) {
+     *     function (Connection $connection) {
      *         // client connection established (and authenticated)
      *     },
      *     function (Exception $e) {
@@ -83,7 +84,7 @@ class Factory
      * ```
      *
      * The method returns a [Promise](https://github.com/reactphp/promise) that
-     * will resolve with a [`ConnectionInterface`](#connectioninterface)
+     * will resolve with an internal `Connection`
      * instance on success or will reject with an `Exception` if the URL is
      * invalid or the connection or authentication fails.
      *
@@ -153,8 +154,8 @@ class Factory
      * ```
      *
      * @param string $uri
-     * @return PromiseInterface<ConnectionInterface>
-     *     Resolves with a `ConnectionInterface` on success or rejects with an `Exception` on error.
+     * @return PromiseInterface<Connection>
+     *     Resolves with a `Connection` on success or rejects with an `Exception` on error.
      */
     public function createConnection(
         #[\SensitiveParameter]
@@ -258,131 +259,5 @@ class Factory
             }
             throw $e;
         });
-    }
-
-    /**
-     * Creates a new connection.
-     *
-     * It helps with establishing a TCP/IP connection to your MySQL database
-     * and issuing the initial authentication handshake.
-     *
-     * ```php
-     * $connection = $factory->createLazyConnection($url);
-     *
-     * $connection->query(…);
-     * ```
-     *
-     * This method immediately returns a "virtual" connection implementing the
-     * [`ConnectionInterface`](#connectioninterface) that can be used to
-     * interface with your MySQL database. Internally, it lazily creates the
-     * underlying database connection only on demand once the first request is
-     * invoked on this instance and will queue all outstanding requests until
-     * the underlying connection is ready. This underlying connection will be
-     * reused for all requests until it is closed. By default, idle connections
-     * will be held open for 1ms (0.001s) when not used. The next request will
-     * either reuse the existing connection or will automatically create a new
-     * underlying connection if this idle time is expired.
-     *
-     * From a consumer side this means that you can start sending queries to the
-     * database right away while the underlying connection may still be
-     * outstanding. Because creating this underlying connection may take some
-     * time, it will enqueue all outstanding commands and will ensure that all
-     * commands will be executed in correct order once the connection is ready.
-     * In other words, this "virtual" connection behaves just like a "real"
-     * connection as described in the `ConnectionInterface` and frees you from
-     * having to deal with its async resolution.
-     *
-     * If the underlying database connection fails, it will reject all
-     * outstanding commands and will return to the initial "idle" state. This
-     * means that you can keep sending additional commands at a later time which
-     * will again try to open a new underlying connection. Note that this may
-     * require special care if you're using transactions that are kept open for
-     * longer than the idle period.
-     *
-     * Note that creating the underlying connection will be deferred until the
-     * first request is invoked. Accordingly, any eventual connection issues
-     * will be detected once this instance is first used. You can use the
-     * `quit()` method to ensure that the "virtual" connection will be soft-closed
-     * and no further commands can be enqueued. Similarly, calling `quit()` on
-     * this instance when not currently connected will succeed immediately and
-     * will not have to wait for an actual underlying connection.
-     *
-     * Depending on your particular use case, you may prefer this method or the
-     * underlying `createConnection()` which resolves with a promise. For many
-     * simple use cases it may be easier to create a lazy connection.
-     *
-     * The `$url` parameter must contain the database host, optional
-     * authentication, port and database to connect to:
-     *
-     * ```php
-     * $factory->createLazyConnection('user:secret@localhost:3306/database');
-     * ```
-     *
-     * Note that both the username and password must be URL-encoded (percent-encoded)
-     * if they contain special characters:
-     *
-     * ```php
-     * $user = 'he:llo';
-     * $pass = 'p@ss';
-     *
-     * $connection = $factory->createLazyConnection(
-     *     rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
-     * );
-     * ```
-     *
-     * You can omit the port if you're connecting to default port `3306`:
-     *
-     * ```php
-     * $factory->createLazyConnection('user:secret@localhost/database');
-     * ```
-     *
-     * If you do not include authentication and/or database, then this method
-     * will default to trying to connect as user `root` with an empty password
-     * and no database selected. This may be useful when initially setting up a
-     * database, but likely to yield an authentication error in a production system:
-     *
-     * ```php
-     * $factory->createLazyConnection('localhost');
-     * ```
-     *
-     * This method respects PHP's `default_socket_timeout` setting (default 60s)
-     * as a timeout for establishing the underlying connection and waiting for
-     * successful authentication. You can explicitly pass a custom timeout value
-     * in seconds (or use a negative number to not apply a timeout) like this:
-     *
-     * ```php
-     * $factory->createLazyConnection('localhost?timeout=0.5');
-     * ```
-     *
-     * By default, idle connections will be held open for 1ms (0.001s) when not
-     * used. The next request will either reuse the existing connection or will
-     * automatically create a new underlying connection if this idle time is
-     * expired. This ensures you always get a "fresh" connection and as such
-     * should not be confused with a "keepalive" or "heartbeat" mechanism, as
-     * this will not actively try to probe the connection. You can explicitly
-     * pass a custom idle timeout value in seconds (or use a negative number to
-     * not apply a timeout) like this:
-     *
-     * ```php
-     * $factory->createLazyConnection('localhost?idle=10.0');
-     * ```
-     *
-     * By default, the connection provides full UTF-8 support (using the
-     * `utf8mb4` charset encoding). This should usually not be changed for most
-     * applications nowadays, but for legacy reasons you can change this to use
-     * a different ASCII-compatible charset encoding like this:
-     *
-     * ```php
-     * $factory->createLazyConnection('localhost?charset=utf8mb4');
-     * ```
-     *
-     * @param string $uri
-     * @return ConnectionInterface
-     */
-    public function createLazyConnection(
-        #[\SensitiveParameter]
-        $uri
-    ) {
-        return new LazyConnection($this, $uri, $this->loop);
     }
 }

@@ -4,8 +4,8 @@ namespace React\Tests\MySQL;
 
 use React\EventLoop\Loop;
 use React\MySQL\Io\Constants;
+use React\MySQL\MysqlClient;
 use React\MySQL\QueryResult;
-use React\MySQL\Factory;
 
 class ResultQueryTest extends BaseTestCase
 {
@@ -368,10 +368,8 @@ class ResultQueryTest extends BaseTestCase
 
     public function testSelectWithExplicitCharsetReturnsCharset()
     {
-        $factory = new Factory();
-
         $uri = $this->getConnectionString() . '?charset=latin1';
-        $connection = $factory->createLazyConnection($uri);
+        $connection = new MysqlClient($uri);
 
         $connection->query('SELECT @@character_set_client')->then(function (QueryResult $command) {
             $this->assertCount(1, $command->resultRows);
@@ -404,12 +402,10 @@ class ResultQueryTest extends BaseTestCase
     /**
      * @depends testSimpleSelect
      */
-    public function testSimpleSelectFromLazyConnectionWithoutDatabaseNameReturnsSameData()
+    public function testSimpleSelectFromMysqlClientWithoutDatabaseNameReturnsSameData()
     {
-        $factory = new Factory();
-
         $uri = $this->getConnectionString(['dbname' => '']);
-        $connection = $factory->createLazyConnection($uri);
+        $connection = new MysqlClient($uri);
 
         $connection->query('select * from test.book')->then(function (QueryResult $command) {
             $this->assertCount(2, $command->resultRows);
@@ -560,12 +556,10 @@ class ResultQueryTest extends BaseTestCase
         Loop::run();
     }
 
-    public function testQueryStreamFromLazyConnectionEmitsSingleRow()
+    public function testQueryStreamFromMysqlClientEmitsSingleRow()
     {
-        $factory = new Factory();
-
         $uri = $this->getConnectionString();
-        $connection = $factory->createLazyConnection($uri);
+        $connection = new MysqlClient($uri);
 
         $stream = $connection->queryStream('SELECT 1');
 
@@ -577,12 +571,10 @@ class ResultQueryTest extends BaseTestCase
         Loop::run();
     }
 
-    public function testQueryStreamFromLazyConnectionWillErrorWhenConnectionIsClosed()
+    public function testQueryStreamFromMysqlClientWillErrorWhenConnectionIsClosed()
     {
-        $factory = new Factory();
-
         $uri = $this->getConnectionString();
-        $connection = $factory->createLazyConnection($uri);
+        $connection = new MysqlClient($uri);
 
         $stream = $connection->queryStream('SELECT 1');
 

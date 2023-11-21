@@ -22,16 +22,15 @@ It is written in pure PHP and does not require any extensions.
 
 * [Quickstart example](#quickstart-example)
 * [Usage](#usage)
-  * [Factory](#factory)
-    * [createConnection()](#createconnection)
-    * [createLazyConnection()](#createlazyconnection)
-  * [ConnectionInterface](#connectioninterface)
+  * [MysqlClient](#mysqlclient)
+    * [__construct()](#__construct)
     * [query()](#query)
     * [queryStream()](#querystream)
     * [ping()](#ping)
     * [quit()](#quit)
     * [close()](#close)
-    * [Events](#events)
+    * [error event](#error-event)
+    * [close event](#close-event)
 * [Install](#install)
 * [Tests](#tests)
 * [License](#license)
@@ -45,11 +44,10 @@ This example runs a simple `SELECT` query and dumps all the records from a `book
 
 require __DIR__ . '/vendor/autoload.php';
 
-$factory = new React\MySQL\Factory();
-$connection = $factory->createLazyConnection('user:pass@localhost/bookstore');
+$mysql = new React\MySQL\MysqlClient('user:pass@localhost/bookstore');
 
-$connection->query('SELECT * FROM book')->then(
-    function (QueryResult $command) {
+$mysql->query('SELECT * FROM book')->then(
+    function (React\MySQL\QueryResult $command) {
         print_r($command->resultFields);
         print_r($command->resultRows);
         echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
@@ -64,19 +62,118 @@ See also the [examples](examples).
 
 ## Usage
 
-### Factory
+### MysqlClient
 
-The `Factory` is responsible for creating your [`ConnectionInterface`](#connectioninterface) instance.
+The `MysqlClient` is responsible for exchanging messages with your MySQL server
+and keeps track of pending queries.
 
 ```php
-$factory = new React\MySQL\Factory();
+$mysql = new React\MySQL\MysqlClient($uri);
+
+$mysql->query(…);
 ```
 
-This class takes an optional `LoopInterface|null $loop` parameter that can be used to
-pass the event loop instance to use for this object. You can use a `null` value
-here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
-This value SHOULD NOT be given unless you're sure you want to explicitly use a
-given event loop instance.
+This class represents a connection that is responsible for communicating
+with your MySQL server instance, managing the connection state and sending
+your database queries. Internally, it creates the underlying database
+connection only on demand once the first request is invoked on this
+instance and will queue all outstanding requests until the underlying
+connection is ready. This underlying connection will be reused for all
+requests until it is closed. By default, idle connections will be held
+open for 1ms (0.001s) when not used. The next request will either reuse
+the existing connection or will automatically create a new underlying
+connection if this idle time is expired.
+
+From a consumer side this means that you can start sending queries to the
+database right away while the underlying connection may still be
+outstanding. Because creating this underlying connection may take some
+time, it will enqueue all outstanding commands and will ensure that all
+commands will be executed in correct order once the connection is ready.
+
+If the underlying database connection fails, it will reject all
+outstanding commands and will return to the initial "idle" state. This
+means that you can keep sending additional commands at a later time which
+will again try to open a new underlying connection. Note that this may
+require special care if you're using transactions that are kept open for
+longer than the idle period.
+
+Note that creating the underlying connection will be deferred until the
+first request is invoked. Accordingly, any eventual connection issues
+will be detected once this instance is first used. You can use the
+`quit()` method to ensure that the connection will be soft-closed
+and no further commands can be enqueued. Similarly, calling `quit()` on
+this instance when not currently connected will succeed immediately and
+will not have to wait for an actual underlying connection.
+
+#### __construct()
+
+The `new MysqlClient(string $uri, ConnectorInterface $connector = null, LoopInterface $loop = null)` constructor can be used to
+create a new `MysqlClient` instance.
+
+The `$uri` parameter must contain the database host, optional
+authentication, port and database to connect to:
+
+```php
+$mysql = new React\MySQL\MysqlClient('user:secret@localhost:3306/database');
+```
+
+Note that both the username and password must be URL-encoded (percent-encoded)
+if they contain special characters:
+
+```php
+$user = 'he:llo';
+$pass = 'p@ss';
+
+$mysql = new React\MySQL\MysqlClient(
+    rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
+);
+```
+
+You can omit the port if you're connecting to default port `3306`:
+
+```php
+$mysql = new React\MySQL\MysqlClient('user:secret@localhost/database');
+```
+
+If you do not include authentication and/or database, then this method
+will default to trying to connect as user `root` with an empty password
+and no database selected. This may be useful when initially setting up a
+database, but likely to yield an authentication error in a production system:
+
+```php
+$mysql = new React\MySQL\MysqlClient('localhost');
+```
+
+This method respects PHP's `default_socket_timeout` setting (default 60s)
+as a timeout for establishing the underlying connection and waiting for
+successful authentication. You can explicitly pass a custom timeout value
+in seconds (or use a negative number to not apply a timeout) like this:
+
+```php
+$mysql = new React\MySQL\MysqlClient('localhost?timeout=0.5');
+```
+
+By default, idle connections will be held open for 1ms (0.001s) when not
+used. The next request will either reuse the existing connection or will
+automatically create a new underlying connection if this idle time is
+expired. This ensures you always get a "fresh" connection and as such
+should not be confused with a "keepalive" or "heartbeat" mechanism, as
+this will not actively try to probe the connection. You can explicitly
+pass a custom idle timeout value in seconds (or use a negative number to
+not apply a timeout) like this:
+
+```php
+$mysql = new React\MySQL\MysqlClient('localhost?idle=10.0');
+```
+
+By default, the connection provides full UTF-8 support (using the
+`utf8mb4` charset encoding). This should usually not be changed for most
+applications nowadays, but for legacy reasons you can change this to use
+a different ASCII-compatible charset encoding like this:
+
+```php
+$mysql = new React\MySQL\MysqlClient('localhost?charset=utf8mb4');
+```
 
 If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
 proxy servers etc.), you can explicitly pass a custom instance of the
@@ -94,220 +191,14 @@ $connector = new React\Socket\Connector([
     )
 ]);
 
-$factory = new React\MySQL\Factory(null, $connector);
+$mysql = new React\MySQL\MysqlClient('user:secret@localhost:3306/database', $connector);
 ```
 
-#### createConnection()
-
-The `createConnection(string $url): PromiseInterface<ConnectionInterface>` method can be used to
-create a new [`ConnectionInterface`](#connectioninterface).
-
-It helps with establishing a TCP/IP connection to your MySQL database
-and issuing the initial authentication handshake.
-
-```php
-$factory->createConnection($url)->then(
-    function (ConnectionInterface $connection) {
-        // client connection established (and authenticated)
-    },
-    function (Exception $e) {
-        // an error occurred while trying to connect or authorize client
-    }
-);
-```
-
-The method returns a [Promise](https://github.com/reactphp/promise) that
-will resolve with a [`ConnectionInterface`](#connectioninterface)
-instance on success or will reject with an `Exception` if the URL is
-invalid or the connection or authentication fails.
-
-The returned Promise is implemented in such a way that it can be
-cancelled when it is still pending. Cancelling a pending promise will
-reject its value with an Exception and will cancel the underlying TCP/IP
-connection attempt and/or MySQL authentication.
-
-```php
-$promise = $factory->createConnection($url);
-
-Loop::addTimer(3.0, function () use ($promise) {
-    $promise->cancel();
-});
-```
-
-The `$url` parameter must contain the database host, optional
-authentication, port and database to connect to:
-
-```php
-$factory->createConnection('user:secret@localhost:3306/database');
-```
-
-Note that both the username and password must be URL-encoded (percent-encoded)
-if they contain special characters:
-
-```php
-$user = 'he:llo';
-$pass = 'p@ss';
-
-$promise = $factory->createConnection(
-    rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
-);
-```
-
-You can omit the port if you're connecting to default port `3306`:
-
-```php
-$factory->createConnection('user:secret@localhost/database');
-```
-
-If you do not include authentication and/or database, then this method
-will default to trying to connect as user `root` with an empty password
-and no database selected. This may be useful when initially setting up a
-database, but likely to yield an authentication error in a production system:
-
-```php
-$factory->createConnection('localhost');
-```
-
-This method respects PHP's `default_socket_timeout` setting (default 60s)
-as a timeout for establishing the connection and waiting for successful
-authentication. You can explicitly pass a custom timeout value in seconds
-(or use a negative number to not apply a timeout) like this:
-
-```php
-$factory->createConnection('localhost?timeout=0.5');
-```
-
-By default, the connection provides full UTF-8 support (using the
-`utf8mb4` charset encoding). This should usually not be changed for most
-applications nowadays, but for legacy reasons you can change this to use
-a different ASCII-compatible charset encoding like this:
-
-```php
-$factory->createConnection('localhost?charset=utf8mb4');
-```
-
-#### createLazyConnection()
-
-Creates a new connection.
-
-It helps with establishing a TCP/IP connection to your MySQL database
-and issuing the initial authentication handshake.
-
-```php
-$connection = $factory->createLazyConnection($url);
-
-$connection->query(…);
-```
-
-This method immediately returns a "virtual" connection implementing the
-[`ConnectionInterface`](#connectioninterface) that can be used to
-interface with your MySQL database. Internally, it lazily creates the
-underlying database connection only on demand once the first request is
-invoked on this instance and will queue all outstanding requests until
-the underlying connection is ready. This underlying connection will be
-reused for all requests until it is closed. By default, idle connections
-will be held open for 1ms (0.001s) when not used. The next request will
-either reuse the existing connection or will automatically create a new
-underlying connection if this idle time is expired.
-
-From a consumer side this means that you can start sending queries to the
-database right away while the underlying connection may still be
-outstanding. Because creating this underlying connection may take some
-time, it will enqueue all outstanding commands and will ensure that all
-commands will be executed in correct order once the connection is ready.
-In other words, this "virtual" connection behaves just like a "real"
-connection as described in the `ConnectionInterface` and frees you from
-having to deal with its async resolution.
-
-If the underlying database connection fails, it will reject all
-outstanding commands and will return to the initial "idle" state. This
-means that you can keep sending additional commands at a later time which
-will again try to open a new underlying connection. Note that this may
-require special care if you're using transactions that are kept open for
-longer than the idle period.
-
-Note that creating the underlying connection will be deferred until the
-first request is invoked. Accordingly, any eventual connection issues
-will be detected once this instance is first used. You can use the
-`quit()` method to ensure that the "virtual" connection will be soft-closed
-and no further commands can be enqueued. Similarly, calling `quit()` on
-this instance when not currently connected will succeed immediately and
-will not have to wait for an actual underlying connection.
-
-Depending on your particular use case, you may prefer this method or the
-underlying `createConnection()` which resolves with a promise. For many
-simple use cases it may be easier to create a lazy connection.
-
-The `$url` parameter must contain the database host, optional
-authentication, port and database to connect to:
-
-```php
-$factory->createLazyConnection('user:secret@localhost:3306/database');
-```
-
-Note that both the username and password must be URL-encoded (percent-encoded)
-if they contain special characters:
-
-```php
-$user = 'he:llo';
-$pass = 'p@ss';
-
-$connection = $factory->createLazyConnection(
-    rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
-);
-```
-
-You can omit the port if you're connecting to default port `3306`:
-
-```php
-$factory->createLazyConnection('user:secret@localhost/database');
-```
-
-If you do not include authentication and/or database, then this method
-will default to trying to connect as user `root` with an empty password
-and no database selected. This may be useful when initially setting up a
-database, but likely to yield an authentication error in a production system:
-
-```php
-$factory->createLazyConnection('localhost');
-```
-
-This method respects PHP's `default_socket_timeout` setting (default 60s)
-as a timeout for establishing the underlying connection and waiting for
-successful authentication. You can explicitly pass a custom timeout value
-in seconds (or use a negative number to not apply a timeout) like this:
-
-```php
-$factory->createLazyConnection('localhost?timeout=0.5');
-```
-
-By default, idle connections will be held open for 1ms (0.001s) when not
-used. The next request will either reuse the existing connection or will
-automatically create a new underlying connection if this idle time is
-expired. This ensures you always get a "fresh" connection and as such
-should not be confused with a "keepalive" or "heartbeat" mechanism, as
-this will not actively try to probe the connection. You can explicitly
-pass a custom idle timeout value in seconds (or use a negative number to
-not apply a timeout) like this:
-
-```php
-$factory->createLazyConnection('localhost?idle=10.0');
-```
-
-By default, the connection provides full UTF-8 support (using the
-`utf8mb4` charset encoding). This should usually not be changed for most
-applications nowadays, but for legacy reasons you can change this to use
-a different ASCII-compatible charset encoding like this:
-
-```php
-$factory->createLazyConnection('localhost?charset=utf8mb4');
-```
-
-### ConnectionInterface
-
-The `ConnectionInterface` represents a connection that is responsible for
-communicating with your MySQL server instance, managing the connection state
-and sending your database queries.
+This class takes an optional `LoopInterface|null $loop` parameter that can be used to
+pass the event loop instance to use for this object. You can use a `null` value
+here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
+This value SHOULD NOT be given unless you're sure you want to explicitly use a
+given event loop instance.
 
 #### query()
 
@@ -321,8 +212,8 @@ and outstanding queries will be put into a queue to be executed once the
 previous queries are completed.
 
 ```php
-$connection->query('CREATE TABLE test ...');
-$connection->query('INSERT INTO test (id) VALUES (1)');
+$mysql->query('CREATE TABLE test ...');
+$mysql->query('INSERT INTO test (id) VALUES (1)');
 ```
 
 If this SQL statement returns a result set (such as from a `SELECT`
@@ -334,7 +225,7 @@ unknown or known to be too large to fit into memory, you should use the
 [`queryStream()`](#querystream) method instead.
 
 ```php
-$connection->query($query)->then(function (QueryResult $command) {
+$mysql->query($query)->then(function (QueryResult $command) {
     if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)
         print_r($command->resultFields);
@@ -357,7 +248,7 @@ You can optionally pass an array of `$params` that will be bound to the
 query like this:
 
 ```php
-$connection->query('SELECT * FROM user WHERE id > ?', [$id]);
+$mysql->query('SELECT * FROM user WHERE id > ?', [$id]);
 ```
 
 The given `$sql` parameter MUST contain a single statement. Support
@@ -378,7 +269,7 @@ into memory. If you know your result set to not exceed a few dozens or
 hundreds of rows, you may want to use the [`query()`](#query) method instead.
 
 ```php
-$stream = $connection->queryStream('SELECT * FROM user');
+$stream = $mysql->queryStream('SELECT * FROM user');
 $stream->on('data', function ($row) {
     echo $row['name'] . PHP_EOL;
 });
@@ -391,7 +282,7 @@ You can optionally pass an array of `$params` that will be bound to the
 query like this:
 
 ```php
-$stream = $connection->queryStream('SELECT * FROM user WHERE id > ?', [$id]);
+$stream = $mysql->queryStream('SELECT * FROM user WHERE id > ?', [$id]);
 ```
 
 This method is specifically designed for queries that return a result set
@@ -406,7 +297,7 @@ rows to a [`WritableStreamInterface`](https://github.com/reactphp/stream#writabl
 like this:
 
 ```php
-$connection->queryStream('SELECT * FROM user')->pipe($formatter)->pipe($logger);
+$mysql->queryStream('SELECT * FROM user')->pipe($formatter)->pipe($logger);
 ```
 
 Note that as per the underlying stream definition, calling `pause()` and
@@ -434,7 +325,7 @@ and outstanding command will be put into a queue to be executed once the
 previous queries are completed.
 
 ```php
-$connection->ping()->then(function () {
+$mysql->ping()->then(function () {
     echo 'OK' . PHP_EOL;
 }, function (Exception $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
@@ -453,8 +344,8 @@ and outstanding commands will be put into a queue to be executed once the
 previous commands are completed.
 
 ```php
-$connection->query('CREATE TABLE test ...');
-$connection->quit();
+$mysql->query('CREATE TABLE test ...');
+$mysql->quit();
 ```
 
 #### close()
@@ -466,26 +357,21 @@ Unlike the `quit()` method, this method will immediately force-close the
 connection and reject all outstanding commands.
 
 ```php
-$connection->close();
+$mysql->close();
 ```
 
 Forcefully closing the connection will yield a warning in the server logs
 and should generally only be used as a last resort. See also
 [`quit()`](#quit) as a safe alternative.
 
-#### Events
-
-Besides defining a few methods, this interface also implements the
-`EventEmitterInterface` which allows you to react to certain events:
-
-##### error event
+#### error event
 
 The `error` event will be emitted once a fatal error occurs, such as
 when the connection is lost or is invalid.
 The event receives a single `Exception` argument for the error instance.
 
 ```php
-$connection->on('error', function (Exception $e) {
+$mysql->on('error', function (Exception $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
 });
 ```
@@ -494,12 +380,12 @@ This event will only be triggered for fatal errors and will be followed
 by closing the connection. It is not to be confused with "soft" errors
 caused by invalid SQL queries.
 
-##### close event
+#### close event
 
 The `close` event will be emitted once the connection closes (terminates).
 
 ```php
-$connection->on('close', function () {
+$mysql->on('close', function () {
     echo 'Connection closed' . PHP_EOL;
 });
 ```
