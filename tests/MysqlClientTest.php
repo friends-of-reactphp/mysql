@@ -4,7 +4,7 @@ namespace React\Tests\MySQL\Io;
 
 use React\MySQL\Io\Connection;
 use React\MySQL\MysqlClient;
-use React\MySQL\QueryResult;
+use React\MySQL\MysqlResult;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -308,7 +308,7 @@ class MysqlClientTest extends BaseTestCase
 
     public function testQueryWillResolveAndStartTimerWithDefaultIntervalWhenQueryFromUnderlyingConnectionResolves()
     {
-        $result = new QueryResult();
+        $result = new MysqlResult();
 
         $base = $this->getMockBuilder('React\MySQL\Io\Connection')->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve($result));
@@ -331,7 +331,7 @@ class MysqlClientTest extends BaseTestCase
 
     public function testQueryWillResolveAndStartTimerWithIntervalFromIdleParameterWhenQueryFromUnderlyingConnectionResolves()
     {
-        $result = new QueryResult();
+        $result = new MysqlResult();
 
         $base = $this->getMockBuilder('React\MySQL\Io\Connection')->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve($result));
@@ -354,7 +354,7 @@ class MysqlClientTest extends BaseTestCase
 
     public function testQueryWillResolveWithoutStartingTimerWhenQueryFromUnderlyingConnectionResolvesAndIdleParameterIsNegative()
     {
-        $result = new QueryResult();
+        $result = new MysqlResult();
 
         $base = $this->getMockBuilder('React\MySQL\Io\Connection')->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve($result));
@@ -377,7 +377,7 @@ class MysqlClientTest extends BaseTestCase
 
     public function testQueryBeforePingWillResolveWithoutStartingTimerWhenQueryFromUnderlyingConnectionResolvesBecausePingIsStillPending()
     {
-        $result = new QueryResult();
+        $result = new MysqlResult();
         $deferred = new Deferred();
 
         $base = $this->getMockBuilder('React\MySQL\Io\Connection')->disableOriginalConstructor()->getMock();

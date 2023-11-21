@@ -47,7 +47,7 @@ require __DIR__ . '/vendor/autoload.php';
 $mysql = new React\MySQL\MysqlClient('user:pass@localhost/bookstore');
 
 $mysql->query('SELECT * FROM book')->then(
-    function (React\MySQL\QueryResult $command) {
+    function (React\MySQL\MysqlResult $command) {
         print_r($command->resultFields);
         print_r($command->resultRows);
         echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
@@ -202,10 +202,10 @@ given event loop instance.
 
 #### query()
 
-The `query(string $query, array $params = []): PromiseInterface<QueryResult>` method can be used to
+The `query(string $query, array $params = []): PromiseInterface<MysqlResult>` method can be used to
 perform an async query.
 
-This method returns a promise that will resolve with a `QueryResult` on
+This method returns a promise that will resolve with a `MysqlResult` on
 success or will reject with an `Exception` on error. The MySQL protocol
 is inherently sequential, so that all queries will be performed in order
 and outstanding queries will be put into a queue to be executed once the
@@ -225,7 +225,7 @@ unknown or known to be too large to fit into memory, you should use the
 [`queryStream()`](#querystream) method instead.
 
 ```php
-$mysql->query($query)->then(function (QueryResult $command) {
+$mysql->query($query)->then(function (React\MySQL\MysqlResult $command) {
     if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)
         print_r($command->resultFields);

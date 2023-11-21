@@ -5,7 +5,7 @@ namespace React\Tests\MySQL;
 use React\EventLoop\Loop;
 use React\MySQL\Io\Constants;
 use React\MySQL\MysqlClient;
-use React\MySQL\QueryResult;
+use React\MySQL\MysqlResult;
 
 class ResultQueryTest extends BaseTestCase
 {
@@ -13,7 +13,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select \'foo\'')->then(function (QueryResult $command) {
+        $connection->query('select \'foo\'')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame('foo', reset($command->resultRows[0]));
@@ -51,7 +51,7 @@ class ResultQueryTest extends BaseTestCase
 
         $expected = $value;
 
-        $connection->query('select ?', [$value])->then(function (QueryResult $command) use ($expected) {
+        $connection->query('select ?', [$value])->then(function (MysqlResult $command) use ($expected) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
@@ -76,7 +76,7 @@ class ResultQueryTest extends BaseTestCase
         $expected = $value;
 
         $connection->query('SET SQL_MODE="NO_BACKSLASH_ESCAPES"');
-        $connection->query('select ?', [$value])->then(function (QueryResult $command) use ($expected) {
+        $connection->query('select ?', [$value])->then(function (MysqlResult $command) use ($expected) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
@@ -103,7 +103,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select ?', [$value])->then(function (QueryResult $command) use ($expected) {
+        $connection->query('select ?', [$value])->then(function (MysqlResult $command) use ($expected) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame($expected, reset($command->resultRows[0]));
@@ -117,7 +117,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select \'hello?\'')->then(function (QueryResult $command) {
+        $connection->query('select \'hello?\'')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertEquals('hello?', reset($command->resultRows[0]));
@@ -134,7 +134,7 @@ class ResultQueryTest extends BaseTestCase
         $length = 40000;
         $value = str_repeat('.', $length);
 
-        $connection->query('SELECT ?', [$value])->then(function (QueryResult $command) use ($length) {
+        $connection->query('SELECT ?', [$value])->then(function (MysqlResult $command) use ($length) {
             $this->assertCount(1, $command->resultFields);
             $this->assertEquals($length * 4, $command->resultFields[0]['length']);
             $this->assertSame(Constants::FIELD_TYPE_VAR_STRING, $command->resultFields[0]['type']);
@@ -148,7 +148,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select \'foo\' as ``')->then(function (QueryResult $command) {
+        $connection->query('select \'foo\' as ``')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame('foo', reset($command->resultRows[0]));
@@ -166,7 +166,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select null')->then(function (QueryResult $command) {
+        $connection->query('select null')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertNull(reset($command->resultRows[0]));
@@ -183,7 +183,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo" UNION select "bar"')->then(function (QueryResult $command) {
+        $connection->query('select "foo" UNION select "bar"')->then(function (MysqlResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -199,7 +199,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo" UNION select null')->then(function (QueryResult $command) {
+        $connection->query('select "foo" UNION select null')->then(function (MysqlResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -218,7 +218,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select 0 UNION select null')->then(function (QueryResult $command) {
+        $connection->query('select 0 UNION select null')->then(function (MysqlResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -237,7 +237,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo" UNION select 1')->then(function (QueryResult $command) {
+        $connection->query('select "foo" UNION select 1')->then(function (MysqlResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -256,7 +256,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo" UNION select ""')->then(function (QueryResult $command) {
+        $connection->query('select "foo" UNION select ""')->then(function (MysqlResult $command) {
             $this->assertCount(2, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -272,7 +272,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo" LIMIT 0')->then(function (QueryResult $command) {
+        $connection->query('select "foo" LIMIT 0')->then(function (MysqlResult $command) {
             $this->assertCount(0, $command->resultRows);
 
             $this->assertCount(1, $command->resultFields);
@@ -287,7 +287,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo","bar"')->then(function (QueryResult $command) {
+        $connection->query('select "foo","bar"')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(2, $command->resultRows[0]);
 
@@ -303,7 +303,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo",""')->then(function (QueryResult $command) {
+        $connection->query('select "foo",""')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(2, $command->resultRows[0]);
 
@@ -319,7 +319,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select \'\' as `first`, \'\' as `second`')->then(function (QueryResult $command) {
+        $connection->query('select \'\' as `first`, \'\' as `second`')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(2, $command->resultRows[0]);
             $this->assertSame(['', ''], array_values($command->resultRows[0]));
@@ -337,7 +337,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('select "foo" as `col`,"bar" as `col`')->then(function (QueryResult $command) {
+        $connection->query('select "foo" as `col`,"bar" as `col`')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
 
@@ -356,7 +356,7 @@ class ResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('SELECT @@character_set_client')->then(function (QueryResult $command) {
+        $connection->query('SELECT @@character_set_client')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame('utf8mb4', reset($command->resultRows[0]));
@@ -371,7 +371,7 @@ class ResultQueryTest extends BaseTestCase
         $uri = $this->getConnectionString() . '?charset=latin1';
         $connection = new MysqlClient($uri);
 
-        $connection->query('SELECT @@character_set_client')->then(function (QueryResult $command) {
+        $connection->query('SELECT @@character_set_client')->then(function (MysqlResult $command) {
             $this->assertCount(1, $command->resultRows);
             $this->assertCount(1, $command->resultRows[0]);
             $this->assertSame('latin1', reset($command->resultRows[0]));
@@ -391,7 +391,7 @@ class ResultQueryTest extends BaseTestCase
         $connection->query("insert into book (`name`) values ('foo')");
         $connection->query("insert into book (`name`) values ('bar')");
 
-        $connection->query('select * from book')->then(function (QueryResult $command) {
+        $connection->query('select * from book')->then(function (MysqlResult $command) {
             $this->assertCount(2, $command->resultRows);
         });
 
@@ -407,7 +407,7 @@ class ResultQueryTest extends BaseTestCase
         $uri = $this->getConnectionString(['dbname' => '']);
         $connection = new MysqlClient($uri);
 
-        $connection->query('select * from test.book')->then(function (QueryResult $command) {
+        $connection->query('select * from test.book')->then(function (MysqlResult $command) {
             $this->assertCount(2, $command->resultRows);
         });
 
@@ -459,7 +459,7 @@ class ResultQueryTest extends BaseTestCase
         $connection = $this->createConnection(Loop::get());
 
         Loop::addTimer(0.1, function () use ($connection) {
-            $connection->query('select 1+1')->then(function (QueryResult $command) {
+            $connection->query('select 1+1')->then(function (MysqlResult $command) {
                 $this->assertEquals([['1+1' => 2]], $command->resultRows);
             });
             $connection->quit();

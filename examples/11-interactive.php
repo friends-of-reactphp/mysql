@@ -25,7 +25,7 @@ $stdin->on('data', function ($line) use ($mysql) {
     }
 
     $time = microtime(true);
-    $mysql->query($query)->then(function (React\MySQL\QueryResult $command) use ($time) {
+    $mysql->query($query)->then(function (React\MySQL\MysqlResult $command) use ($time) {
         if (isset($command->resultRows)) {
             // this is a response to a SELECT etc. with some rows (0+)
             echo implode("\t", array_column($command->resultFields, 'name')) . PHP_EOL;
