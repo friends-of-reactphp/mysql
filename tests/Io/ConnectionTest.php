@@ -1,16 +1,16 @@
 <?php
 
-namespace React\Tests\MySQL\Io;
+namespace React\Tests\Mysql\Io;
 
-use React\MySQL\Io\Connection;
-use React\Tests\MySQL\BaseTestCase;
+use React\Mysql\Io\Connection;
+use React\Tests\Mysql\BaseTestCase;
 
 class ConnectionTest extends BaseTestCase
 {
     public function testQuitWillEnqueueOneCommand()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
-        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
         $conn = new Connection($stream, $executor);
@@ -20,7 +20,7 @@ class ConnectionTest extends BaseTestCase
     public function testQueryAfterQuitRejectsImmediately()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
-        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
         $conn = new Connection($stream, $executor);
@@ -43,7 +43,7 @@ class ConnectionTest extends BaseTestCase
     public function testQueryAfterCloseRejectsImmediately()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
-        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->never())->method('enqueue');
 
         $conn = new Connection($stream, $executor);
@@ -66,7 +66,7 @@ class ConnectionTest extends BaseTestCase
     public function testQueryStreamAfterQuitThrows()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
-        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
         $conn = new Connection($stream, $executor);
@@ -83,7 +83,7 @@ class ConnectionTest extends BaseTestCase
     public function testPingAfterQuitRejectsImmediately()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
-        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
         $conn = new Connection($stream, $executor);
@@ -106,7 +106,7 @@ class ConnectionTest extends BaseTestCase
     public function testQuitAfterQuitRejectsImmediately()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
-        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
         $conn = new Connection($stream, $executor);
@@ -137,7 +137,7 @@ class ConnectionTest extends BaseTestCase
                 return true;
             }))
         );
-        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->never())->method('enqueue');
 
         $conn = new Connection($stream, $executor);

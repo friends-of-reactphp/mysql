@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL;
+namespace React\Mysql;
 
 class Exception extends \Exception
 {

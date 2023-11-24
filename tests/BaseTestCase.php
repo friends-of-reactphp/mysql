@@ -1,11 +1,11 @@
 <?php
 
-namespace React\Tests\MySQL;
+namespace React\Tests\Mysql;
 
 use PHPUnit\Framework\TestCase;
 use React\EventLoop\LoopInterface;
-use React\MySQL\Io\Connection;
-use React\MySQL\Io\Factory;
+use React\Mysql\Io\Connection;
+use React\Mysql\Io\Factory;
 
 class BaseTestCase extends TestCase
 {

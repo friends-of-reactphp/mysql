@@ -7,7 +7,7 @@ use React\EventLoop\Loop;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$mysql = new React\MySQL\MysqlClient(getenv('MYSQL_URI') ?: 'test:test@localhost/test');
+$mysql = new React\Mysql\MysqlClient(getenv('MYSQL_URI') ?: 'test:test@localhost/test');
 
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
 $stream = $mysql->queryStream($query);
@@ -17,7 +17,7 @@ $ref->setAccessible(true);
 $promise = $ref->getValue($mysql);
 assert($promise instanceof React\Promise\PromiseInterface);
 
-$promise->then(function (React\MySQL\Io\Connection $connection) {
+$promise->then(function (React\Mysql\Io\Connection $connection) {
     // The protocol parser reads rather large chunks from the underlying connection
     // and as such can yield multiple (dozens to hundreds) rows from a single data
     // chunk. We try to artificially limit the stream chunk size here to try to

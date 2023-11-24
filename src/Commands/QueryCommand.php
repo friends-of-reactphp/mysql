@@ -1,8 +1,8 @@
 <?php
 
-namespace React\MySQL\Commands;
+namespace React\Mysql\Commands;
 
-use React\MySQL\Io\Query;
+use React\Mysql\Io\Query;
 
 /**
  * @internal

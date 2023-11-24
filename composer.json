@@ -18,12 +18,12 @@
     },
     "autoload": {
         "psr-4": {
-            "React\\MySQL\\": "src/"
+            "React\\Mysql\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "React\\Tests\\MySQL\\": "tests/"
+            "React\\Tests\\Mysql\\": "tests/"
         }
     }
 }

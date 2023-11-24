@@ -1,12 +1,12 @@
 <?php
 
-namespace React\MySQL;
+namespace React\Mysql;
 
 use Evenement\EventEmitter;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
-use React\MySQL\Io\Connection;
-use React\MySQL\Io\Factory;
+use React\Mysql\Io\Connection;
+use React\Mysql\Io\Factory;
 use React\Stream\ReadableStreamInterface;
 use React\Socket\ConnectorInterface;
 
@@ -171,7 +171,7 @@ class MysqlClient extends EventEmitter
      * [`queryStream()`](#querystream) method instead.
      *
      * ```php
-     * $mysql->query($query)->then(function (React\MySQL\MysqlResult $command) {
+     * $mysql->query($query)->then(function (React\Mysql\MysqlResult $command) {
      *     if (isset($command->resultRows)) {
      *         // this is a response to a SELECT etc. with some rows (0+)
      *         print_r($command->resultFields);

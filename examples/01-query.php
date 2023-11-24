@@ -5,10 +5,10 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$mysql = new React\MySQL\MysqlClient(getenv('MYSQL_URI') ?: 'test:test@localhost/test');
+$mysql = new React\Mysql\MysqlClient(getenv('MYSQL_URI') ?: 'test:test@localhost/test');
 
 $query = isset($argv[1]) ? $argv[1] : 'select * from book';
-$mysql->query($query)->then(function (React\MySQL\MysqlResult $command) {
+$mysql->query($query)->then(function (React\Mysql\MysqlResult $command) {
     if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)
         print_r($command->resultFields);

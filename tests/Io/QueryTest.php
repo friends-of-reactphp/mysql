@@ -1,9 +1,9 @@
 <?php
 
-namespace React\Tests\MySQL\Io;
+namespace React\Tests\Mysql\Io;
 
 use PHPUnit\Framework\TestCase;
-use React\MySQL\Io\Query;
+use React\Mysql\Io\Query;
 
 class QueryTest extends TestCase
 {
