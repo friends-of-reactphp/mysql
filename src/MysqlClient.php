@@ -3,7 +3,6 @@
 namespace React\Mysql;
 
 use Evenement\EventEmitter;
-use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Mysql\Io\Connection;
 use React\Mysql\Io\Factory;
@@ -52,7 +51,6 @@ class MysqlClient extends EventEmitter
     private $factory;
     private $uri;
     private $closed = false;
-    private $busy = false;
 
     /** @var PromiseInterface<Connection>|null */
     private $connecting;
@@ -60,13 +58,14 @@ class MysqlClient extends EventEmitter
     /** @var ?Connection */
     private $connection;
 
-    /** @var ?Connection */
-    private $disconnecting;
-
-    private $loop;
-    private $idlePeriod = 0.001;
-    private $idleTimer;
-    private $pending = 0;
+    /**
+     * set to true only between calling `quit()` and the connection closing in response
+     *
+     * @var bool
+     * @see self::quit()
+     * @see self::$closed
+     */
+    private $quitting = false;
 
     public function __construct(
         #[\SensitiveParameter]
@@ -74,15 +73,8 @@ class MysqlClient extends EventEmitter
         ConnectorInterface $connector = null,
         LoopInterface $loop = null
     ) {
-        $args = [];
-        \parse_str((string) \parse_url($uri, \PHP_URL_QUERY), $args);
-        if (isset($args['idle'])) {
-            $this->idlePeriod = (float)$args['idle'];
-        }
-
         $this->factory = new Factory($loop, $connector);
         $this->uri = $uri;
-        $this->loop = $loop ?: Loop::get();
     }
 
     /**
@@ -90,7 +82,8 @@ class MysqlClient extends EventEmitter
      */
     private function getConnection()
     {
-        if ($this->connection !== null && $this->disconnecting === null) {
+        // happy path: reuse existing connection unless it is already closing after an idle timeout
+        if ($this->connection !== null && ($this->quitting || $this->connection->state !== Connection::STATE_CLOSING)) {
             return \React\Promise\resolve($this->connection);
         }
 
@@ -99,11 +92,12 @@ class MysqlClient extends EventEmitter
         }
 
         // force-close connection if still waiting for previous disconnection
-        if ($this->disconnecting !== null) {
-            $this->disconnecting->close();
-            $this->disconnecting = null;
+        if ($this->connection !== null) {
+            assert($this->connection->state === Connection::STATE_CLOSING);
+            $this->connection->close();
         }
 
+        // create new connection if not already connected or connecting
         $this->connecting = $connecting = $this->factory->createConnection($this->uri);
         $this->connecting->then(function (Connection $connection) {
             $this->connection = $connection;
@@ -112,11 +106,6 @@ class MysqlClient extends EventEmitter
             // connection completed => remember only until closed
             $connection->on('close', function () {
                 $this->connection = null;
-
-                if ($this->idleTimer !== null) {
-                    $this->loop->cancelTimer($this->idleTimer);
-                    $this->idleTimer = null;
-                }
             });
         }, function () {
             // connection failed => discard connection attempt
@@ -124,38 +113,6 @@ class MysqlClient extends EventEmitter
         });
 
         return $connecting;
-    }
-
-    private function awake()
-    {
-        ++$this->pending;
-
-        if ($this->idleTimer !== null) {
-            $this->loop->cancelTimer($this->idleTimer);
-            $this->idleTimer = null;
-        }
-    }
-
-    private function idle()
-    {
-        --$this->pending;
-
-        if ($this->pending < 1 && $this->idlePeriod >= 0 && $this->connection !== null) {
-            $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
-                $this->idleTimer = null;
-                $this->disconnecting = $this->connection;
-                $this->connection->quit()->then(
-                    function () {
-                        // successfully disconnected => remove reference
-                        $this->disconnecting = null;
-                    },
-                    function () {
-                        // soft-close failed but will close anyway => remove reference
-                        $this->disconnecting = null;
-                    }
-                );
-            });
-        }
     }
 
     /**
@@ -224,17 +181,7 @@ class MysqlClient extends EventEmitter
         }
 
         return $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-            $this->awake();
-            return $connection->query($sql, $params)->then(
-                function (MysqlResult $result) {
-                    $this->idle();
-                    return $result;
-                },
-                function (\Exception $e) {
-                    $this->idle();
-                    throw $e;
-                }
-            );
+            return $connection->query($sql, $params);
         });
     }
 
@@ -305,14 +252,7 @@ class MysqlClient extends EventEmitter
 
         return \React\Promise\Stream\unwrapReadable(
             $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-                $stream = $connection->queryStream($sql, $params);
-
-                $this->awake();
-                $stream->on('close', function () {
-                    $this->idle();
-                });
-
-                return $stream;
+                return $connection->queryStream($sql, $params);
             })
         );
     }
@@ -344,16 +284,7 @@ class MysqlClient extends EventEmitter
         }
 
         return $this->getConnection()->then(function (Connection $connection) {
-            $this->awake();
-            return $connection->ping()->then(
-                function () {
-                    $this->idle();
-                },
-                function (\Exception $e) {
-                    $this->idle();
-                    throw $e;
-                }
-            );
+            return $connection->ping();
         });
     }
 
@@ -391,9 +322,9 @@ class MysqlClient extends EventEmitter
             return \React\Promise\resolve(null);
         }
 
+        $this->quitting = true;
         return new Promise(function (callable $resolve, callable $reject) {
             $this->getConnection()->then(function (Connection $connection) use ($resolve, $reject) {
-                $this->awake();
                 // soft-close connection and emit close event afterwards both on success or on error
                 $connection->quit()->then(
                     function () use ($resolve){
@@ -436,24 +367,16 @@ class MysqlClient extends EventEmitter
         }
 
         $this->closed = true;
+        $this->quitting = false;
 
-        // force-close connection if still waiting for previous disconnection
         // either close active connection or cancel pending connection attempt
         // below branches are exclusive, there can only be a single connection
-        if ($this->disconnecting !== null) {
-            $this->disconnecting->close();
-            $this->disconnecting = null;
-        } elseif ($this->connection !== null) {
+        if ($this->connection !== null) {
             $this->connection->close();
             $this->connection = null;
         } elseif ($this->connecting !== null) {
             $this->connecting->cancel();
             $this->connecting = null;
-        }
-
-        if ($this->idleTimer !== null) {
-            $this->loop->cancelTimer($this->idleTimer);
-            $this->idleTimer = null;
         }
 
         $this->emit('close');

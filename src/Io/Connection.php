@@ -3,6 +3,7 @@
 namespace React\Mysql\Io;
 
 use Evenement\EventEmitter;
+use React\EventLoop\LoopInterface;
 use React\Mysql\Commands\CommandInterface;
 use React\Mysql\Commands\PingCommand;
 use React\Mysql\Commands\QueryCommand;
@@ -29,25 +30,45 @@ class Connection extends EventEmitter
     private $executor;
 
     /**
-     * @var integer
+     * @var int one of the state constants (may change, but should be used readonly from outside)
+     * @see self::STATE_*
      */
-    private $state = self::STATE_AUTHENTICATED;
+    public $state = self::STATE_AUTHENTICATED;
 
     /**
      * @var SocketConnectionInterface
      */
     private $stream;
 
+    /** @var LoopInterface */
+    private $loop;
+
+    /** @var float */
+    private $idlePeriod = 0.001;
+
+    /** @var ?\React\EventLoop\TimerInterface */
+    private $idleTimer;
+
+    /** @var int */
+    private $pending = 0;
+
     /**
      * Connection constructor.
      *
      * @param SocketConnectionInterface $stream
      * @param Executor                  $executor
+     * @param LoopInterface             $loop
+     * @param ?float                    $idlePeriod
      */
-    public function __construct(SocketConnectionInterface $stream, Executor $executor)
+    public function __construct(SocketConnectionInterface $stream, Executor $executor, LoopInterface $loop, $idlePeriod)
     {
         $this->stream   = $stream;
         $this->executor = $executor;
+
+        $this->loop = $loop;
+        if ($idlePeriod !== null) {
+            $this->idlePeriod = $idlePeriod;
+        }
 
         $stream->on('error', [$this, 'handleConnectionError']);
         $stream->on('close', [$this, 'handleConnectionClosed']);
@@ -71,6 +92,7 @@ class Connection extends EventEmitter
             return \React\Promise\reject($e);
         }
 
+        $this->awake();
         $deferred = new Deferred();
 
         // store all result set rows until result set end
@@ -86,11 +108,13 @@ class Connection extends EventEmitter
 
             $rows = [];
 
+            $this->idle();
             $deferred->resolve($result);
         });
 
         // resolve / reject status reply (response without result set)
         $command->on('error', function ($error) use ($deferred) {
+            $this->idle();
             $deferred->reject($error);
         });
         $command->on('success', function () use ($command, $deferred) {
@@ -99,6 +123,7 @@ class Connection extends EventEmitter
             $result->insertId = $command->insertId;
             $result->warningCount = $command->warningCount;
 
+            $this->idle();
             $deferred->resolve($result);
         });
 
@@ -115,20 +140,30 @@ class Connection extends EventEmitter
         $command = new QueryCommand();
         $command->setQuery($query);
         $this->_doCommand($command);
+        $this->awake();
 
-        return new QueryStream($command, $this->stream);
+        $stream = new QueryStream($command, $this->stream);
+        $stream->on('close', function () {
+            $this->idle();
+        });
+
+        return $stream;
     }
 
     public function ping()
     {
         return new Promise(function ($resolve, $reject) {
-            $this->_doCommand(new PingCommand())
-                ->on('error', function ($reason) use ($reject) {
-                    $reject($reason);
-                })
-                ->on('success', function () use ($resolve) {
-                    $resolve(null);
-                });
+            $command = $this->_doCommand(new PingCommand());
+            $this->awake();
+
+            $command->on('success', function () use ($resolve) {
+                $this->idle();
+                $resolve(null);
+            });
+            $command->on('error', function ($reason) use ($reject) {
+                $this->idle();
+                $reject($reason);
+            });
         });
     }
 
@@ -137,6 +172,10 @@ class Connection extends EventEmitter
         return new Promise(function ($resolve, $reject) {
             $command = $this->_doCommand(new QuitCommand());
             $this->state = self::STATE_CLOSING;
+
+            // mark connection as "awake" until it is closed, so never "idle"
+            $this->awake();
+
             $command->on('success', function () use ($resolve) {
                 $resolve(null);
                 $this->close();
@@ -157,6 +196,11 @@ class Connection extends EventEmitter
         $this->state = self::STATE_CLOSED;
         $remoteClosed = $this->stream->isReadable() === false && $this->stream->isWritable() === false;
         $this->stream->close();
+
+        if ($this->idleTimer !== null) {
+            $this->loop->cancelTimer($this->idleTimer);
+            $this->idleTimer = null;
+        }
 
         // reject all pending commands if connection is closed
         while (!$this->executor->isIdle()) {
@@ -222,5 +266,30 @@ class Connection extends EventEmitter
         }
 
         return $this->executor->enqueue($command);
+    }
+
+    private function awake()
+    {
+        ++$this->pending;
+
+        if ($this->idleTimer !== null) {
+            $this->loop->cancelTimer($this->idleTimer);
+            $this->idleTimer = null;
+        }
+    }
+
+    private function idle()
+    {
+        --$this->pending;
+
+        if ($this->pending < 1 && $this->idlePeriod >= 0 && $this->state === self::STATE_AUTHENTICATED) {
+            $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
+                // soft-close connection and emit close event afterwards both on success or on error
+                $this->idleTimer = null;
+                $this->quit()->then(null, function () {
+                    // ignore to avoid reporting unhandled rejection
+                });
+            });
+        }
     }
 }

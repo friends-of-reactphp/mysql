@@ -210,11 +210,12 @@ class Factory
             $connecting->cancel();
         });
 
-        $connecting->then(function (SocketConnectionInterface $stream) use ($authCommand, $deferred, $uri) {
+        $idlePeriod = isset($args['idle']) ? (float) $args['idle'] : null;
+        $connecting->then(function (SocketConnectionInterface $stream) use ($authCommand, $deferred, $uri, $idlePeriod) {
             $executor = new Executor();
             $parser = new Parser($stream, $executor);
 
-            $connection = new Connection($stream, $executor);
+            $connection = new Connection($stream, $executor, $this->loop, $idlePeriod);
             $command = $executor->enqueue($authCommand);
             $parser->start();
 

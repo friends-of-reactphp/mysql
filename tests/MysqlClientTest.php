@@ -27,12 +27,6 @@ class MysqlClientTest extends BaseTestCase
 
         $this->assertInstanceOf('React\Socket\ConnectorInterface', $connector);
 
-        $ref = new \ReflectionProperty($mysql, 'loop');
-        $ref->setAccessible(true);
-        $loop = $ref->getValue($mysql);
-
-        $this->assertInstanceOf('React\EventLoop\LoopInterface', $loop);
-
         $ref = new \ReflectionProperty($factory, 'loop');
         $ref->setAccessible(true);
         $loop = $ref->getValue($factory);
@@ -55,11 +49,6 @@ class MysqlClientTest extends BaseTestCase
         $ref->setAccessible(true);
 
         $this->assertSame($connector, $ref->getValue($factory));
-
-        $ref = new \ReflectionProperty($mysql, 'loop');
-        $ref->setAccessible(true);
-
-        $this->assertSame($loop, $ref->getValue($mysql));
 
         $ref = new \ReflectionProperty($factory, 'loop');
         $ref->setAccessible(true);
@@ -90,7 +79,7 @@ class MysqlClientTest extends BaseTestCase
         $deferred->reject(new \RuntimeException());
     }
 
-    public function testPingWillNotCloseConnectionWhenUnderlyingConnectionCloses()
+    public function testConnectionCloseEventAfterPingWillNotEmitCloseEvent()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
@@ -114,34 +103,7 @@ class MysqlClientTest extends BaseTestCase
         $base->emit('close');
     }
 
-    public function testPingWillCancelTimerWithoutClosingConnectionWhenUnderlyingConnectionCloses()
-    {
-        $base = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping', 'close'])->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-
-        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
-        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
-
-        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $loop->expects($this->once())->method('cancelTimer')->with($timer);
-
-        $connection = new MysqlClient('', null, $loop);
-
-        $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
-        $ref->setValue($connection, $factory);
-
-        $connection->on('close', $this->expectCallableNever());
-
-        $connection->ping();
-
-        assert($base instanceof Connection);
-        $base->emit('close');
-    }
-
-    public function testPingWillNotForwardErrorFromUnderlyingConnection()
+    public function testConnectionErrorEventAfterPingWillNotEmitErrorEvent()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
@@ -161,87 +123,15 @@ class MysqlClientTest extends BaseTestCase
 
         $connection->ping();
 
+        assert($base instanceof Connection);
         $base->emit('error', [new \RuntimeException()]);
     }
 
-    public function testPingFollowedByIdleTimerWillQuitUnderlyingConnection()
+    public function testPingAfterConnectionIsInClosingStateDueToIdleTimerWillCloseConnectionBeforeCreatingSecondConnection()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->once())->method('quit')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->never())->method('close');
-
-        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
-        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
-
-        $timeout = null;
-        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
-            $timeout = $cb;
-            return true;
-        }))->willReturn($timer);
-
-        $connection = new MysqlClient('', null, $loop);
-
-        $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
-        $ref->setValue($connection, $factory);
-
-        $connection->on('close', $this->expectCallableNever());
-
-        $connection->ping();
-
-        $this->assertNotNull($timeout);
-        $timeout();
-    }
-
-    public function testPingFollowedByIdleTimerWillNotHaveToCloseUnderlyingConnectionWhenQuitFailsBecauseUnderlyingConnectionEmitsCloseAutomatically()
-    {
-        $base = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->once())->method('quit')->willReturn(\React\Promise\reject(new \RuntimeException()));
-        $base->expects($this->never())->method('close');
-
-        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
-        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
-
-        $timeout = null;
-        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
-            $timeout = $cb;
-            return true;
-        }))->willReturn($timer);
-
-        $connection = new MysqlClient('', null, $loop);
-
-        $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
-        $ref->setValue($connection, $factory);
-
-        $connection->on('close', $this->expectCallableNever());
-
-        $connection->ping();
-
-        $this->assertNotNull($timeout);
-        $timeout();
-
-        assert($base instanceof Connection);
-        $base->emit('close');
-
-        $ref = new \ReflectionProperty($connection, 'connecting');
-        $ref->setAccessible(true);
-        $connecting = $ref->getValue($connection);
-
-        $this->assertNull($connecting);
-    }
-
-    public function testPingAfterIdleTimerWillCloseUnderlyingConnectionBeforeCreatingSecondConnection()
-    {
-        $base = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->once())->method('quit')->willReturn(new Promise(function () { }));
+        $base->expects($this->never())->method('quit');
         $base->expects($this->once())->method('close');
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -250,13 +140,7 @@ class MysqlClientTest extends BaseTestCase
             new Promise(function () { })
         );
 
-        $timeout = null;
-        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
-            $timeout = $cb;
-            return true;
-        }))->willReturn($timer);
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -268,21 +152,19 @@ class MysqlClientTest extends BaseTestCase
 
         $connection->ping();
 
-        $this->assertNotNull($timeout);
-        $timeout();
+        // emulate triggering idle timer by setting connection state to closing
+        $base->state = Connection::STATE_CLOSING;
 
         $connection->ping();
     }
 
-
-    public function testQueryReturnsPendingPromiseAndWillNotStartTimerWhenConnectionIsPending()
+    public function testQueryReturnsPendingPromiseWhenConnectionIsPending()
     {
         $deferred = new Deferred();
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->never())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -314,7 +196,7 @@ class MysqlClientTest extends BaseTestCase
         $connection->query('SELECT 1');
     }
 
-    public function testQueryWillResolveAndStartTimerWithDefaultIntervalWhenQueryFromUnderlyingConnectionResolves()
+    public function testQueryWillResolveWhenQueryFromUnderlyingConnectionResolves()
     {
         $result = new MysqlResult();
 
@@ -325,7 +207,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything());
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -337,53 +218,7 @@ class MysqlClientTest extends BaseTestCase
         $ret->then($this->expectCallableOnceWith($result), $this->expectCallableNever());
     }
 
-    public function testQueryWillResolveAndStartTimerWithIntervalFromIdleParameterWhenQueryFromUnderlyingConnectionResolves()
-    {
-        $result = new MysqlResult();
-
-        $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve($result));
-
-        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
-        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
-
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->with(2.5, $this->anything());
-
-        $connection = new MysqlClient('mysql://localhost?idle=2.5', null, $loop);
-
-        $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
-        $ref->setValue($connection, $factory);
-
-        $ret = $connection->query('SELECT 1');
-        $ret->then($this->expectCallableOnceWith($result), $this->expectCallableNever());
-    }
-
-    public function testQueryWillResolveWithoutStartingTimerWhenQueryFromUnderlyingConnectionResolvesAndIdleParameterIsNegative()
-    {
-        $result = new MysqlResult();
-
-        $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve($result));
-
-        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
-        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
-
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->never())->method('addTimer');
-
-        $connection = new MysqlClient('mysql://localhost?idle=-1', null, $loop);
-
-        $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
-        $ref->setValue($connection, $factory);
-
-        $ret = $connection->query('SELECT 1');
-        $ret->then($this->expectCallableOnceWith($result), $this->expectCallableNever());
-    }
-
-    public function testQueryBeforePingWillResolveWithoutStartingTimerWhenQueryFromUnderlyingConnectionResolvesBecausePingIsStillPending()
+    public function testPingAfterQueryWillPassPingToConnectionWhenQueryResolves()
     {
         $result = new MysqlResult();
         $deferred = new Deferred();
@@ -396,7 +231,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->never())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -412,31 +246,7 @@ class MysqlClientTest extends BaseTestCase
         $ret->then($this->expectCallableOnceWith($result), $this->expectCallableNever());
     }
 
-    public function testQueryAfterPingWillCancelTimerAgainWhenPingFromUnderlyingConnectionResolved()
-    {
-        $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(new Promise(function () { }));
-
-        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
-        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
-
-        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $loop->expects($this->once())->method('cancelTimer')->with($timer);
-
-        $connection = new MysqlClient('', null, $loop);
-
-        $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
-        $ref->setValue($connection, $factory);
-
-        $connection->ping();
-        $connection->query('SELECT 1');
-    }
-
-    public function testQueryWillRejectAndStartTimerWhenQueryFromUnderlyingConnectionRejects()
+    public function testQueryWillRejectWhenQueryFromUnderlyingConnectionRejects()
     {
         $error = new \RuntimeException();
 
@@ -447,7 +257,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -459,14 +268,13 @@ class MysqlClientTest extends BaseTestCase
         $ret->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
     }
 
-    public function testQueryWillRejectWithoutStartingTimerWhenUnderlyingConnectionRejects()
+    public function testQueryWillRejectWhenUnderlyingConnectionRejects()
     {
         $deferred = new Deferred();
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->never())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -499,7 +307,7 @@ class MysqlClientTest extends BaseTestCase
         $this->assertTrue($ret->isReadable());
     }
 
-    public function testQueryStreamWillReturnStreamFromUnderlyingConnectionWithoutStartingTimerWhenResolved()
+    public function testQueryStreamWillReturnStreamFromUnderlyingConnectionWhenResolved()
     {
         $stream = new ThroughStream();
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
@@ -509,7 +317,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->never())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -525,7 +332,7 @@ class MysqlClientTest extends BaseTestCase
         $this->assertTrue($ret->isReadable());
     }
 
-    public function testQueryStreamWillReturnStreamFromUnderlyingConnectionAndStartTimerWhenResolvedAndClosed()
+    public function testQueryStreamWillReturnStreamFromUnderlyingConnectionWhenResolvedAndClosed()
     {
         $stream = new ThroughStream();
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
@@ -535,7 +342,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -653,7 +459,7 @@ class MysqlClientTest extends BaseTestCase
         $connection->ping()->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
     }
 
-    public function testPingWillResolveAndStartTimerWhenPingFromUnderlyingConnectionResolves()
+    public function testPingWillResolveWhenPingFromUnderlyingConnectionResolves()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
@@ -662,7 +468,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -674,7 +479,7 @@ class MysqlClientTest extends BaseTestCase
         $ret->then($this->expectCallableOnce(), $this->expectCallableNever());
     }
 
-    public function testPingWillRejectAndStartTimerWhenPingFromUnderlyingConnectionRejects()
+    public function testPingWillRejectWhenPingFromUnderlyingConnectionRejects()
     {
         $error = new \RuntimeException();
 
@@ -685,7 +490,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -697,7 +501,7 @@ class MysqlClientTest extends BaseTestCase
         $ret->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
     }
 
-    public function testPingWillRejectAndNotStartIdleTimerWhenPingFromUnderlyingConnectionRejectsBecauseConnectionIsDead()
+    public function testPingWillRejectWhenPingFromUnderlyingConnectionEmitsCloseEventAndRejects()
     {
         $error = new \RuntimeException();
 
@@ -712,7 +516,6 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->never())->method('addTimer');
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -871,6 +674,33 @@ class MysqlClientTest extends BaseTestCase
         $deferred->reject(new \RuntimeException());
     }
 
+    public function testPingAfterQuitWillPassPingCommandToConnectionWhenItIsStillQuitting()
+    {
+        $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
+        $connection->expects($this->exactly(2))->method('ping')->willReturn(\React\Promise\resolve(null));
+        $connection->expects($this->once())->method('quit')->willReturn(new Promise(function () { }));
+        $connection->expects($this->never())->method('close');
+
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
+
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $mysql = new MysqlClient('', null, $loop);
+
+        $ref = new \ReflectionProperty($mysql, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($mysql, $factory);
+
+        $mysql->on('close', $this->expectCallableNever());
+
+        $mysql->ping();
+
+        $mysql->quit();
+
+        $mysql->ping();
+    }
+
     public function testCloseEmitsCloseImmediatelyWhenConnectionIsNotAlreadyPending()
     {
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -953,18 +783,16 @@ class MysqlClientTest extends BaseTestCase
         $connection->close();
     }
 
-    public function testCloseAfterPingWillCancelTimerWhenPingFromUnderlyingConnectionResolves()
+    public function testCloseAfterPingWillCloseUnderlyingConnection()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
+        $base->expects($this->once())->method('close');
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
-        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $loop->expects($this->once())->method('cancelTimer')->with($timer);
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -1021,23 +849,17 @@ class MysqlClientTest extends BaseTestCase
         $connection->close();
     }
 
-    public function testCloseAfterPingAfterIdleTimeoutWillCloseUnderlyingConnectionWhenQuitIsStillPending()
+    public function testCloseAfterConnectionIsInClosingStateDueToIdleTimerWillCloseUnderlyingConnection()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->once())->method('quit')->willReturn(new Promise(function () { }));
+        $base->expects($this->never())->method('quit');
         $base->expects($this->once())->method('close');
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
 
-        $timeout = null;
-        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
-            $timeout = $cb;
-            return true;
-        }))->willReturn($timer);
 
         $connection = new MysqlClient('', null, $loop);
 
@@ -1047,8 +869,8 @@ class MysqlClientTest extends BaseTestCase
 
         $connection->ping();
 
-        $this->assertNotNull($timeout);
-        $timeout();
+        // emulate triggering idle timer by setting connection state to closing
+        $base->state = Connection::STATE_CLOSING;
 
         $connection->close();
     }
