@@ -7,8 +7,9 @@ use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Mysql\Io\Connection;
 use React\Mysql\Io\Factory;
-use React\Stream\ReadableStreamInterface;
+use React\Promise\Promise;
 use React\Socket\ConnectorInterface;
+use React\Stream\ReadableStreamInterface;
 
 /**
  * This class represents a connection that is responsible for communicating
@@ -135,9 +136,8 @@ class MysqlClient extends EventEmitter
                             // successfully disconnected => remove reference
                             $this->disconnecting = null;
                         },
-                        function () use ($connection) {
-                            // soft-close failed => force-close connection
-                            $connection->close();
+                        function () {
+                            // soft-close failed but will close anyway => remove reference
                             $this->disconnecting = null;
                         }
                     );
@@ -361,6 +361,11 @@ class MysqlClient extends EventEmitter
      * $mysql->quit();
      * ```
      *
+     * This method will gracefully close the connection to the MySQL database
+     * server once all outstanding commands are completed. See also
+     * [`close()`](#close) if you want to force-close the connection without
+     * waiting for any commands to complete instead.
+     *
      * @return PromiseInterface<void>
      *     Resolves with a `void` value on success or rejects with an `Exception` on error.
      */
@@ -376,17 +381,25 @@ class MysqlClient extends EventEmitter
             return \React\Promise\resolve(null);
         }
 
-        return $this->connecting()->then(function (Connection $connection) {
-            $this->awake();
-            return $connection->quit()->then(
-                function () {
-                    $this->close();
-                },
-                function (\Exception $e) {
-                    $this->close();
-                    throw $e;
-                }
-            );
+        return new Promise(function (callable $resolve, callable $reject) {
+            $this->connecting()->then(function (Connection $connection) use ($resolve, $reject) {
+                $this->awake();
+                // soft-close connection and emit close event afterwards both on success or on error
+                $connection->quit()->then(
+                    function () use ($resolve){
+                        $resolve(null);
+                        $this->close();
+                    },
+                    function (\Exception $e) use ($reject) {
+                        $reject($e);
+                        $this->close();
+                    }
+                );
+            }, function (\Exception $e) use ($reject) {
+                // emit close event afterwards when no connection can be established
+                $reject($e);
+                $this->close();
+            });
         });
     }
 

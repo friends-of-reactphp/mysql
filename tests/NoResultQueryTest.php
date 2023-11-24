@@ -133,13 +133,34 @@ CREATE TABLE IF NOT EXISTS `book` (
         Loop::run();
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
+    public function testPingAndQuitWillFulfillPingBeforeQuitBeforeCloseEvent()
+    {
+        $this->expectOutputString('ping.quit.close.');
+
+        $uri = $this->getConnectionString();
+        $connection = new MysqlClient($uri);
+
+        $connection->on('close', function () {
+            echo 'close.';
+        });
+
+        $connection->ping()->then(function () {
+            echo 'ping.';
+        });
+
+        $connection->quit()->then(function () {
+            echo 'quit.';
+        });
+
+        Loop::run();
+    }
+
     public function testPingWithValidAuthWillRunUntilIdleTimerAfterPingEvenWithoutQuit()
     {
         $uri = $this->getConnectionString();
         $connection = new MysqlClient($uri);
+
+        $connection->on('close', $this->expectCallableNever());
 
         $connection->ping();
 

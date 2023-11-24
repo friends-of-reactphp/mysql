@@ -135,17 +135,16 @@ class Connection extends EventEmitter
     public function quit()
     {
         return new Promise(function ($resolve, $reject) {
-            $this->_doCommand(new QuitCommand())
-                ->on('error', function ($reason) use ($reject) {
-                    $reject($reason);
-                })
-                ->on('success', function () use ($resolve) {
-                    $this->state = self::STATE_CLOSED;
-                    $this->emit('end', [$this]);
-                    $this->emit('close', [$this]);
-                    $resolve(null);
-                });
+            $command = $this->_doCommand(new QuitCommand());
             $this->state = self::STATE_CLOSING;
+            $command->on('success', function () use ($resolve) {
+                $resolve(null);
+                $this->close();
+            });
+            $command->on('error', function ($reason) use ($reject) {
+                $reject($reason);
+                $this->close();
+            });
         });
     }
 
