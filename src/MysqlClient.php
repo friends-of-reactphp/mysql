@@ -151,7 +151,7 @@ class MysqlClient extends EventEmitter
     /**
      * Performs an async query.
      *
-     * This method returns a promise that will resolve with a `QueryResult` on
+     * This method returns a promise that will resolve with a `MysqlResult` on
      * success or will reject with an `Exception` on error. The MySQL protocol
      * is inherently sequential, so that all queries will be performed in order
      * and outstanding queries will be put into a queue to be executed once the
@@ -171,7 +171,7 @@ class MysqlClient extends EventEmitter
      * [`queryStream()`](#querystream) method instead.
      *
      * ```php
-     * $mysql->query($query)->then(function (QueryResult $command) {
+     * $mysql->query($query)->then(function (React\MySQL\MysqlResult $command) {
      *     if (isset($command->resultRows)) {
      *         // this is a response to a SELECT etc. with some rows (0+)
      *         print_r($command->resultFields);
@@ -204,8 +204,8 @@ class MysqlClient extends EventEmitter
      *
      * @param string $sql    SQL statement
      * @param array  $params Parameters which should be bound to query
-     * @return PromiseInterface<QueryResult>
-     *     Resolves with a `QueryResult` on success or rejects with an `Exception` on error.
+     * @return PromiseInterface<MysqlResult>
+     *     Resolves with a `MysqlResult` on success or rejects with an `Exception` on error.
      */
     public function query($sql, array $params = [])
     {
@@ -216,7 +216,7 @@ class MysqlClient extends EventEmitter
         return $this->connecting()->then(function (Connection $connection) use ($sql, $params) {
             $this->awake();
             return $connection->query($sql, $params)->then(
-                function (QueryResult $result) {
+                function (MysqlResult $result) {
                     $this->idle();
                     return $result;
                 },

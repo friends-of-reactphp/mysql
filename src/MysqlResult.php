@@ -2,7 +2,7 @@
 
 namespace React\MySQL;
 
-class QueryResult
+class MysqlResult
 {
     /**
      * last inserted ID (if any)

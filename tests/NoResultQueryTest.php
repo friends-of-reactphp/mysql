@@ -4,7 +4,7 @@ namespace React\Tests\MySQL;
 
 use React\EventLoop\Loop;
 use React\MySQL\MysqlClient;
-use React\MySQL\QueryResult;
+use React\MySQL\MysqlResult;
 
 class NoResultQueryTest extends BaseTestCase
 {
@@ -27,7 +27,7 @@ class NoResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('update book set created=999 where id=999')->then(function (QueryResult $command) {
+        $connection->query('update book set created=999 where id=999')->then(function (MysqlResult $command) {
             $this->assertEquals(0, $command->affectedRows);
         });
 
@@ -39,7 +39,7 @@ class NoResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query("insert into book (`name`) values ('foo')")->then(function (QueryResult $command) {
+        $connection->query("insert into book (`name`) values ('foo')")->then(function (MysqlResult $command) {
             $this->assertEquals(1, $command->affectedRows);
             $this->assertEquals(1, $command->insertId);
         });
@@ -53,7 +53,7 @@ class NoResultQueryTest extends BaseTestCase
         $connection = $this->createConnection(Loop::get());
 
         $connection->query("insert into book (`name`) values ('foo')");
-        $connection->query('update book set created=999 where id=1')->then(function (QueryResult $command) {
+        $connection->query('update book set created=999 where id=1')->then(function (MysqlResult $command) {
             $this->assertEquals(1, $command->affectedRows);
         });
 
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `book` (
     PRIMARY KEY (`id`)
 )';
 
-        $connection->query($sql)->then(function (QueryResult $command) {
+        $connection->query($sql)->then(function (MysqlResult $command) {
             $this->assertEquals(1, $command->warningCount);
         });
 

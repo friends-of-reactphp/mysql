@@ -8,7 +8,7 @@ use React\MySQL\Commands\PingCommand;
 use React\MySQL\Commands\QueryCommand;
 use React\MySQL\Commands\QuitCommand;
 use React\MySQL\Exception;
-use React\MySQL\QueryResult;
+use React\MySQL\MysqlResult;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
@@ -79,7 +79,7 @@ class Connection extends EventEmitter
             $rows[] = $row;
         });
         $command->on('end', function () use ($command, $deferred, &$rows) {
-            $result = new QueryResult();
+            $result = new MysqlResult();
             $result->resultFields = $command->fields;
             $result->resultRows = $rows;
             $result->warningCount = $command->warningCount;
@@ -94,7 +94,7 @@ class Connection extends EventEmitter
             $deferred->reject($error);
         });
         $command->on('success', function () use ($command, $deferred) {
-            $result = new QueryResult();
+            $result = new MysqlResult();
             $result->affectedRows = $command->affectedRows;
             $result->insertId = $command->insertId;
             $result->warningCount = $command->warningCount;
