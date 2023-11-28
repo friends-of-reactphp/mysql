@@ -6,6 +6,7 @@ use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
 use React\Mysql\Io\Connection;
 use React\Mysql\Io\Factory;
+use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Socket\ConnectorInterface;
 use React\Stream\ReadableStreamInterface;
@@ -59,6 +60,13 @@ class MysqlClient extends EventEmitter
     private $connection;
 
     /**
+     * array of outstanding connection requests to send next commands once a connection becomes ready
+     *
+     * @var array<int,Deferred<Connection>>
+     */
+    private $pending = [];
+
+    /**
      * set to true only between calling `quit()` and the connection closing in response
      *
      * @var bool
@@ -75,44 +83,6 @@ class MysqlClient extends EventEmitter
     ) {
         $this->factory = new Factory($loop, $connector);
         $this->uri = $uri;
-    }
-
-    /**
-     * @return PromiseInterface<Connection>
-     */
-    private function getConnection()
-    {
-        // happy path: reuse existing connection unless it is already closing after an idle timeout
-        if ($this->connection !== null && ($this->quitting || $this->connection->state !== Connection::STATE_CLOSING)) {
-            return \React\Promise\resolve($this->connection);
-        }
-
-        if ($this->connecting !== null) {
-            return $this->connecting;
-        }
-
-        // force-close connection if still waiting for previous disconnection
-        if ($this->connection !== null) {
-            assert($this->connection->state === Connection::STATE_CLOSING);
-            $this->connection->close();
-        }
-
-        // create new connection if not already connected or connecting
-        $this->connecting = $connecting = $this->factory->createConnection($this->uri);
-        $this->connecting->then(function (Connection $connection) {
-            $this->connection = $connection;
-            $this->connecting = null;
-
-            // connection completed => remember only until closed
-            $connection->on('close', function () {
-                $this->connection = null;
-            });
-        }, function () {
-            // connection failed => discard connection attempt
-            $this->connecting = null;
-        });
-
-        return $connecting;
     }
 
     /**
@@ -176,12 +146,18 @@ class MysqlClient extends EventEmitter
      */
     public function query($sql, array $params = [])
     {
-        if ($this->closed) {
+        if ($this->closed || $this->quitting) {
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
         return $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-            return $connection->query($sql, $params);
+            return $connection->query($sql, $params)->then(function (MysqlResult $result) use ($connection) {
+                $this->handleConnectionReady($connection);
+                return $result;
+            }, function (\Exception $e) use ($connection) {
+                $this->handleConnectionReady($connection);
+                throw $e;
+            });
         });
     }
 
@@ -246,13 +222,22 @@ class MysqlClient extends EventEmitter
      */
     public function queryStream($sql, $params = [])
     {
-        if ($this->closed) {
+        if ($this->closed || $this->quitting) {
             throw new Exception('Connection closed');
         }
 
         return \React\Promise\Stream\unwrapReadable(
             $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-                return $connection->queryStream($sql, $params);
+                $stream = $connection->queryStream($sql, $params);
+
+                $stream->on('end', function () use ($connection) {
+                    $this->handleConnectionReady($connection);
+                });
+                $stream->on('error', function () use ($connection) {
+                    $this->handleConnectionReady($connection);
+                });
+
+                return $stream;
             })
         );
     }
@@ -279,12 +264,17 @@ class MysqlClient extends EventEmitter
      */
     public function ping()
     {
-        if ($this->closed) {
+        if ($this->closed || $this->quitting) {
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
         return $this->getConnection()->then(function (Connection $connection) {
-            return $connection->ping();
+            return $connection->ping()->then(function () use ($connection) {
+                $this->handleConnectionReady($connection);
+            }, function (\Exception $e) use ($connection) {
+                $this->handleConnectionReady($connection);
+                throw $e;
+            });
         });
     }
 
@@ -312,7 +302,7 @@ class MysqlClient extends EventEmitter
      */
     public function quit()
     {
-        if ($this->closed) {
+        if ($this->closed || $this->quitting) {
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
@@ -379,7 +369,77 @@ class MysqlClient extends EventEmitter
             $this->connecting = null;
         }
 
+        // clear all outstanding commands
+        foreach ($this->pending as $deferred) {
+            $deferred->reject(new \RuntimeException('Connection closed'));
+        }
+        $this->pending = [];
+
         $this->emit('close');
         $this->removeAllListeners();
+    }
+
+
+    /**
+     * @return PromiseInterface<Connection>
+     */
+    private function getConnection()
+    {
+        $deferred = new Deferred();
+
+        // force-close connection if still waiting for previous disconnection due to idle timer
+        if ($this->connection !== null && $this->connection->state === Connection::STATE_CLOSING) {
+            $this->connection->close();
+            $this->connection = null;
+        }
+
+        // happy path: reuse existing connection unless it is currently busy executing another command
+        if ($this->connection !== null && !$this->connection->isBusy()) {
+            $deferred->resolve($this->connection);
+            return $deferred->promise();
+        }
+
+        // queue pending connection request until connection becomes ready
+        $this->pending[] = $deferred;
+
+        // create new connection if not already connected or connecting
+        if ($this->connection === null && $this->connecting === null) {
+            $this->connecting = $this->factory->createConnection($this->uri);
+            $this->connecting->then(function (Connection $connection) {
+                // connection completed => remember only until closed
+                $this->connecting = null;
+                $this->connection = $connection;
+                $connection->on('close', function () {
+                    $this->connection = null;
+                });
+
+                // handle first command from queue when connection is ready
+                $this->handleConnectionReady($connection);
+            }, function (\Exception $e) {
+                // connection failed => discard connection attempt
+                $this->connecting = null;
+
+                foreach ($this->pending as $key => $deferred) {
+                    $deferred->reject($e);
+                    unset($this->pending[$key]);
+                }
+            });
+        }
+
+        return $deferred->promise();
+    }
+
+    private function handleConnectionReady(Connection $connection)
+    {
+        $deferred = \reset($this->pending);
+        if ($deferred === false) {
+            // nothing to do if there are no outstanding connection requests
+            return;
+        }
+
+        assert($deferred instanceof Deferred);
+        unset($this->pending[\key($this->pending)]);
+
+        $deferred->resolve($connection);
     }
 }

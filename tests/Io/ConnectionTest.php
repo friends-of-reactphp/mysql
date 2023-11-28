@@ -7,6 +7,42 @@ use React\Tests\Mysql\BaseTestCase;
 
 class ConnectionTest extends BaseTestCase
 {
+    public function testIsBusyReturnsTrueWhenParserIsBusy()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue', 'isIdle'])->getMock();
+        $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
+        $executor->expects($this->never())->method('isIdle');
+
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+        $parser->expects($this->once())->method('isBusy')->willReturn(true);
+
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
+
+        $connection->query('SELECT 1');
+
+        $this->assertTrue($connection->isBusy());
+    }
+
+    public function testIsBusyReturnsFalseWhenParserIsNotBusyAndExecutorIsIdle()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+
+        $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->getMock();
+        $executor->expects($this->once())->method('isIdle')->willReturn(true);
+
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
+
+        $this->assertFalse($connection->isBusy());
+    }
+
     public function testQueryWillEnqueueOneCommand()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
@@ -15,10 +51,12 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->query('SELECT 1');
     }
 
@@ -32,12 +70,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -59,12 +99,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -86,12 +128,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(1.0, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, 1.0);
+        $connection = new Connection($stream, $executor, $parser, $loop, 1.0);
 
         $this->assertNull($currentCommand);
 
@@ -113,10 +157,12 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $connection = new Connection($stream, $executor, $loop, -1);
+        $connection = new Connection($stream, $executor, $parser, $loop, -1);
 
         $this->assertNull($currentCommand);
 
@@ -138,12 +184,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -166,6 +214,8 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timeout = null;
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
@@ -174,7 +224,7 @@ class ConnectionTest extends BaseTestCase
             return true;
         }))->willReturn($timer);
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $connection->on('close', $this->expectCallableOnce());
 
@@ -203,6 +253,8 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timeout = null;
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
@@ -211,7 +263,7 @@ class ConnectionTest extends BaseTestCase
             return true;
         }))->willReturn($timer);
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $connection->on('close', $this->expectCallableOnce());
 
@@ -239,10 +291,12 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -263,12 +317,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -288,10 +344,12 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->queryStream('SELECT 1');
     }
 
@@ -305,12 +363,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -333,12 +393,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -359,10 +421,12 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->ping();
     }
 
@@ -376,12 +440,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -403,12 +469,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->never())->method('cancelTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -426,10 +494,12 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->quit();
     }
 
@@ -443,10 +513,12 @@ class ConnectionTest extends BaseTestCase
             return $pingCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $events = '';
         $connection->on('close', function () use (&$events) {
@@ -479,10 +551,12 @@ class ConnectionTest extends BaseTestCase
             return $pingCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $events = '';
         $connection->on('close', function () use (&$events) {
@@ -512,10 +586,12 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->getMock();
         $executor->expects($this->once())->method('isIdle')->willReturn(true);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->never())->method('addTimer');
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $connection->on('close', $this->expectCallableOnce());
 
@@ -532,12 +608,14 @@ class ConnectionTest extends BaseTestCase
             return $currentCommand = $command;
         });
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything())->willReturn($timer);
         $loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $connection = new Connection($stream, $executor, $loop, null);
+        $connection = new Connection($stream, $executor, $parser, $loop, null);
 
         $this->assertNull($currentCommand);
 
@@ -557,9 +635,11 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->quit();
         $promise = $conn->query('SELECT 1');
 
@@ -582,9 +662,11 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->never())->method('enqueue');
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->close();
         $promise = $conn->query('SELECT 1');
 
@@ -607,9 +689,11 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->quit();
 
         try {
@@ -626,9 +710,11 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->quit();
         $promise = $conn->ping();
 
@@ -651,9 +737,11 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->once())->method('enqueue')->willReturnArgument(0);
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->quit();
         $promise = $conn->quit();
 
@@ -684,9 +772,11 @@ class ConnectionTest extends BaseTestCase
         $executor = $this->getMockBuilder('React\Mysql\Io\Executor')->setMethods(['enqueue'])->getMock();
         $executor->expects($this->never())->method('enqueue');
 
+        $parser = $this->getMockBuilder('React\Mysql\Io\Parser')->disableOriginalConstructor()->getMock();
+
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $conn = new Connection($stream, $executor, $loop, null);
+        $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->on('error', $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),

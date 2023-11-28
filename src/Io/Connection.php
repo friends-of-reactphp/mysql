@@ -40,6 +40,9 @@ class Connection extends EventEmitter
      */
     private $stream;
 
+    /** @var Parser */
+    private $parser;
+
     /** @var LoopInterface */
     private $loop;
 
@@ -57,13 +60,15 @@ class Connection extends EventEmitter
      *
      * @param SocketConnectionInterface $stream
      * @param Executor                  $executor
+     * @param Parser                    $parser
      * @param LoopInterface             $loop
      * @param ?float                    $idlePeriod
      */
-    public function __construct(SocketConnectionInterface $stream, Executor $executor, LoopInterface $loop, $idlePeriod)
+    public function __construct(SocketConnectionInterface $stream, Executor $executor, Parser $parser, LoopInterface $loop, $idlePeriod)
     {
         $this->stream   = $stream;
         $this->executor = $executor;
+        $this->parser   = $parser;
 
         $this->loop = $loop;
         if ($idlePeriod !== null) {
@@ -72,6 +77,17 @@ class Connection extends EventEmitter
 
         $stream->on('error', [$this, 'handleConnectionError']);
         $stream->on('close', [$this, 'handleConnectionClosed']);
+    }
+
+    /**
+     * busy executing some command such as query or ping
+     *
+     * @return bool
+     * @throws void
+     */
+    public function isBusy()
+    {
+        return $this->parser->isBusy() || !$this->executor->isIdle();
     }
 
     /**

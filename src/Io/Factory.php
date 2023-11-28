@@ -215,7 +215,7 @@ class Factory
             $executor = new Executor();
             $parser = new Parser($stream, $executor);
 
-            $connection = new Connection($stream, $executor, $this->loop, $idlePeriod);
+            $connection = new Connection($stream, $executor, $parser, $this->loop, $idlePeriod);
             $command = $executor->enqueue($authCommand);
             $parser->start();
 
