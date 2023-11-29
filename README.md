@@ -44,10 +44,10 @@ This example runs a simple `SELECT` query and dumps all the records from a `book
 
 require __DIR__ . '/vendor/autoload.php';
 
-$mysql = new React\MySQL\MysqlClient('user:pass@localhost/bookstore');
+$mysql = new React\Mysql\MysqlClient('user:pass@localhost/bookstore');
 
 $mysql->query('SELECT * FROM book')->then(
-    function (React\MySQL\MysqlResult $command) {
+    function (React\Mysql\MysqlResult $command) {
         print_r($command->resultFields);
         print_r($command->resultRows);
         echo count($command->resultRows) . ' row(s) in set' . PHP_EOL;
@@ -68,7 +68,7 @@ The `MysqlClient` is responsible for exchanging messages with your MySQL server
 and keeps track of pending queries.
 
 ```php
-$mysql = new React\MySQL\MysqlClient($uri);
+$mysql = new React\Mysql\MysqlClient($uri);
 
 $mysql->query(…);
 ```
@@ -114,7 +114,7 @@ The `$uri` parameter must contain the database host, optional
 authentication, port and database to connect to:
 
 ```php
-$mysql = new React\MySQL\MysqlClient('user:secret@localhost:3306/database');
+$mysql = new React\Mysql\MysqlClient('user:secret@localhost:3306/database');
 ```
 
 Note that both the username and password must be URL-encoded (percent-encoded)
@@ -124,7 +124,7 @@ if they contain special characters:
 $user = 'he:llo';
 $pass = 'p@ss';
 
-$mysql = new React\MySQL\MysqlClient(
+$mysql = new React\Mysql\MysqlClient(
     rawurlencode($user) . ':' . rawurlencode($pass) . '@localhost:3306/db'
 );
 ```
@@ -132,7 +132,7 @@ $mysql = new React\MySQL\MysqlClient(
 You can omit the port if you're connecting to default port `3306`:
 
 ```php
-$mysql = new React\MySQL\MysqlClient('user:secret@localhost/database');
+$mysql = new React\Mysql\MysqlClient('user:secret@localhost/database');
 ```
 
 If you do not include authentication and/or database, then this method
@@ -141,7 +141,7 @@ and no database selected. This may be useful when initially setting up a
 database, but likely to yield an authentication error in a production system:
 
 ```php
-$mysql = new React\MySQL\MysqlClient('localhost');
+$mysql = new React\Mysql\MysqlClient('localhost');
 ```
 
 This method respects PHP's `default_socket_timeout` setting (default 60s)
@@ -150,7 +150,7 @@ successful authentication. You can explicitly pass a custom timeout value
 in seconds (or use a negative number to not apply a timeout) like this:
 
 ```php
-$mysql = new React\MySQL\MysqlClient('localhost?timeout=0.5');
+$mysql = new React\Mysql\MysqlClient('localhost?timeout=0.5');
 ```
 
 By default, idle connections will be held open for 1ms (0.001s) when not
@@ -163,7 +163,7 @@ pass a custom idle timeout value in seconds (or use a negative number to
 not apply a timeout) like this:
 
 ```php
-$mysql = new React\MySQL\MysqlClient('localhost?idle=10.0');
+$mysql = new React\Mysql\MysqlClient('localhost?idle=10.0');
 ```
 
 By default, the connection provides full UTF-8 support (using the
@@ -172,7 +172,7 @@ applications nowadays, but for legacy reasons you can change this to use
 a different ASCII-compatible charset encoding like this:
 
 ```php
-$mysql = new React\MySQL\MysqlClient('localhost?charset=utf8mb4');
+$mysql = new React\Mysql\MysqlClient('localhost?charset=utf8mb4');
 ```
 
 If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
@@ -191,7 +191,7 @@ $connector = new React\Socket\Connector([
     )
 ]);
 
-$mysql = new React\MySQL\MysqlClient('user:secret@localhost:3306/database', $connector);
+$mysql = new React\Mysql\MysqlClient('user:secret@localhost:3306/database', $connector);
 ```
 
 This class takes an optional `LoopInterface|null $loop` parameter that can be used to
@@ -225,7 +225,7 @@ unknown or known to be too large to fit into memory, you should use the
 [`queryStream()`](#querystream) method instead.
 
 ```php
-$mysql->query($query)->then(function (React\MySQL\MysqlResult $command) {
+$mysql->query($query)->then(function (React\Mysql\MysqlResult $command) {
     if (isset($command->resultRows)) {
         // this is a response to a SELECT etc. with some rows (0+)
         print_r($command->resultFields);

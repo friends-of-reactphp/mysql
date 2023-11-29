@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL\Commands;
+namespace React\Mysql\Commands;
 
 /**
  * @internal

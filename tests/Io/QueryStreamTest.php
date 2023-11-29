@@ -1,8 +1,10 @@
 <?php
 
-use React\MySQL\Commands\QueryCommand;
-use React\MySQL\Io\QueryStream;
-use React\Tests\MySQL\BaseTestCase;
+namespace React\Tests\Mysql\Io;
+
+use React\Mysql\Commands\QueryCommand;
+use React\Mysql\Io\QueryStream;
+use React\Tests\Mysql\BaseTestCase;
 
 class QueryStreamTest extends BaseTestCase
 {
@@ -63,7 +65,7 @@ class QueryStreamTest extends BaseTestCase
         $stream->on('error', $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
         $stream->on('close', $this->expectCallableOnce());
 
-        $command->emit('error', [new RuntimeException()]);
+        $command->emit('error', [new \RuntimeException()]);
     }
 
     public function testPauseForwardsToConnectionAfterResultStarted()

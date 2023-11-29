@@ -1,13 +1,13 @@
 <?php
 
-namespace React\Tests\MySQL\Io;
+namespace React\Tests\Mysql\Io;
 
 use React\EventLoop\Loop;
-use React\MySQL\Io\Connection;
-use React\MySQL\Io\Factory;
+use React\Mysql\Io\Connection;
+use React\Mysql\Io\Factory;
 use React\Promise\Promise;
 use React\Socket\SocketServer;
-use React\Tests\MySQL\BaseTestCase;
+use React\Tests\Mysql\BaseTestCase;
 
 class FactoryTest extends BaseTestCase
 {

@@ -1,9 +1,9 @@
 <?php
 
-namespace React\Tests\MySQL\Io;
+namespace React\Tests\Mysql\Io;
 
-use React\MySQL\Io\Buffer;
-use React\Tests\MySQL\BaseTestCase;
+use React\Mysql\Io\Buffer;
+use React\Tests\Mysql\BaseTestCase;
 
 class BufferTest extends BaseTestCase
 {

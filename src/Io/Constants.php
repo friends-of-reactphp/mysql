@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL\Io;
+namespace React\Mysql\Io;
 
 /**
  * @internal

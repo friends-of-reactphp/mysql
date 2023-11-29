@@ -1,21 +1,21 @@
 <?php
 
-namespace React\MySQL\Io;
+namespace React\Mysql\Io;
 
 use Evenement\EventEmitter;
-use React\MySQL\Commands\CommandInterface;
-use React\MySQL\Commands\PingCommand;
-use React\MySQL\Commands\QueryCommand;
-use React\MySQL\Commands\QuitCommand;
-use React\MySQL\Exception;
-use React\MySQL\MysqlResult;
+use React\Mysql\Commands\CommandInterface;
+use React\Mysql\Commands\PingCommand;
+use React\Mysql\Commands\QueryCommand;
+use React\Mysql\Commands\QuitCommand;
+use React\Mysql\Exception;
+use React\Mysql\MysqlResult;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Socket\ConnectionInterface as SocketConnectionInterface;
 
 /**
  * @internal
- * @see \React\MySQL\MysqlClient
+ * @see \React\Mysql\MysqlClient
  */
 class Connection extends EventEmitter
 {

@@ -1,11 +1,11 @@
 <?php
 
-namespace React\MySQL\Io;
+namespace React\Mysql\Io;
 
-use React\MySQL\Commands\AuthenticateCommand;
-use React\MySQL\Commands\QueryCommand;
-use React\MySQL\Commands\QuitCommand;
-use React\MySQL\Exception as MysqlException;
+use React\Mysql\Commands\AuthenticateCommand;
+use React\Mysql\Commands\QueryCommand;
+use React\Mysql\Commands\QuitCommand;
+use React\Mysql\Exception as MysqlException;
 use React\Stream\DuplexStreamInterface;
 
 /**
@@ -46,7 +46,7 @@ class Parser
      * next command from the `Executor` queue. If no command is outstanding,
      * this will be reset to the `null` state.
      *
-     * @var \React\MySQL\Commands\AbstractCommand|null
+     * @var \React\Mysql\Commands\AbstractCommand|null
      */
     protected $currCommand;
 

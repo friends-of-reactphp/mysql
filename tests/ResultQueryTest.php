@@ -1,11 +1,11 @@
 <?php
 
-namespace React\Tests\MySQL;
+namespace React\Tests\Mysql;
 
 use React\EventLoop\Loop;
-use React\MySQL\Io\Constants;
-use React\MySQL\MysqlClient;
-use React\MySQL\MysqlResult;
+use React\Mysql\Io\Constants;
+use React\Mysql\MysqlClient;
+use React\Mysql\MysqlResult;
 
 class ResultQueryTest extends BaseTestCase
 {

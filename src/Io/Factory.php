@@ -1,11 +1,11 @@
 <?php
 
-namespace React\MySQL\Io;
+namespace React\Mysql\Io;
 
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
-use React\MySQL\Commands\AuthenticateCommand;
-use React\MySQL\Exception;
+use React\Mysql\Commands\AuthenticateCommand;
+use React\Mysql\Exception;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use React\Promise\Timer\TimeoutException;
@@ -15,7 +15,7 @@ use React\Socket\ConnectionInterface as SocketConnectionInterface;
 
 /**
  * @internal
- * @see \React\MySQL\MysqlClient
+ * @see \React\Mysql\MysqlClient
  */
 class Factory
 {
@@ -29,7 +29,7 @@ class Factory
      * The `Factory` is responsible for creating an internal `Connection` instance.
      *
      * ```php
-     * $factory = new React\MySQL\Io\Factory();
+     * $factory = new React\Mysql\Io\Factory();
      * ```
      *
      * This class takes an optional `LoopInterface|null $loop` parameter that can be used to
@@ -54,7 +54,7 @@ class Factory
      *     ]
      * ]);
      *
-     * $factory = new React\MySQL\Factory(null, $connector);
+     * $factory = new React\Mysql\Factory(null, $connector);
      * ```
      *
      * @param ?LoopInterface $loop

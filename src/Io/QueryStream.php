@@ -1,9 +1,9 @@
 <?php
 
-namespace React\MySQL\Io;
+namespace React\Mysql\Io;
 
 use Evenement\EventEmitter;
-use React\MySQL\Commands\QueryCommand;
+use React\Mysql\Commands\QueryCommand;
 use React\Socket\ConnectionInterface;
 use React\Stream\ReadableStreamInterface;
 use React\Stream\Util;

@@ -1,6 +1,6 @@
 <?php
 
-namespace React\MySQL\Io;
+namespace React\Mysql\Io;
 
 /**
  * @internal
@@ -25,7 +25,7 @@ class Query
      * as long as this class is only used internally for the `query()` method.
      *
      * @var array<string,string>
-     * @see \React\MySQL\Commands\AuthenticateCommand::$charsetMap
+     * @see \React\Mysql\Commands\AuthenticateCommand::$charsetMap
      */
     private $escapeChars = [
             //"\x00"   => "\\0",

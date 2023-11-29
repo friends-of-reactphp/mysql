@@ -1,14 +1,14 @@
 <?php
 
-namespace React\Tests\MySQL\Io;
+namespace React\Tests\Mysql\Io;
 
-use React\MySQL\Commands\QueryCommand;
-use React\MySQL\Exception;
-use React\MySQL\Io\Executor;
-use React\MySQL\Io\Parser;
+use React\Mysql\Commands\QueryCommand;
+use React\Mysql\Exception;
+use React\Mysql\Io\Executor;
+use React\Mysql\Io\Parser;
 use React\Stream\CompositeStream;
 use React\Stream\ThroughStream;
-use React\Tests\MySQL\BaseTestCase;
+use React\Tests\Mysql\BaseTestCase;
 
 class ParserTest extends BaseTestCase
 {

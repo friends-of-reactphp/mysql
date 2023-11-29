@@ -1,9 +1,9 @@
 <?php
 
-namespace React\Tests\MySQL\Commands;
+namespace React\Tests\Mysql\Commands;
 
 use PHPUnit\Framework\TestCase;
-use React\MySQL\Commands\AuthenticateCommand;
+use React\Mysql\Commands\AuthenticateCommand;
 
 class AuthenticateCommandTest extends TestCase
 {
