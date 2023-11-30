@@ -17,6 +17,72 @@ class ConnectionTest extends BaseTestCase
         $conn->quit();
     }
 
+    public function testQuitWillResolveBeforeEmittingCloseEventWhenQuitCommandEmitsSuccess()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+
+        $pingCommand = null;
+        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor->expects($this->once())->method('enqueue')->willReturnCallback(function ($command) use (&$pingCommand) {
+            return $pingCommand = $command;
+        });
+
+        $connection = new Connection($stream, $executor);
+
+        $events = '';
+        $connection->on('close', function () use (&$events) {
+            $events .= 'closed.';
+        });
+
+        $this->assertEquals('', $events);
+
+        $promise = $connection->quit();
+
+        $promise->then(function () use (&$events) {
+            $events .= 'fulfilled.';
+        });
+
+        $this->assertEquals('', $events);
+
+        $this->assertNotNull($pingCommand);
+        $pingCommand->emit('success');
+
+        $this->assertEquals('fulfilled.closed.', $events);
+    }
+
+    public function testQuitWillRejectBeforeEmittingCloseEventWhenQuitCommandEmitsError()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+
+        $pingCommand = null;
+        $executor = $this->getMockBuilder('React\MySQL\Io\Executor')->setMethods(['enqueue'])->getMock();
+        $executor->expects($this->once())->method('enqueue')->willReturnCallback(function ($command) use (&$pingCommand) {
+            return $pingCommand = $command;
+        });
+
+        $connection = new Connection($stream, $executor);
+
+        $events = '';
+        $connection->on('close', function () use (&$events) {
+            $events .= 'closed.';
+        });
+
+        $this->assertEquals('', $events);
+
+        $promise = $connection->quit();
+
+        $promise->then(null, function () use (&$events) {
+            $events .= 'rejected.';
+        });
+
+        $this->assertEquals('', $events);
+
+        $this->assertNotNull($pingCommand);
+        $pingCommand->emit('error', [new \RuntimeException()]);
+
+        $this->assertEquals('rejected.closed.', $events);
+    }
+
     public function testQueryAfterQuitRejectsImmediately()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();

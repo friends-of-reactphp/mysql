@@ -1,6 +1,6 @@
 <?php
 
-namespace React\Tests\Mysql\Io;
+namespace React\Tests\Mysql;
 
 use React\Mysql\Io\Connection;
 use React\Mysql\MysqlClient;
@@ -10,7 +10,6 @@ use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use React\Stream\ReadableStreamInterface;
 use React\Stream\ThroughStream;
-use React\Tests\Mysql\BaseTestCase;
 
 class MysqlClientTest extends BaseTestCase
 {
@@ -197,12 +196,12 @@ class MysqlClientTest extends BaseTestCase
         $timeout();
     }
 
-    public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWhenQuitFails()
+    public function testPingFollowedByIdleTimerWillNotHaveToCloseUnderlyingConnectionWhenQuitFailsBecauseUnderlyingConnectionEmitsCloseAutomatically()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->setMethods(['ping', 'quit', 'close'])->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
         $base->expects($this->once())->method('quit')->willReturn(\React\Promise\reject(new \RuntimeException()));
-        $base->expects($this->once())->method('close');
+        $base->expects($this->never())->method('close');
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
@@ -227,6 +226,15 @@ class MysqlClientTest extends BaseTestCase
 
         $this->assertNotNull($timeout);
         $timeout();
+
+        assert($base instanceof Connection);
+        $base->emit('close');
+
+        $ref = new \ReflectionProperty($connection, 'connecting');
+        $ref->setAccessible(true);
+        $connecting = $ref->getValue($connection);
+
+        $this->assertNull($connecting);
     }
 
     public function testPingAfterIdleTimerWillCloseUnderlyingConnectionBeforeCreatingSecondConnection()
@@ -757,6 +765,32 @@ class MysqlClientTest extends BaseTestCase
         $ret->then($this->expectCallableNever(), $this->expectCallableNever());
     }
 
+    public function testQuitAfterPingRejectsAndThenEmitsCloseWhenFactoryFailsToCreateUnderlyingConnection()
+    {
+        $deferred = new Deferred();
+        $factory = $this->getMockBuilder('React\MySQL\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $connection = new MysqlClient('', null, $loop);
+
+        $ref = new \ReflectionProperty($connection, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($connection, $factory);
+
+        $connection->ping()->then(null, $this->expectCallableOnce());
+
+        $this->expectOutputString('reject.close.');
+        $connection->on('close', function () {
+            echo 'close.';
+        });
+        $connection->quit()->then(null, function () {
+            echo 'reject.';
+        });
+
+        $deferred->reject(new \RuntimeException());
+    }
+
     public function testQuitAfterPingWillQuitUnderlyingConnectionWhenResolved()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
@@ -777,11 +811,12 @@ class MysqlClientTest extends BaseTestCase
         $connection->quit();
     }
 
-    public function testQuitAfterPingResolvesAndEmitsCloseWhenUnderlyingConnectionQuits()
+    public function testQuitAfterPingResolvesAndThenEmitsCloseWhenUnderlyingConnectionQuits()
     {
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
+        $deferred = new Deferred();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->once())->method('quit')->willReturn(\React\Promise\resolve(null));
+        $base->expects($this->once())->method('quit')->willReturn($deferred->promise());
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
@@ -793,21 +828,25 @@ class MysqlClientTest extends BaseTestCase
         $ref->setAccessible(true);
         $ref->setValue($connection, $factory);
 
-        $connection->on('close', $this->expectCallableOnce());
-
         $connection->ping();
-        $ret = $connection->quit();
 
-        $this->assertTrue($ret instanceof PromiseInterface);
-        $ret->then($this->expectCallableOnce(), $this->expectCallableNever());
+        $this->expectOutputString('quit.close.');
+        $connection->on('close', function () {
+            echo 'close.';
+        });
+        $connection->quit()->then(function () {
+            echo 'quit.';
+        });
+
+        $deferred->resolve(null);
     }
 
-    public function testQuitAfterPingRejectsAndEmitsCloseWhenUnderlyingConnectionFailsToQuit()
+    public function testQuitAfterPingRejectsAndThenEmitsCloseWhenUnderlyingConnectionFailsToQuit()
     {
-        $error = new \RuntimeException();
+        $deferred = new Deferred();
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $base->expects($this->once())->method('ping')->willReturn(\React\Promise\resolve(null));
-        $base->expects($this->once())->method('quit')->willReturn(\React\Promise\reject($error));
+        $base->expects($this->once())->method('quit')->willReturn($deferred->promise());
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
@@ -819,13 +858,17 @@ class MysqlClientTest extends BaseTestCase
         $ref->setAccessible(true);
         $ref->setValue($connection, $factory);
 
-        $connection->on('close', $this->expectCallableOnce());
-
         $connection->ping();
-        $ret = $connection->quit();
 
-        $this->assertTrue($ret instanceof PromiseInterface);
-        $ret->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
+        $this->expectOutputString('reject.close.');
+        $connection->on('close', function () {
+            echo 'close.';
+        });
+        $connection->quit()->then(null, function () {
+            echo 'reject.';
+        });
+
+        $deferred->reject(new \RuntimeException());
     }
 
     public function testCloseEmitsCloseImmediatelyWhenConnectionIsNotAlreadyPending()

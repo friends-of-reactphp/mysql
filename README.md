@@ -348,6 +348,11 @@ $mysql->query('CREATE TABLE test ...');
 $mysql->quit();
 ```
 
+This method will gracefully close the connection to the MySQL database
+server once all outstanding commands are completed. See also
+[`close()`](#close) if you want to force-close the connection without
+waiting for any commands to complete instead.
+
 #### close()
 
 The `close(): void` method can be used to
