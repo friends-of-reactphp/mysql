@@ -115,6 +115,17 @@ class Parser
         });
     }
 
+    /**
+     * busy executing some command such as query or ping
+     *
+     * @return bool
+     * @throws void
+     */
+    public function isBusy()
+    {
+        return $this->currCommand !== null;
+    }
+
     public function start()
     {
         $this->stream->on('data', [$this, 'handleData']);
