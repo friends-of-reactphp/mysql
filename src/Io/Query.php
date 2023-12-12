@@ -125,16 +125,34 @@ class Query
 
     protected function buildSql()
     {
+        $tooManyParametersError = 'Params not enough to build sql';
         $sql = $this->sql;
 
         $offset = strpos($sql, '?');
-        foreach ($this->params as $param) {
+        $offsetNamed = 0;
+
+        foreach ($this->params as $key => $param) {
             $replacement = $this->resolveValueForSql($param);
-            $sql = substr_replace($sql, $replacement, $offset, 1);
-            $offset = strpos($sql, '?', $offset + strlen($replacement));
+
+            if (is_string($key)) {
+                $prefix = $key[0] === ':' ? '' : ':';
+                $offsetNamed = strpos($sql, $prefix . $key, $offsetNamed);
+
+                if ($offsetNamed === false) {
+                    throw new \LogicException($tooManyParametersError);
+                }
+
+                $sql = substr_replace($sql, $replacement, $offsetNamed, strlen($prefix) + strlen($key));
+                $offset = strpos($sql, '?', strlen($replacement));
+                $offsetNamed += strlen($replacement);
+            } else {
+                $sql = substr_replace($sql, $replacement, $offset, 1);
+                $offset = strpos($sql, '?', $offset + strlen($replacement));
+            }
         }
+
         if ($offset !== false) {
-            throw new \LogicException('Params not enough to build sql');
+            throw new \LogicException($tooManyParametersError);
         }
 
         return $sql;
