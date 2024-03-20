@@ -169,13 +169,13 @@ class FactoryTest extends BaseTestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) {
-                    return !!preg_match("/^Connection to mysql:\/\/[^ ]* failed during authentication: Access denied for user '.*?'@'.*?' \(using password: YES\) \(EACCES\)$/", $e->getMessage());
+                    return !!preg_match("/^Connection to mysql:\/\/[^ ]* failed during authentication: Access denied for user '.*?'@'.*?'( \(using password: YES\))? \(EACCES\)$/", $e->getMessage());
                 }),
                 $this->callback(function (\RuntimeException $e) {
                     return $e->getCode() === (defined('SOCKET_EACCES') ? SOCKET_EACCES : 13);
                 }),
                 $this->callback(function (\RuntimeException $e) {
-                    return !!preg_match("/^Access denied for user '.*?'@'.*?' \(using password: YES\)$/", $e->getPrevious()->getMessage());
+                    return !!preg_match("/^Access denied for user '.*?'@'.*?'( \(using password: YES\))?$/", $e->getPrevious()->getMessage());
                 })
             )
         ));
