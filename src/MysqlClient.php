@@ -8,6 +8,7 @@ use React\Mysql\Io\Connection;
 use React\Mysql\Io\Factory;
 use React\Promise\Deferred;
 use React\Promise\Promise;
+use React\Promise\PromiseInterface;
 use React\Socket\ConnectorInterface;
 use React\Stream\ReadableStreamInterface;
 
