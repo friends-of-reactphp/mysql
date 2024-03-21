@@ -13,6 +13,7 @@
         "react/socket": "^1.12"
     },
     "require-dev": {
+        "phpstan/phpstan": "1.10.20 || 1.4.10",
         "phpunit/phpunit": "^9.6 || ^5.7 || ^4.8.36",
         "react/async": "^4 || ^3 || ^2"
     },

@@ -52,3 +52,25 @@ jobs:
       - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
       - run: bash tests/wait-for-mysql.sh
       - run: docker run -i --rm --workdir=/data -v "$(pwd):/data" --net=host hhvm/hhvm:3.30-lts-latest hhvm vendor/bin/phpunit
+
+  PHPStan:
+    name: PHPStan (PHP ${{ matrix.php }})
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        php:
+          - 8.2
+          - 8.1
+          - 8.0
+          - 7.4
+          - 7.3
+          - 7.2
+          - 7.1
+    steps:
+      - uses: actions/checkout@v3
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - run: composer install
+      - run: vendor/bin/phpstan
