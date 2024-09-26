@@ -179,6 +179,12 @@ class Connection extends EventEmitter implements ConnectionInterface
         }
 
         $this->emit('close');
+        /**
+         * MemoryLeak: Remove all listeners from executor, so it
+         * will be removed from memory when connection
+         * is closed.
+         */
+        $this->executor->removeAllListeners();
         $this->removeAllListeners();
     }
 

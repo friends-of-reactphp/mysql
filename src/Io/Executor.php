@@ -23,6 +23,28 @@ class Executor extends EventEmitter
 
     public function enqueue($command)
     {
+        /**
+         * MemoryLeak: Make sure removeAllListeners is called on commands,
+         * otherwise they might stay in memory for ever.
+         */
+        $command->on(
+            'error',
+            function () use ($command) {
+                $command->removeAllListeners();
+            }
+        );
+        $command->on(
+            'success',
+            function () use ($command) {
+                $command->removeAllListeners();
+            }
+        );
+        $command->on(
+            'end',
+            function () use ($command) {
+                $command->removeAllListeners();
+            }
+        );
         $this->queue->enqueue($command);
         $this->emit('new');
 
