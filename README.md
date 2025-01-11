@@ -107,7 +107,7 @@ will not have to wait for an actual underlying connection.
 
 #### __construct()
 
-The `new MysqlClient(string $uri, ConnectorInterface $connector = null, LoopInterface $loop = null)` constructor can be used to
+The `new MysqlClient(string $uri, ?ConnectorInterface $connector = null, ?LoopInterface $loop = null)` constructor can be used to
 create a new `MysqlClient` instance.
 
 The `$uri` parameter must contain the database host, optional

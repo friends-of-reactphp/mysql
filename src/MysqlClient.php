@@ -76,12 +76,24 @@ class MysqlClient extends EventEmitter
      */
     private $quitting = false;
 
+    /**
+     * @param string $uri
+     * @param ?ConnectorInterface $connector
+     * @param ?LoopInterface $loop
+     */
     public function __construct(
         #[\SensitiveParameter]
         $uri,
-        ConnectorInterface $connector = null,
-        LoopInterface $loop = null
+        $connector = null,
+        $loop = null
     ) {
+        if ($connector !== null && !$connector instanceof ConnectorInterface) { // manual type check to support legacy PHP < 7.1
+            throw new \InvalidArgumentException('Argument #2 ($connector) expected null|React\Socket\ConnectorInterface');
+        }
+        if ($loop !== null && !$loop instanceof LoopInterface) { // manual type check to support legacy PHP < 7.1
+            throw new \InvalidArgumentException('Argument #3 ($loop) expected null|React\EventLoop\LoopInterface');
+        }
+
         $this->factory = new Factory($loop, $connector);
         $this->uri = $uri;
     }

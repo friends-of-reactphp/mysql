@@ -60,8 +60,12 @@ class Factory
      * @param ?LoopInterface $loop
      * @param ?ConnectorInterface $connector
      */
-    public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null)
+    public function __construct($loop = null, $connector = null)
     {
+        // manual type check to support legacy PHP < 7.1
+        assert($loop === null || $loop instanceof LoopInterface);
+        assert($connector === null || $connector instanceof ConnectorInterface);
+
         $this->loop = $loop ?: Loop::get();
         $this->connector = $connector ?: new Connector([], $this->loop);
     }

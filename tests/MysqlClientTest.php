@@ -56,6 +56,18 @@ class MysqlClientTest extends BaseTestCase
         $this->assertSame($loop, $ref->getValue($factory));
     }
 
+    public function testContructorThrowsExceptionForInvalidConnector()
+    {
+        $this->setExpectedException('InvalidArgumentException', 'Argument #2 ($connector) expected null|React\Socket\ConnectorInterface');
+        new MysqlClient('localhost', 'connector');
+    }
+
+    public function testContructorThrowsExceptionForInvalidLoop()
+    {
+        $this->setExpectedException('InvalidArgumentException', 'Argument #3 ($loop) expected null|React\EventLoop\LoopInterface');
+        new MysqlClient('localhost', null, 'loop');
+    }
+
     public function testPingWillNotCloseConnectionWhenPendingConnectionFails()
     {
         $deferred = new Deferred();
