@@ -152,8 +152,8 @@ class MysqlClient extends EventEmitter
      * could allow for possible SQL injection attacks and this API is not
      * suited for exposing multiple possible results.
      *
-     * @param string $sql    SQL statement
-     * @param array  $params Parameters which should be bound to query
+     * @param string $sql SQL statement
+     * @param list<string|int|float|bool|null> $params Parameters which should be bound to query
      * @return PromiseInterface<MysqlResult>
      *     Resolves with a `MysqlResult` on success or rejects with an `Exception` on error.
      */
@@ -229,11 +229,11 @@ class MysqlClient extends EventEmitter
      * could allow for possible SQL injection attacks and this API is not
      * suited for exposing multiple possible results.
      *
-     * @param string $sql    SQL statement
-     * @param array  $params Parameters which should be bound to query
+     * @param string $sql SQL statement
+     * @param list<string|int|float|bool|null> $params Parameters which should be bound to query
      * @return ReadableStreamInterface
      */
-    public function queryStream($sql, $params = [])
+    public function queryStream($sql, array $params = [])
     {
         if ($this->closed || $this->quitting) {
             throw new Exception('Connection closed');

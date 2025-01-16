@@ -202,7 +202,7 @@ given event loop instance.
 
 #### query()
 
-The `query(string $query, array $params = []): PromiseInterface<MysqlResult>` method can be used to
+The `query(string $query, list<string|int|float|bool|null> $params = []): PromiseInterface<MysqlResult>` method can be used to
 perform an async query.
 
 This method returns a promise that will resolve with a `MysqlResult` on
@@ -258,7 +258,7 @@ suited for exposing multiple possible results.
 
 #### queryStream()
 
-The `queryStream(string $sql, array $params = []): ReadableStreamInterface` method can be used to
+The `queryStream(string $sql, list<string|int|float|bool|null> $params = []): ReadableStreamInterface` method can be used to
 perform an async query and stream the rows of the result set.
 
 This method returns a readable stream that will emit each row of the

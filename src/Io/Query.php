@@ -49,36 +49,13 @@ class Query
     /**
      * Binding params for the query, multiple arguments support.
      *
-     * @param  mixed              $param
-     * @return self
+     * @param list<string|int|float|bool|null> $params
+     * @return $this
      */
-    public function bindParams()
-    {
-        $this->builtSql = null;
-        $this->params   = func_get_args();
-
-        return $this;
-    }
-
     public function bindParamsFromArray(array $params)
     {
         $this->builtSql = null;
         $this->params   = $params;
-
-        return $this;
-    }
-
-    /**
-     * Binding params for the query, multiple arguments support.
-     *
-     * @param  mixed              $param
-     * @return self
-     *                                  @deprecated
-     */
-    public function params()
-    {
-        $this->params   = func_get_args();
-        $this->builtSql = null;
 
         return $this;
     }
@@ -104,13 +81,6 @@ class Query
                 break;
             case 'string':
                 $value = "'" . $this->escape($value) . "'";
-                break;
-            case 'array':
-                $nvalue = [];
-                foreach ($value as $v) {
-                    $nvalue[] = $this->resolveValueForSql($v);
-                }
-                $value = implode(',', $nvalue);
                 break;
             case 'NULL':
                 $value = 'NULL';

@@ -10,19 +10,19 @@ class QueryTest extends TestCase
     public function testBindParams()
     {
         $query = new Query('select * from test where id = ? and name = ?');
-        $sql   = $query->bindParams(100, 'test')->getSql();
+        $sql   = $query->bindParamsFromArray([100, 'test'])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
 
-        $query = new Query('select * from test where id in (?) and name = ?');
-        $sql   = $query->bindParams([1, 2], 'test')->getSql();
+        $query = new Query('select * from test where id in (?,?) and name = ?');
+        $sql   = $query->bindParamsFromArray([1, 2, 'test'])->getSql();
         $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
         /*
         $query = new Query('select * from test where id = :id and name = :name');
-        $sql   = $query->params([':id' => 100, ':name' => 'test'])->getSql();
+        $sql   = $query->bindParamsFromArray([':id' => 100, ':name' => 'test'])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
 
         $query = new Query('select * from test where id = :id and name = ?');
-        $sql   = $query->params('test', [':id' => 100])->getSql();
+        $sql   = $query->bindParamsFromArray(['test', ':id' => 100])->getSql();
         $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
         */
     }
@@ -30,28 +30,28 @@ class QueryTest extends TestCase
     public function testGetSqlReturnsQuestionMarkReplacedWhenBound()
     {
         $query = new Query('select ?');
-        $sql   = $query->bindParams('hello')->getSql();
+        $sql   = $query->bindParamsFromArray(['hello'])->getSql();
         $this->assertEquals("select 'hello'", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarkReplacedWhenBoundFromLastCall()
     {
         $query = new Query('select ?');
-        $sql   = $query->bindParams('foo')->bindParams('bar')->getSql();
+        $sql   = $query->bindParamsFromArray(['foo'])->bindParamsFromArray(['bar'])->getSql();
         $this->assertEquals("select 'bar'", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarkReplacedWithNullValueWhenBound()
     {
         $query = new Query('select ?');
-        $sql   = $query->bindParams(null)->getSql();
+        $sql   = $query->bindParamsFromArray([null])->getSql();
         $this->assertEquals("select NULL", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarkReplacedFromBoundWhenBound()
     {
         $query = new Query('select CONCAT(?, ?)');
-        $sql   = $query->bindParams('hello??', 'world??')->getSql();
+        $sql   = $query->bindParamsFromArray(['hello??', 'world??'])->getSql();
         $this->assertEquals("select CONCAT('hello??', 'world??')", $sql);
     }
 
