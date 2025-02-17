@@ -7,14 +7,14 @@
         "php": ">=5.4.0",
         "evenement/evenement": "^3.0 || ^2.1 || ^1.1",
         "react/event-loop": "^1.2",
-        "react/promise": "^3 || ^2.7",
+        "react/promise": "^3.2 || ^2.7",
         "react/promise-stream": "^1.6",
-        "react/promise-timer": "^1.9",
-        "react/socket": "^1.12"
+        "react/promise-timer": "^1.11",
+        "react/socket": "^1.16"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.6 || ^5.7 || ^4.8.36",
-        "react/async": "^4 || ^3 || ^2"
+        "react/async": "^4.3 || ^3 || ^2"
     },
     "autoload": {
         "psr-4": {
