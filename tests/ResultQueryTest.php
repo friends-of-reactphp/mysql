@@ -476,6 +476,118 @@ class ResultQueryTest extends BaseTestCase
         Loop::run();
     }
 
+    protected function checkMaxAllowedPacket($connection, $min = 0x1100000)
+    {
+        return $connection->query('SHOW VARIABLES LIKE \'max_allowed_packet\'')->then(
+            function ($res) use ($min, $connection) {
+                $current = $res->resultRows[0]['Value'];
+                if ($current < $min) {
+                    $this->markTestSkipped('max_allowed_packet too low: current: ' . $current . ' min: ' . $min);
+                }
+                return true;
+            }
+        );
+    }
+
+    public function testSelectStaticTextSplitPacketsExactlyBelow16MiB()
+    {
+        $uri = $this->getConnectionString();
+        $connection = new MysqlClient($uri);
+
+        $this->checkMaxAllowedPacket($connection, 0x1000000)->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly below 16MiB packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 11);
+                $connection->query('select \'' . $text . '\'')->then(
+                    function (MysqlResult $command) use ($text) {
+                        $this->assertCount(1, $command->resultRows);
+                        $this->assertCount(1, $command->resultRows[0]);
+                        $this->assertSame($text, reset($command->resultRows[0]));
+                    }
+                );
+                $connection->quit();
+            },
+            function (\Exception $error) {
+                $this->markTestSkipped($error->getMessage());
+            }
+        );
+        Loop::run();
+    }
+
+    public function testSelectStaticTextSplitPacketsExactly16MiB()
+    {
+        $uri = $this->getConnectionString();
+        $connection = new MysqlClient($uri);
+
+        $this->checkMaxAllowedPacket($connection)->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly at 16MiB packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff - 10);
+                $connection->query('select \'' . $text . '\'')->then(
+                    function (MysqlResult $command) use ($text) {
+                        $this->assertCount(1, $command->resultRows);
+                        $this->assertCount(1, $command->resultRows[0]);
+                        $this->assertSame($text, reset($command->resultRows[0]));
+                    }
+                );
+                $connection->quit();
+            },
+            function (\Exception $error) {
+                if (method_exists($this, 'assertStringContainsString')) {
+                    // PHPUnit 9+
+                    $this->assertStringContainsString('max_allowed_packet too low: current:', $error->getMessage());
+                } else {
+                    // legacy PHPUnit < 9
+                    $this->assertContains('max_allowed_packet too low: current:', $error->getMessage());
+                }
+            }
+        );
+        Loop::run();
+    }
+
+    public function testSelectStaticTextSplitPacketsAbove16MiB()
+    {
+        $uri = $this->getConnectionString();
+        $connection = new MysqlClient($uri);
+
+        $this->checkMaxAllowedPacket($connection)->then(
+            function () use ($connection) {
+                /**
+                 * This should be exactly at 16MiB + 10 packet
+                 *
+                 * x03 + "select ''" = len(10)
+                 */
+                $text = str_repeat('A', 0xffffff);
+                $connection->query('select \'' . $text . '\'')->then(
+                    function (MysqlResult $command) use ($text) {
+                        $this->assertCount(1, $command->resultRows);
+                        $this->assertCount(1, $command->resultRows[0]);
+                        $this->assertSame($text, reset($command->resultRows[0]));
+                    }
+                );
+                $connection->quit();
+            },
+            function (\Exception $error) {
+                if (method_exists($this, 'assertStringContainsString')) {
+                    // PHPUnit 9+
+                    $this->assertStringContainsString('max_allowed_packet too low: current:', $error->getMessage());
+                } else {
+                    // legacy PHPUnit < 9
+                    $this->assertContains('max_allowed_packet too low: current:', $error->getMessage());
+                }
+            }
+        );
+        Loop::run();
+    }
+
     public function testQueryStreamStaticEmptyEmitsSingleRow()
     {
         $connection = $this->createConnection(Loop::get());
