@@ -2,6 +2,7 @@
 
 namespace React\Tests\Mysql\Io;
 
+use React\Mysql\Commands\AuthenticateCommand;
 use React\Mysql\Commands\QueryCommand;
 use React\Mysql\Exception;
 use React\Mysql\Io\Executor;
@@ -40,6 +41,23 @@ class ParserTest extends BaseTestCase
 
         $this->assertEquals('Connection closing (ECONNABORTED)', $error->getMessage());
         $this->assertEquals(defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103, $error->getCode());
+    }
+
+    public function testUnexpectedAuthPluginShouldEmitErrorOnAuthenticateCommandAndCloseStream()
+    {
+        $stream = new ThroughStream();
+        $stream->on('close', $this->expectCallableOnce());
+
+        $command = new AuthenticateCommand('root', '', 'test', 'utf8mb4');
+        $command->on('error', $this->expectCallableOnceWith(new \UnexpectedValueException('Unknown authentication plugin "caching_sha2_password" requested by server')));
+
+        $executor = new Executor();
+        $executor->enqueue($command);
+
+        $parser = new Parser($stream, $executor);
+        $parser->start();
+
+        $stream->write("\x49\0\0\0\x0a\x38\x2e\x34\x2e\x35\0\x5e\0\0\0\x08\x0c\x41\x44\x12\x5e\x69\x59\0\xff\xff\xff\x02\0\xff\xdf\x15\0\0\0\0\0\0\0\0\0\0\x3c\x2c\x5e\x54\x06\x04\x01\x61\x01\x20\x79\x1b\0\x63\x61\x63\x68\x69\x6e\x67\x5f\x73\x68\x61\x32\x5f\x70\x61\x73\x73\x77\x6f\x72\x64\0");
     }
 
     public function testUnexpectedErrorWithoutCurrentCommandWillBeIgnored()
