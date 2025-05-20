@@ -416,6 +416,12 @@ extensions and supports running on legacy PHP 5.4 through current PHP 8+ and
 HHVM.
 It's *highly recommended to use the latest supported PHP version* for this project.
 
+This project supports connecting to a variety of MySQL database versions and
+compatible projects using the MySQL protocol. The `caching_sha2_password`
+authentication plugin (default in MySQL 8+) requires PHP 7.1+ and `ext-openssl`
+to be installed, while the older `mysql_native_password` authentication plugin
+(default in MySQL 5.7) is supported across all supported PHP versions.
+
 ## Tests
 
 To run the test suite, you first need to clone this repo and then install all

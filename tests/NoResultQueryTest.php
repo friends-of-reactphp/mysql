@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS `book` (
 )';
 
         $connection->query($sql)->then(function (MysqlResult $command) {
-            $this->assertEquals(1, $command->warningCount);
+            // 3 warnings on MySQL 8+, 1 warning on legacy MySQL 5
+            $this->assertGreaterThanOrEqual(1, $command->warningCount);
         });
 
         $connection->quit();
