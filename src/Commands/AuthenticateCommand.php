@@ -7,7 +7,7 @@ use React\Mysql\Io\Constants;
 
 /**
  * @internal
- * @link https://dev.mysql.com/doc/internals/en/connection-phase-packets.html#packet-Protocol::HandshakeResponse
+ * @link https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_connection_phase_packets_protocol_handshake_response.html#sect_protocol_connection_phase_packets_protocol_handshake_response41
  */
 class AuthenticateCommand extends AbstractCommand
 {
@@ -73,8 +73,19 @@ class AuthenticateCommand extends AbstractCommand
         return 0;
     }
 
-    public function authenticatePacket($scramble, Buffer $buffer)
+    /**
+     * @param string $scramble
+     * @param ?string $authPlugin
+     * @param Buffer $buffer
+     * @return string
+     * @throws \UnexpectedValueException for unsupported authentication plugin
+     */
+    public function authenticatePacket($scramble, $authPlugin, Buffer $buffer)
     {
+        if ($authPlugin !== null && $authPlugin !== 'mysql_native_password') {
+            throw new \UnexpectedValueException('Unknown authentication plugin "' . addslashes($authPlugin) . '" requested by server');
+        }
+
         $clientFlags = Constants::CLIENT_LONG_PASSWORD |
             Constants::CLIENT_LONG_FLAG |
             Constants::CLIENT_LOCAL_FILES |
@@ -84,20 +95,28 @@ class AuthenticateCommand extends AbstractCommand
             Constants::CLIENT_SECURE_CONNECTION |
             Constants::CLIENT_CONNECT_WITH_DB;
 
+        if ($authPlugin !== null) {
+            $clientFlags |= Constants::CLIENT_PLUGIN_AUTH;
+        }
+
         return pack('VVc', $clientFlags, $this->maxPacketSize, $this->charsetNumber)
             . "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             . $this->user . "\x00"
-            . $this->getAuthToken($scramble, $this->passwd, $buffer)
-            . $this->dbname . "\x00";
+            . $buffer->buildStringLen($this->authMysqlNativePassword($scramble))
+            . $this->dbname . "\x00"
+            . ($authPlugin !== null ? $authPlugin . "\0" : '');
     }
 
-    public function getAuthToken($scramble, $password, Buffer $buffer)
+    /**
+     * @param string $scramble
+     * @return string
+     */
+    private function authMysqlNativePassword($scramble)
     {
-        if ($password === '') {
-            return "\x00";
+        if ($this->passwd === '') {
+            return '';
         }
-        $token = \sha1($scramble . \sha1($hash1 = \sha1($password, true), true), true) ^ $hash1;
 
-        return $buffer->buildStringLen($token);
+        return \sha1($scramble . \sha1($hash1 = \sha1($this->passwd, true), true), true) ^ $hash1;
     }
 }

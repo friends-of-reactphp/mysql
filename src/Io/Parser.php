@@ -104,6 +104,12 @@ class Parser
      */
     protected $executor;
 
+    /**
+     * @var ?string authentication plugin name, set if server capabilities include CLIENT_PLUGIN_AUTH
+     * @link https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_connection_phase_authentication_methods.html
+     */
+    private $authPlugin;
+
     public function __construct(DuplexStreamInterface $stream, Executor $executor)
     {
         $this->stream   = $stream;
@@ -227,7 +233,8 @@ class Parser
             $packet->skip(1);
 
             if ($this->connectOptions['ServerCaps'] & Constants::CLIENT_PLUGIN_AUTH) {
-                $packet->readStringNull(); // skip authentication plugin name
+                $this->authPlugin = $packet->readStringNull();
+                $this->debug('Authentication plugin: ' . $this->authPlugin);
             }
 
             // init completed, continue with sending AuthenticateCommand
@@ -403,7 +410,12 @@ class Parser
 
             if ($command instanceof AuthenticateCommand) {
                 $this->phase = self::PHASE_AUTH_SENT;
-                $this->sendPacket($command->authenticatePacket($this->scramble, $this->buffer));
+                try {
+                    $this->sendPacket($command->authenticatePacket($this->scramble, $this->authPlugin, $this->buffer));
+                } catch (\UnexpectedValueException $e) {
+                    $this->onError($e);
+                    $this->stream->close();
+                }
             } else {
                 $this->seq = 0;
                 $this->sendPacket($this->buffer->buildInt1($command->getId()) . $command->getSql());
