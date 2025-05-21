@@ -43,13 +43,36 @@ class ParserTest extends BaseTestCase
         $this->assertEquals(defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103, $error->getCode());
     }
 
+    public function testParseValidAuthPluginWillSendAuthResponse()
+    {
+        $stream = new ThroughStream();
+
+        $outgoing = new ThroughStream();
+        $outgoing->on('data', $this->expectCallableOnceWith("\x08\0\0\x01" . "response"));
+
+        $command = $this->getMockBuilder('React\Mysql\Commands\AuthenticateCommand')->disableOriginalConstructor()->getMock();
+        $command->expects($this->once())->method('authenticatePacket')->with($this->anything(), 'caching_sha2_password')->willReturn('response');
+
+        $executor = new Executor();
+        $executor->enqueue($command);
+
+        $parser = new Parser(new CompositeStream($stream, $outgoing), $executor);
+        $parser->start();
+
+        $stream->write("\x49\0\0\0\x0a\x38\x2e\x34\x2e\x35\0\x5e\0\0\0\x08\x0c\x41\x44\x12\x5e\x69\x59\0\xff\xff\xff\x02\0\xff\xdf\x15\0\0\0\0\0\0\0\0\0\0\x3c\x2c\x5e\x54\x06\x04\x01\x61\x01\x20\x79\x1b\0\x63\x61\x63\x68\x69\x6e\x67\x5f\x73\x68\x61\x32\x5f\x70\x61\x73\x73\x77\x6f\x72\x64\0");
+
+        $ref = new \ReflectionProperty($parser, 'authPlugin');
+        $ref->setAccessible(true);
+        $this->assertEquals('caching_sha2_password', $ref->getValue($parser));
+    }
+
     public function testUnexpectedAuthPluginShouldEmitErrorOnAuthenticateCommandAndCloseStream()
     {
         $stream = new ThroughStream();
         $stream->on('close', $this->expectCallableOnce());
 
         $command = new AuthenticateCommand('root', '', 'test', 'utf8mb4');
-        $command->on('error', $this->expectCallableOnceWith(new \UnexpectedValueException('Unknown authentication plugin "caching_sha2_password" requested by server')));
+        $command->on('error', $this->expectCallableOnceWith(new \UnexpectedValueException('Unknown authentication plugin "sha256_password" requested by server')));
 
         $executor = new Executor();
         $executor->enqueue($command);
@@ -57,7 +80,123 @@ class ParserTest extends BaseTestCase
         $parser = new Parser($stream, $executor);
         $parser->start();
 
-        $stream->write("\x49\0\0\0\x0a\x38\x2e\x34\x2e\x35\0\x5e\0\0\0\x08\x0c\x41\x44\x12\x5e\x69\x59\0\xff\xff\xff\x02\0\xff\xdf\x15\0\0\0\0\0\0\0\0\0\0\x3c\x2c\x5e\x54\x06\x04\x01\x61\x01\x20\x79\x1b\0\x63\x61\x63\x68\x69\x6e\x67\x5f\x73\x68\x61\x32\x5f\x70\x61\x73\x73\x77\x6f\x72\x64\0");
+        $stream->write("\x43\0\0\0\x0a\x38\x2e\x34\x2e\x35\0\x5e\0\0\0\x08\x0c\x41\x44\x12\x5e\x69\x59\0\xff\xff\xff\x02\0\xff\xdf\x15\0\0\0\0\0\0\0\0\0\0\x3c\x2c\x5e\x54\x06\x04\x01\x61\x01\x20\x79\x1b\0\x73\x68\x61\x32\x35\x36\x5f\x70\x61\x73\x73\x77\x6f\x72\x64\0");
+    }
+
+    public function testParseAuthMoreDataWithFastAuthSuccessWillPrintDebugLogAndWaitForOkPacketWithoutSendingPacket()
+    {
+        $stream = new ThroughStream();
+        $stream->on('close', $this->expectCallableNever());
+
+        $outgoing = new ThroughStream();
+        $outgoing->on('data', $this->expectCallableNever());
+
+        $executor = new Executor();
+
+        $parser = new Parser(new CompositeStream($stream, $outgoing), $executor);
+        $parser->start();
+
+        $ref = new \ReflectionProperty($parser, 'debug');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, true);
+
+        $ref = new \ReflectionProperty($parser, 'phase');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
+
+        $ref = new \ReflectionProperty($parser, 'authPlugin');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, 'caching_sha2_password');
+
+        $this->expectOutputRegex('/Fast auth success\n$/');
+        $stream->write("\x02\0\0\0" . "\x01\x03");
+    }
+
+    public function testParseAuthMoreDataWithFastAuthFailureWillSendCertificateRequest()
+    {
+        $stream = new ThroughStream();
+        $stream->on('close', $this->expectCallableNever());
+
+        $outgoing = new ThroughStream();
+        $outgoing->on('data', $this->expectCallableOnceWith("\x01\0\0\x01" . "\x02"));
+
+        $executor = new Executor();
+
+        $parser = new Parser(new CompositeStream($stream, $outgoing), $executor);
+        $parser->start();
+
+        $ref = new \ReflectionProperty($parser, 'phase');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
+
+        $ref = new \ReflectionProperty($parser, 'authPlugin');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, 'caching_sha2_password');
+
+        $stream->write("\x02\0\0\0" . "\x01\x04");
+    }
+
+    public function testParseAuthMoreDataWithCertificateWillSendEncryptedPassword()
+    {
+        $stream = new ThroughStream();
+        $stream->on('close', $this->expectCallableNever());
+
+        $outgoing = new ThroughStream();
+        $outgoing->on('data', $this->expectCallableOnceWith("\x09\0\0\x01" . "encrypted"));
+
+        $command = $this->getMockBuilder('React\Mysql\Commands\AuthenticateCommand')->disableOriginalConstructor()->getMock();
+        $command->expects($this->once())->method('authSha256')->with('', '---')->willReturn('encrypted');
+
+        $executor = new Executor();
+
+        $parser = new Parser(new CompositeStream($stream, $outgoing), $executor);
+        $parser->start();
+
+        $ref = new \ReflectionProperty($parser, 'phase');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
+
+        $ref = new \ReflectionProperty($parser, 'authPlugin');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, 'caching_sha2_password');
+
+        $ref = new \ReflectionProperty($parser, 'currCommand');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, $command);
+
+        $stream->write("\x04\0\0\0" . "\x01---");
+    }
+
+    public function testAuthMoreDataWithCertificateWillEmitErrorAndCloseConnectionWhenEncryptingPasswordThrows()
+    {
+        $stream = new ThroughStream();
+        $stream->on('close', $this->expectCallableOnce());
+
+        $outgoing = new ThroughStream();
+        $outgoing->on('data', $this->expectCallableNever());
+
+        $command = $this->getMockBuilder('React\Mysql\Commands\AuthenticateCommand')->disableOriginalConstructor()->getMock();
+        $command->expects($this->once())->method('authSha256')->with('', '---')->willThrowException(new \UnexpectedValueException('Error'));
+        $command->expects($this->once())->method('emit')->with('error', [new \UnexpectedValueException('Error')]);
+
+        $executor = new Executor();
+
+        $parser = new Parser(new CompositeStream($stream, $outgoing), $executor);
+        $parser->start();
+
+        $ref = new \ReflectionProperty($parser, 'phase');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
+
+        $ref = new \ReflectionProperty($parser, 'authPlugin');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, 'caching_sha2_password');
+
+        $ref = new \ReflectionProperty($parser, 'currCommand');
+        $ref->setAccessible(true);
+        $ref->setValue($parser, $command);
+
+        $stream->write("\x04\0\0\0" . "\x01---");
     }
 
     public function testUnexpectedErrorWithoutCurrentCommandWillBeIgnored()

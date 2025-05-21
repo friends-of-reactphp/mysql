@@ -283,6 +283,30 @@ class Parser
                     $this->debug('Result set next part');
                     ++$this->rsState;
                 }
+            } elseif ($fieldCount === 0x01 && $this->phase === self::PHASE_AUTH_SENT && $this->authPlugin === 'caching_sha2_password') {
+                // Protocol::AuthMoreData packet
+                // https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_connection_phase_packets_protocol_auth_more_data.html
+                $status = $packet->readInt1();
+                if ($status === 0x03 && $packet->length() === 0) {
+                    // ignore fast auth success here, will be followed by OK packet
+                    $this->debug('Fast auth success');
+                } elseif ($status === 0x04 && $packet->length() === 0) {
+                    // fast auth failure means we need to request the certificate to send the encrypted password
+                    $this->debug('Fast auth failure, request certificate');
+                    $this->sendPacket("\x02");
+                } else {
+                    // extra auth containing certificate data
+                    $this->debug('Extra auth certificate received, send encrypted password');
+                    $packet->prepend($packet->buildInt1($status));
+
+                    try {
+                        assert($this->currCommand instanceof AuthenticateCommand);
+                        $this->sendPacket($this->currCommand->authSha256($this->scramble, $packet->read($packet->length())));
+                    } catch (\UnexpectedValueException $e) {
+                        $this->onError($e);
+                        $this->stream->close();
+                    }
+                }
             } else {
                 // Data packet
                 $packet->prepend($packet->buildInt1($fieldCount));
