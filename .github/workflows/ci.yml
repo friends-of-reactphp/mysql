@@ -6,10 +6,12 @@ on:
 
 jobs:
   PHPUnit:
-    name: PHPUnit (PHP ${{ matrix.php }})
+    name: PHPUnit (PHP ${{ matrix.php }} + ${{ matrix.rdbms }})
     runs-on: ubuntu-24.04
     strategy:
       matrix:
+        rdbms:
+          - mysql:5
         php:
           - 8.4
           - 8.3
@@ -24,6 +26,9 @@ jobs:
           - 5.6
           - 5.5
           - 5.4
+        include:
+          - php: 8.4
+            rdbms: mariadb:10
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
@@ -32,7 +37,7 @@ jobs:
           coverage: ${{ matrix.php < 8.0 && 'xdebug' || 'pcov' }}
           ini-file: development
       - run: composer install
-      - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test mysql:5
+      - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test ${{ matrix.rdbms }}
       - run: bash tests/wait-for-mysql.sh
       - run: vendor/bin/phpunit --coverage-text
         if: ${{ matrix.php >= 7.3 }}
