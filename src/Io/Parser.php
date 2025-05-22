@@ -269,7 +269,7 @@ class Parser
                 $this->debug(sprintf("AffectedRows: %d, InsertId: %d, WarningCount:%d", $this->affectedRows, $this->insertId, $this->warningCount));
                 $this->onSuccess();
                 $this->nextRequest();
-            } elseif ($fieldCount === 0xFE) {
+            } elseif ($fieldCount === 0xFE && $this->phase !== self::PHASE_AUTH_SENT) {
                 // EOF Packet
                 $packet->skip(4); // warn, status
                 if ($this->rsState === self::RS_STATE_ROW) {
@@ -282,6 +282,22 @@ class Parser
                     // move to next part of result set (header->field->row)
                     $this->debug('Result set next part');
                     ++$this->rsState;
+                }
+            } elseif ($fieldCount === 0xFE && $this->phase === self::PHASE_AUTH_SENT) {
+                // Protocol::AuthSwitchRequest packet
+                // https://dev.mysql.com/doc/dev/mysql-server/latest/page_protocol_connection_phase_packets_protocol_auth_switch_request.html
+                $this->authPlugin = $packet->readStringNull();
+                $this->scramble = $packet->read($packet->length() - 1);
+                $packet->skip(1); // 0x00
+                $this->debug('Switched to authentication plugin: ' . $this->authPlugin);
+
+                try {
+                    assert($this->currCommand instanceof AuthenticateCommand);
+                    $this->sendPacket($this->currCommand->authResponse($this->scramble, $this->authPlugin));
+                    //$this->sendPacket($this->currCommand->authenticatePacket($this->scramble, $this->authPlugin, $this->buffer));
+                } catch (\UnexpectedValueException $e) {
+                    $this->onError($e);
+                    $this->stream->close();
                 }
             } elseif ($fieldCount === 0x01 && $this->phase === self::PHASE_AUTH_SENT && $this->authPlugin === 'caching_sha2_password') {
                 // Protocol::AuthMoreData packet

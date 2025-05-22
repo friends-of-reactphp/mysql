@@ -82,10 +82,6 @@ class AuthenticateCommand extends AbstractCommand
      */
     public function authenticatePacket($scramble, $authPlugin, Buffer $buffer)
     {
-        if ($authPlugin !== null && $authPlugin !== 'mysql_native_password' && $authPlugin !== 'caching_sha2_password') {
-            throw new \UnexpectedValueException('Unknown authentication plugin "' . addslashes($authPlugin) . '" requested by server');
-        }
-
         $clientFlags = Constants::CLIENT_LONG_PASSWORD |
             Constants::CLIENT_LONG_FLAG |
             Constants::CLIENT_LOCAL_FILES |
@@ -102,9 +98,26 @@ class AuthenticateCommand extends AbstractCommand
         return pack('VVc', $clientFlags, $this->maxPacketSize, $this->charsetNumber)
             . "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
             . $this->user . "\x00"
-            . $buffer->buildStringLen($authPlugin === 'caching_sha2_password' ? $this->authCachingSha2Password($scramble) : $this->authMysqlNativePassword($scramble))
+            . $buffer->buildStringLen($this->authResponse($scramble, $authPlugin))
             . $this->dbname . "\x00"
             . ($authPlugin !== null ? $authPlugin . "\0" : '');
+    }
+
+    /**
+     * @param string $scramble
+     * @param ?string $authPlugin
+     * @return string
+     * @throws \UnexpectedValueException for unsupported authentication plugin
+     */
+    public function authResponse($scramble, $authPlugin)
+    {
+        if ($authPlugin === null || $authPlugin === 'mysql_native_password') {
+            return $this->authMysqlNativePassword($scramble);
+        } elseif ($authPlugin === 'caching_sha2_password') {
+            return $this->authCachingSha2Password($scramble);
+        } else {
+            throw new \UnexpectedValueException('Unknown authentication plugin "' . addslashes($authPlugin) . '" requested by server');
+        }
     }
 
     /**
