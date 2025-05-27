@@ -28,6 +28,10 @@ jobs:
           - 5.4
         include:
           - php: 8.4
+            rdbms: mysql:9
+          - php: 8.4
+            rdbms: mysql:8
+          - php: 8.4
             rdbms: mariadb:10
     steps:
       - uses: actions/checkout@v4
