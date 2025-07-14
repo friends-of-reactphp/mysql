@@ -165,34 +165,23 @@ class Factory
         #[\SensitiveParameter]
         $uri
     ) {
-        if (strpos($uri, '://') === false) {
-            $uri = 'mysql://' . $uri;
-        }
-
         $parts = parse_url($uri);
         $uri = preg_replace('#:[^:/]*@#', ':***@', $uri);
-        if (!isset($parts['scheme'], $parts['host']) || $parts['scheme'] !== 'mysql') {
-            return \React\Promise\reject(new \InvalidArgumentException(
-                'Invalid MySQL URI given (EINVAL)',
-                \defined('SOCKET_EINVAL') ? \SOCKET_EINVAL : 22
-            ));
-        }
+        assert(is_array($parts) && isset($parts['scheme'], $parts['host']));
+        assert($parts['scheme'] === 'mysql');
 
         $args = [];
         if (isset($parts['query'])) {
             parse_str($parts['query'], $args);
         }
 
-        try {
-            $authCommand = new AuthenticateCommand(
-                isset($parts['user']) ? rawurldecode($parts['user']) : 'root',
-                isset($parts['pass']) ? rawurldecode($parts['pass']) : '',
-                isset($parts['path']) ? rawurldecode(ltrim($parts['path'], '/')) : '',
-                isset($args['charset']) ? $args['charset'] : 'utf8mb4'
-            );
-        } catch (\InvalidArgumentException $e) {
-            return \React\Promise\reject($e);
-        }
+        /** @throws void already validated in MysqlClient ctor */
+        $authCommand = new AuthenticateCommand(
+            isset($parts['user']) ? rawurldecode($parts['user']) : 'root',
+            isset($parts['pass']) ? rawurldecode($parts['pass']) : '',
+            isset($parts['path']) ? rawurldecode(ltrim($parts['path'], '/')) : '',
+            isset($args['charset']) ? $args['charset'] : 'utf8mb4'
+        );
 
         $connecting = $this->connector->connect(
             $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 3306)

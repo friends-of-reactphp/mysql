@@ -30,7 +30,7 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->with('127.0.0.1:3306')->willReturn($pending);
 
         $factory = new Factory($loop, $connector);
-        $factory->createConnection('127.0.0.1');
+        $factory->createConnection('mysql://127.0.0.1');
     }
 
     public function testConnectWillUseGivenScheme()
@@ -44,28 +44,6 @@ class FactoryTest extends BaseTestCase
         $factory->createConnection('mysql://127.0.0.1');
     }
 
-    public function testConnectWillRejectWhenGivenInvalidScheme()
-    {
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
-
-        $factory = new Factory($loop, $connector);
-
-        $promise = $factory->createConnection('foo://127.0.0.1');
-
-        $promise->then(null, $this->expectCallableOnceWith(
-            $this->logicalAnd(
-                $this->isInstanceOf('InvalidArgumentException'),
-                $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getMessage() === 'Invalid MySQL URI given (EINVAL)';
-                }),
-                $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
-                })
-            )
-        ));
-    }
-
     public function testConnectWillUseGivenHostAndGivenPort()
     {
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
@@ -74,7 +52,7 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->with('127.0.0.1:1234')->willReturn($pending);
 
         $factory = new Factory($loop, $connector);
-        $factory->createConnection('127.0.0.1:1234');
+        $factory->createConnection('mysql://127.0.0.1:1234');
     }
 
     public function testConnectWillUseGivenUserInfoAsDatabaseCredentialsAfterUrldecoding()
@@ -87,7 +65,7 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->with('127.0.0.1:3306')->willReturn(\React\Promise\resolve($connection));
 
         $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('user%21@127.0.0.1');
+        $promise = $factory->createConnection('mysql://user%21@127.0.0.1');
 
         $promise->then($this->expectCallableNever(), $this->expectCallableNever());
 
@@ -104,46 +82,11 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->with('127.0.0.1:3306')->willReturn(\React\Promise\resolve($connection));
 
         $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('127.0.0.1/test%20database');
+        $promise = $factory->createConnection('mysql://127.0.0.1/test%20database');
 
         $promise->then($this->expectCallableNever(), $this->expectCallableNever());
 
         $connection->emit('data', ["\x33\0\0\0" . "\x0a" . "mysql\0" . str_repeat("\0", 44)]);
-    }
-
-    public function testConnectWithInvalidUriWillRejectWithoutConnecting()
-    {
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
-        $connector->expects($this->never())->method('connect');
-
-        $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('///');
-
-        $promise->then(null, $this->expectCallableOnceWith(
-            $this->logicalAnd(
-                $this->isInstanceOf('InvalidArgumentException'),
-                $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getMessage() === 'Invalid MySQL URI given (EINVAL)';
-                }),
-                $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
-                })
-            )
-        ));
-    }
-
-    public function testConnectWithInvalidCharsetWillRejectWithoutConnecting()
-    {
-        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
-        $connector->expects($this->never())->method('connect');
-
-        $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('localhost?charset=unknown');
-
-        $this->assertInstanceof('React\Promise\PromiseInterface', $promise);
-        $promise->then(null, $this->expectCallableOnce());
     }
 
     public function testConnectWithInvalidHostRejectsWithConnectionError()
@@ -204,7 +147,7 @@ class FactoryTest extends BaseTestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) use ($uri) {
-                    return $e->getMessage() === 'Connection to mysql://' . $uri . ' failed during authentication: Connection closed by peer (ECONNRESET)';
+                    return $e->getMessage() === 'Connection to ' . $uri . ' failed during authentication: Connection closed by peer (ECONNRESET)';
                 }),
                 $this->callback(function (\RuntimeException $e) {
                     return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
@@ -244,7 +187,7 @@ class FactoryTest extends BaseTestCase
     {
         $factory = new Factory();
 
-        $uri = 'mysql://' . $this->getConnectionString();
+        $uri = $this->getConnectionString();
 
         $old = ini_get('default_socket_timeout');
         ini_set('default_socket_timeout', '0');
@@ -439,7 +382,7 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->willReturn(\React\Promise\reject(new \RuntimeException('Failed', 123)));
 
         $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('user:secret@127.0.0.1');
+        $promise = $factory->createConnection('mysql://user:secret@127.0.0.1');
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -457,10 +400,6 @@ class FactoryTest extends BaseTestCase
     public function provideUris()
     {
         return [
-            [
-                'localhost',
-                'mysql://localhost'
-            ],
             [
                 'mysql://localhost',
                 'mysql://localhost'
@@ -520,7 +459,7 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->willReturn($pending);
 
         $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('127.0.0.1');
+        $promise = $factory->createConnection('mysql://127.0.0.1');
 
         $promise->cancel();
 
@@ -547,7 +486,7 @@ class FactoryTest extends BaseTestCase
         $connector->expects($this->once())->method('connect')->willReturn(\React\Promise\resolve($connection));
 
         $factory = new Factory($loop, $connector);
-        $promise = $factory->createConnection('127.0.0.1');
+        $promise = $factory->createConnection('mysql://127.0.0.1');
 
         $promise->cancel();
 

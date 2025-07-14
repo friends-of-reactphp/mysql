@@ -4,6 +4,7 @@ namespace React\Mysql;
 
 use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
+use React\Mysql\Commands\AuthenticateCommand;
 use React\Mysql\Io\Connection;
 use React\Mysql\Io\Factory;
 use React\Promise\Deferred;
@@ -80,6 +81,7 @@ class MysqlClient extends EventEmitter
      * @param string $uri
      * @param ?ConnectorInterface $connector
      * @param ?LoopInterface $loop
+     * @throws \InvalidArgumentException if $uri is not a valid MySQL URI
      */
     public function __construct(
         #[\SensitiveParameter]
@@ -87,6 +89,29 @@ class MysqlClient extends EventEmitter
         $connector = null,
         $loop = null
     ) {
+        if (strpos($uri, '://') === false) {
+            $uri = 'mysql://' . $uri;
+        }
+
+        $parts = parse_url($uri);
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || $parts['scheme'] !== 'mysql') {
+            $uri = preg_replace('#:[^:/]*@#', ':***@', $uri);
+            throw new \InvalidArgumentException(
+                'Invalid MySQL URI "' . $uri . '" (EINVAL)',
+                defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
+            );
+        }
+
+        if (isset($parts['query'])) {
+            $query = [];
+            parse_str($parts['query'], $query);
+
+            // validate charset if given
+            if (isset($query['charset'])) {
+                new AuthenticateCommand('', '', '', $query['charset']);
+            }
+        }
+
         if ($connector !== null && !$connector instanceof ConnectorInterface) { // manual type check to support legacy PHP < 7.1
             throw new \InvalidArgumentException('Argument #2 ($connector) expected null|React\Socket\ConnectorInterface');
         }

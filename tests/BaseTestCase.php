@@ -25,7 +25,7 @@ class BaseTestCase extends TestCase
     {
         $parts = $params + $this->getConnectionOptions();
 
-        return rawurlencode($parts['user']) . ':' . rawurlencode($parts['passwd']) . '@' . $parts['host'] . ':' . $parts['port'] . '/' . rawurlencode($parts['dbname']);
+        return 'mysql://' . rawurlencode($parts['user']) . ':' . rawurlencode($parts['passwd']) . '@' . $parts['host'] . ':' . $parts['port'] . '/' . rawurlencode($parts['dbname']);
     }
 
     /**
