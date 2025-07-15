@@ -56,6 +56,73 @@ class MysqlClientTest extends BaseTestCase
         $this->assertSame($loop, $ref->getValue($factory));
     }
 
+    public static function provideInvalidUris()
+    {
+        return [
+            [
+                '',
+                'mysql://'
+            ],
+            [
+                'localhost:100000',
+                'mysql://localhost:100000'
+            ],
+            [
+                'tcp://localhost',
+                'tcp://localhost'
+            ],
+            [
+                'mysql://',
+                'mysql://'
+            ],
+            [
+                'mysql+unix://',
+                'mysql+unix://'
+            ],
+            [
+                'user@localhost:100000',
+                'mysql://user@localhost:100000'
+            ],
+            [
+                ':pass@localhost:100000',
+                'mysql://:***@localhost:100000'
+            ],
+            [
+                'user:@localhost:100000',
+                'mysql://user:***@localhost:100000'
+            ],
+            [
+                'user:pass@localhost:100000',
+                'mysql://user:***@localhost:100000'
+            ],
+            [
+                'user@',
+                'mysql://user@'
+            ],
+            [
+                'user:pass@',
+                'mysql://user:***@'
+            ]
+        ];
+    }
+
+    /** @dataProvider provideInvalidUris */
+    public function testContructorThrowsExceptionForInvalidUri($uri, $message)
+    {
+        $this->setExpectedException(
+            'InvalidArgumentException',
+            'Invalid MySQL URI "' . $message . '" (EINVAL)',
+            defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
+        );
+        new MysqlClient($uri);
+    }
+
+    public function testContructorThrowsExceptionForInvalidCharset()
+    {
+        $this->setExpectedException('InvalidArgumentException', 'Unsupported charset selected');
+        new MysqlClient('localhost?charset=unknown');
+    }
+
     public function testContructorThrowsExceptionForInvalidConnector()
     {
         $this->setExpectedException('InvalidArgumentException', 'Argument #2 ($connector) expected null|React\Socket\ConnectorInterface');
@@ -75,7 +142,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -100,7 +167,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -124,7 +191,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -154,7 +221,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -177,7 +244,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -197,7 +264,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -218,7 +285,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -235,7 +302,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\reject(new \RuntimeException()));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -255,7 +322,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -273,7 +340,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -296,7 +363,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -325,7 +392,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -355,7 +422,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -383,7 +450,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -413,7 +480,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $mysql->on('close', $this->expectCallableNever());
 
@@ -440,7 +507,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -462,7 +529,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -487,7 +554,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -524,7 +591,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -547,7 +614,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -567,7 +634,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -588,7 +655,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -617,7 +684,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -648,7 +715,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -676,7 +743,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -711,7 +778,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -740,7 +807,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -771,7 +838,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $mysql->on('close', $this->expectCallableNever());
 
@@ -799,7 +866,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -821,7 +888,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -849,7 +916,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -869,7 +936,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -889,7 +956,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -906,7 +973,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\reject(new \RuntimeException()));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -926,7 +993,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -944,7 +1011,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -967,7 +1034,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -993,7 +1060,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1020,7 +1087,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1048,7 +1115,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1078,7 +1145,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $mysql->on('close', $this->expectCallableNever());
 
@@ -1105,7 +1172,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1127,7 +1194,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1152,7 +1219,7 @@ class MysqlClientTest extends BaseTestCase
         );
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1186,7 +1253,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1214,7 +1281,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1238,7 +1305,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1264,7 +1331,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1282,7 +1349,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1301,7 +1368,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($promise);
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1324,7 +1391,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1349,7 +1416,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1373,7 +1440,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1396,7 +1463,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($promise);
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1417,7 +1484,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1435,7 +1502,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1455,7 +1522,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->exactly(2))->method('createConnection')->willReturn(\React\Promise\reject($error));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1475,7 +1542,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1497,7 +1564,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1523,7 +1590,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1539,7 +1606,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->never())->method('createConnection');
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1561,7 +1628,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($promise);
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1581,7 +1648,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1610,7 +1677,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1631,7 +1698,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1661,7 +1728,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1693,7 +1760,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $mysql = new MysqlClient('', null, $loop);
+        $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
         $ref->setAccessible(true);
@@ -1714,7 +1781,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->never())->method('createConnection');
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1733,7 +1800,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($deferred->promise());
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1753,7 +1820,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1774,7 +1841,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($promise);
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1801,7 +1868,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1822,7 +1889,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1843,7 +1910,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1866,7 +1933,7 @@ class MysqlClientTest extends BaseTestCase
 
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1887,7 +1954,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->once())->method('createConnection')->willReturn($promise);
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1907,7 +1974,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->never())->method('createConnection');
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1926,7 +1993,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->never())->method('createConnection');
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1944,7 +2011,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->never())->method('createConnection');
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
@@ -1963,7 +2030,7 @@ class MysqlClientTest extends BaseTestCase
         $factory->expects($this->never())->method('createConnection');
         $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $connection = new MysqlClient('', null, $loop);
+        $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
         $ref->setAccessible(true);
