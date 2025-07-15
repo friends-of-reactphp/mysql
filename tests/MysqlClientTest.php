@@ -3,6 +3,7 @@
 namespace React\Tests\Mysql;
 
 use React\Mysql\Io\Connection;
+use React\Mysql\Io\Query;
 use React\Mysql\MysqlClient;
 use React\Mysql\MysqlResult;
 use React\Promise\Deferred;
@@ -191,7 +192,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryWillCreateNewConnectionAndReturnPendingPromiseWhenConnectionResolvesAndQueryOnConnectionIsPending()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $connection->expects($this->once())->method('query')->with('SELECT 1')->willReturn(new Promise(function () { }));
+        $connection->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(new Promise(function () { }));
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
@@ -212,7 +213,7 @@ class MysqlClientTest extends BaseTestCase
     {
         $result = new MysqlResult();
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $connection->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve($result));
+        $connection->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(\React\Promise\resolve($result));
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
@@ -249,7 +250,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryWillReturnRejectedPromiseWhenQueryOnConnectionRejectsAfterCreateConnectionResolves()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $connection->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\reject(new \RuntimeException()));
+        $connection->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(\React\Promise\reject(new \RuntimeException()));
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
@@ -289,7 +290,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryTwiceWillCallQueryOnConnectionOnlyOnceWhenQueryIsStillPending()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $connection->expects($this->once())->method('query')->with('SELECT 1')->willReturn(new Promise(function () { }));
+        $connection->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(new Promise(function () { }));
         $connection->expects($this->once())->method('isBusy')->willReturn(true);
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -313,8 +314,8 @@ class MysqlClientTest extends BaseTestCase
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $connection->expects($this->exactly(2))->method('query')->withConsecutive(
-            ['SELECT 1'],
-            ['SELECT 2']
+            [new Query('SELECT 1')],
+            [new Query('SELECT 2')]
         )->willReturnOnConsecutiveCalls(
             \React\Promise\resolve(new MysqlResult()),
             new Promise(function () { })
@@ -342,8 +343,8 @@ class MysqlClientTest extends BaseTestCase
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $connection->expects($this->exactly(2))->method('query')->withConsecutive(
-            ['SELECT 1'],
-            ['SELECT 2']
+            [new Query('SELECT 1')],
+            [new Query('SELECT 2')]
         )->willReturnOnConsecutiveCalls(
             \React\Promise\resolve(new MysqlResult()),
             new Promise(function () { })
@@ -373,7 +374,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryTwiceWillCreateNewConnectionForSecondQueryWhenFirstConnectionIsClosedAfterFirstQueryIsResolved()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->setMethods(['query', 'isBusy'])->getMock();
-        $connection->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve(new MysqlResult()));
+        $connection->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(\React\Promise\resolve(new MysqlResult()));
         $connection->expects($this->never())->method('isBusy');
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -402,7 +403,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryTwiceWillCloseFirstConnectionAndCreateNewConnectionForSecondQueryWhenFirstConnectionIsInClosingStateDueToIdleTimerAfterFirstQueryIsResolved()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->setMethods(['query', 'isBusy', 'close'])->getMock();
-        $connection->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve(new MysqlResult()));
+        $connection->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(\React\Promise\resolve(new MysqlResult()));
         $connection->expects($this->once())->method('close');
         $connection->expects($this->never())->method('isBusy');
 
@@ -511,8 +512,8 @@ class MysqlClientTest extends BaseTestCase
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $connection->expects($this->exactly(2))->method('query')->withConsecutive(
-            ['SELECT 1'],
-            ['SELECT 2']
+            [new Query('SELECT 1')],
+            [new Query('SELECT 2')]
         )->willReturnOnConsecutiveCalls(
             \React\Promise\reject(new \RuntimeException()),
             new Promise(function () { })
@@ -561,7 +562,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryStreamWillCreateNewConnectionAndReturnReadableStreamWhenConnectionResolvesAndQueryStreamOnConnectionReturnsReadableStream()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $connection->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn(new ThroughStream());
+        $connection->expects($this->once())->method('queryStream')->with(new Query('SELECT 1'))->willReturn(new ThroughStream());
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
@@ -581,7 +582,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryStreamTwiceWillCallQueryStreamOnConnectionOnlyOnceWhenQueryStreamIsStillReadable()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $connection->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn(new ThroughStream());
+        $connection->expects($this->once())->method('queryStream')->with(new Query('SELECT 1'))->willReturn(new ThroughStream());
         $connection->expects($this->once())->method('isBusy')->willReturn(true);
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -605,8 +606,8 @@ class MysqlClientTest extends BaseTestCase
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $connection->expects($this->exactly(2))->method('queryStream')->withConsecutive(
-            ['SELECT 1'],
-            ['SELECT 2']
+            [new Query('SELECT 1')],
+            [new Query('SELECT 2')]
         )->willReturnOnConsecutiveCalls(
             $base = new ThroughStream(),
             new ThroughStream()
@@ -636,8 +637,8 @@ class MysqlClientTest extends BaseTestCase
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $connection->expects($this->exactly(2))->method('queryStream')->withConsecutive(
-            ['SELECT 1'],
-            ['SELECT 2']
+            [new Query('SELECT 1')],
+            [new Query('SELECT 2')]
         )->willReturnOnConsecutiveCalls(
             $base = new ThroughStream(),
             new ThroughStream()
@@ -669,7 +670,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryStreamTwiceWillWaitForFirstQueryStreamToEndBeforeStartingSecondQueryStreamWhenFirstQueryStreamIsExplicitlyClosed()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $connection->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn(new ThroughStream());
+        $connection->expects($this->once())->method('queryStream')->with(new Query('SELECT 1'))->willReturn(new ThroughStream());
         $connection->expects($this->once())->method('isBusy')->willReturn(true);
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -698,8 +699,8 @@ class MysqlClientTest extends BaseTestCase
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
         $connection->expects($this->exactly(2))->method('queryStream')->withConsecutive(
-            ['SELECT 1'],
-            ['SELECT 2']
+            [new Query('SELECT 1')],
+            [new Query('SELECT 2')]
         )->willReturnOnConsecutiveCalls(
             $base = new ThroughStream(),
             new ThroughStream()
@@ -730,7 +731,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryStreamTwiceWillCreateNewConnectionForSecondQueryStreamWhenFirstConnectionIsClosedAfterFirstQueryStreamIsClosed()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->setMethods(['queryStream', 'isBusy'])->getMock();
-        $connection->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn($base = new ThroughStream());
+        $connection->expects($this->once())->method('queryStream')->with(new Query('SELECT 1'))->willReturn($base = new ThroughStream());
         $connection->expects($this->never())->method('isBusy');
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -760,7 +761,7 @@ class MysqlClientTest extends BaseTestCase
     public function testQueryStreamTwiceWillCloseFirstConnectionAndCreateNewConnectionForSecondQueryStreamWhenFirstConnectionIsInClosingStateDueToIdleTimerAfterFirstQueryStreamIsClosed()
     {
         $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->setMethods(['queryStream', 'isBusy', 'close'])->getMock();
-        $connection->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn($base = new ThroughStream());
+        $connection->expects($this->once())->method('queryStream')->with(new Query('SELECT 1'))->willReturn($base = new ThroughStream());
         $connection->expects($this->once())->method('close');
         $connection->expects($this->never())->method('isBusy');
 
@@ -1207,7 +1208,7 @@ class MysqlClientTest extends BaseTestCase
         $result = new MysqlResult();
 
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\resolve($result));
+        $base->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(\React\Promise\resolve($result));
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
@@ -1230,7 +1231,7 @@ class MysqlClientTest extends BaseTestCase
         $deferred = new Deferred();
 
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn($deferred->promise());
+        $base->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn($deferred->promise());
         $base->expects($this->once())->method('ping')->willReturn(new Promise(function () { }));
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -1257,7 +1258,7 @@ class MysqlClientTest extends BaseTestCase
         $error = new \RuntimeException();
 
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('query')->with('SELECT 1')->willReturn(\React\Promise\reject($error));
+        $base->expects($this->once())->method('query')->with(new Query('SELECT 1'))->willReturn(\React\Promise\reject($error));
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
@@ -1317,7 +1318,7 @@ class MysqlClientTest extends BaseTestCase
     {
         $stream = new ThroughStream();
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn($stream);
+        $base->expects($this->once())->method('queryStream')->with(new Query('SELECT 1'))->willReturn($stream);
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));
@@ -1342,7 +1343,7 @@ class MysqlClientTest extends BaseTestCase
     {
         $stream = new ThroughStream();
         $base = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
-        $base->expects($this->once())->method('queryStream')->with('SELECT 1')->willReturn($stream);
+        $base->expects($this->once())->method('queryStream')->with(new Query('SELECT 1'))->willReturn($stream);
 
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
         $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($base));

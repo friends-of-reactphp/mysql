@@ -6,6 +6,7 @@ use Evenement\EventEmitter;
 use React\EventLoop\LoopInterface;
 use React\Mysql\Io\Connection;
 use React\Mysql\Io\Factory;
+use React\Mysql\Io\Query;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -163,8 +164,10 @@ class MysqlClient extends EventEmitter
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
-        return $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-            return $connection->query($sql, $params)->then(function (MysqlResult $result) use ($connection) {
+        $query = new Query($sql, $params);
+
+        return $this->getConnection()->then(function (Connection $connection) use ($query) {
+            return $connection->query($query)->then(function (MysqlResult $result) use ($connection) {
                 $this->handleConnectionReady($connection);
                 return $result;
             }, function (\Exception $e) use ($connection) {
@@ -239,9 +242,11 @@ class MysqlClient extends EventEmitter
             throw new Exception('Connection closed');
         }
 
+        $query = new Query($sql, $params);
+
         return \React\Promise\Stream\unwrapReadable(
-            $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-                $stream = $connection->queryStream($sql, $params);
+            $this->getConnection()->then(function (Connection $connection) use ($query) {
+                $stream = $connection->queryStream($query);
 
                 $stream->on('end', function () use ($connection) {
                     $this->handleConnectionReady($connection);

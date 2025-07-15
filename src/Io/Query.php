@@ -41,23 +41,15 @@ class Query
             //"_"    => "\\_",
         ];
 
-    public function __construct($sql)
-    {
-        $this->sql = $this->builtSql = $sql;
-    }
-
     /**
-     * Binding params for the query, multiple arguments support.
-     *
+     * @param string $sql
      * @param list<string|int|float|bool|null> $params
-     * @return $this
      */
-    public function bindParamsFromArray(array $params)
+    public function __construct($sql, array $params = [])
     {
-        $this->builtSql = null;
-        $this->params   = $params;
-
-        return $this;
+        $this->sql = $sql;
+        $this->builtSql = $params ? null : $sql;
+        $this->params = $params;
     }
 
     public function escape($str)
