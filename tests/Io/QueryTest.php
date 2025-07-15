@@ -2,11 +2,17 @@
 
 namespace React\Tests\Mysql\Io;
 
-use PHPUnit\Framework\TestCase;
 use React\Mysql\Io\Query;
+use React\Tests\Mysql\BaseTestCase;
 
-class QueryTest extends TestCase
+class QueryTest extends BaseTestCase
 {
+    public function testCtorThrowsForInvalidParams()
+    {
+        $this->setExpectedException('InvalidArgumentException', 'Query param must be of type string|int|float|bool|null, resource given');
+        new Query('SELECT ?', [tmpfile()]);
+    }
+
     public function testBindParams()
     {
         $query = new Query('select * from test where id = ? and name = ?', [100, 'test']);

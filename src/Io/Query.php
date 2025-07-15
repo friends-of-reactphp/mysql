@@ -44,9 +44,16 @@ class Query
     /**
      * @param string $sql
      * @param list<string|int|float|bool|null> $params
+     * @throws \InvalidArgumentException if given $params are invalid
      */
     public function __construct($sql, array $params = [])
     {
+        foreach ($params as $param) {
+            if (!\is_scalar($param) && $param !== null) {
+                throw new \InvalidArgumentException('Query param must be of type string|int|float|bool|null, ' . (\is_object($param) ? \get_class($param) : \gettype($param)) . ' given');
+            }
+        }
+
         $this->sql = $sql;
         $this->builtSql = $params ? null : $sql;
         $this->params = $params;
@@ -76,9 +83,6 @@ class Query
                 break;
             case 'NULL':
                 $value = 'NULL';
-                break;
-            default:
-                throw new \InvalidArgumentException(sprintf('Not supported value type of %s.', $type));
                 break;
         }
 

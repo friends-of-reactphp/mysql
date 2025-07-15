@@ -1921,6 +1921,40 @@ class MysqlClientTest extends BaseTestCase
         $ret->then($this->expectCallableNever(), $this->expectCallableOnce());
     }
 
+    public function testQueryThrowsForInvalidQueryParamsWithoutCreatingNewConnection()
+    {
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $connection = new MysqlClient('', null, $loop);
+
+        $ref = new \ReflectionProperty($connection, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($connection, $factory);
+
+        $this->setExpectedException('InvalidArgumentException', 'Query param must be of type string|int|float|bool|null, array given');
+        $connection->query('SELECT ?', [[]]);
+    }
+
+    public function testQueryThrowsForInvalidQueryParamsWhenConnectionIsAlreadyClosed()
+    {
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $connection = new MysqlClient('', null, $loop);
+
+        $ref = new \ReflectionProperty($connection, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($connection, $factory);
+
+        $connection->close();
+
+        $this->setExpectedException('InvalidArgumentException', 'Query param must be of type string|int|float|bool|null, array given');
+        $connection->query('SELECT ?', [[]]);
+    }
+
     public function testQueryStreamThrowsAfterConnectionIsClosed()
     {
         $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
@@ -1937,6 +1971,40 @@ class MysqlClientTest extends BaseTestCase
 
         $this->setExpectedException('React\Mysql\Exception');
         $connection->queryStream('SELECT 1');
+    }
+
+    public function testQueryStreamThrowsForInvalidQueryParamsWithoutCreatingNewConnection()
+    {
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $connection = new MysqlClient('', null, $loop);
+
+        $ref = new \ReflectionProperty($connection, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($connection, $factory);
+
+        $this->setExpectedException('InvalidArgumentException', 'Query param must be of type string|int|float|bool|null, stdClass given');
+        $connection->queryStream('SELECT ?', [new \stdClass()]);
+    }
+
+    public function testQueryStreamThrowsForInvalidQueryParamsWhenConnectionIsAlreadyClosed()
+    {
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->never())->method('createConnection');
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $connection = new MysqlClient('', null, $loop);
+
+        $ref = new \ReflectionProperty($connection, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($connection, $factory);
+
+        $connection->close();
+
+        $this->setExpectedException('InvalidArgumentException', 'Query param must be of type string|int|float|bool|null, stdClass given');
+        $connection->queryStream('SELECT ?', [new \stdClass()]);
     }
 
     public function testPingReturnsRejectedPromiseAfterConnectionIsClosed()
