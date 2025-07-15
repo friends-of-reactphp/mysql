@@ -41,46 +41,22 @@ class Query
             //"_"    => "\\_",
         ];
 
-    public function __construct($sql)
-    {
-        $this->sql = $this->builtSql = $sql;
-    }
-
     /**
-     * Binding params for the query, multiple arguments support.
-     *
-     * @param  mixed              $param
-     * @return self
+     * @param string $sql
+     * @param list<string|int|float|bool|null> $params
+     * @throws \InvalidArgumentException if given $params are invalid
      */
-    public function bindParams()
+    public function __construct($sql, array $params = [])
     {
-        $this->builtSql = null;
-        $this->params   = func_get_args();
+        foreach ($params as $param) {
+            if (!\is_scalar($param) && $param !== null) {
+                throw new \InvalidArgumentException('Query param must be of type string|int|float|bool|null, ' . (\is_object($param) ? \get_class($param) : \gettype($param)) . ' given');
+            }
+        }
 
-        return $this;
-    }
-
-    public function bindParamsFromArray(array $params)
-    {
-        $this->builtSql = null;
-        $this->params   = $params;
-
-        return $this;
-    }
-
-    /**
-     * Binding params for the query, multiple arguments support.
-     *
-     * @param  mixed              $param
-     * @return self
-     *                                  @deprecated
-     */
-    public function params()
-    {
-        $this->params   = func_get_args();
-        $this->builtSql = null;
-
-        return $this;
+        $this->sql = $sql;
+        $this->builtSql = $params ? null : $sql;
+        $this->params = $params;
     }
 
     public function escape($str)
@@ -105,18 +81,8 @@ class Query
             case 'string':
                 $value = "'" . $this->escape($value) . "'";
                 break;
-            case 'array':
-                $nvalue = [];
-                foreach ($value as $v) {
-                    $nvalue[] = $this->resolveValueForSql($v);
-                }
-                $value = implode(',', $nvalue);
-                break;
             case 'NULL':
                 $value = 'NULL';
-                break;
-            default:
-                throw new \InvalidArgumentException(sprintf('Not supported value type of %s.', $type));
                 break;
         }
 

@@ -90,16 +90,8 @@ class Connection extends EventEmitter
         return $this->parser->isBusy() || !$this->executor->isIdle();
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function query($sql, array $params = [])
+    public function query(Query $query)
     {
-        $query = new Query($sql);
-        if ($params) {
-            $query->bindParamsFromArray($params);
-        }
-
         $command = new QueryCommand();
         $command->setQuery($query);
         try {
@@ -146,13 +138,8 @@ class Connection extends EventEmitter
         return $deferred->promise();
     }
 
-    public function queryStream($sql, $params = [])
+    public function queryStream(Query $query)
     {
-        $query = new Query($sql);
-        if ($params) {
-            $query->bindParamsFromArray($params);
-        }
-
         $command = new QueryCommand();
         $command->setQuery($query);
         $this->_doCommand($command);

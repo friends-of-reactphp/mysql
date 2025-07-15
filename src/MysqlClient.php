@@ -7,6 +7,7 @@ use React\EventLoop\LoopInterface;
 use React\Mysql\Commands\AuthenticateCommand;
 use React\Mysql\Io\Connection;
 use React\Mysql\Io\Factory;
+use React\Mysql\Io\Query;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -177,19 +178,22 @@ class MysqlClient extends EventEmitter
      * could allow for possible SQL injection attacks and this API is not
      * suited for exposing multiple possible results.
      *
-     * @param string $sql    SQL statement
-     * @param array  $params Parameters which should be bound to query
+     * @param string $sql SQL statement
+     * @param list<string|int|float|bool|null> $params Parameters which should be bound to query
      * @return PromiseInterface<MysqlResult>
      *     Resolves with a `MysqlResult` on success or rejects with an `Exception` on error.
+     * @throws \InvalidArgumentException if given $params are invalid
      */
     public function query($sql, array $params = [])
     {
+        $query = new Query($sql, $params);
+
         if ($this->closed || $this->quitting) {
             return \React\Promise\reject(new Exception('Connection closed'));
         }
 
-        return $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-            return $connection->query($sql, $params)->then(function (MysqlResult $result) use ($connection) {
+        return $this->getConnection()->then(function (Connection $connection) use ($query) {
+            return $connection->query($query)->then(function (MysqlResult $result) use ($connection) {
                 $this->handleConnectionReady($connection);
                 return $result;
             }, function (\Exception $e) use ($connection) {
@@ -254,19 +258,23 @@ class MysqlClient extends EventEmitter
      * could allow for possible SQL injection attacks and this API is not
      * suited for exposing multiple possible results.
      *
-     * @param string $sql    SQL statement
-     * @param array  $params Parameters which should be bound to query
+     * @param string $sql SQL statement
+     * @param list<string|int|float|bool|null> $params Parameters which should be bound to query
      * @return ReadableStreamInterface
+     * @throws \InvalidArgumentException if given $params are invalid
+     * @throws Exception if connection is already closed/closing
      */
-    public function queryStream($sql, $params = [])
+    public function queryStream($sql, array $params = [])
     {
+        $query = new Query($sql, $params);
+
         if ($this->closed || $this->quitting) {
             throw new Exception('Connection closed');
         }
 
         return \React\Promise\Stream\unwrapReadable(
-            $this->getConnection()->then(function (Connection $connection) use ($sql, $params) {
-                $stream = $connection->queryStream($sql, $params);
+            $this->getConnection()->then(function (Connection $connection) use ($query) {
+                $stream = $connection->queryStream($query);
 
                 $stream->on('end', function () use ($connection) {
                     $this->handleConnectionReady($connection);

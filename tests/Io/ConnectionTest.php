@@ -3,6 +3,7 @@
 namespace React\Tests\Mysql\Io;
 
 use React\Mysql\Io\Connection;
+use React\Mysql\Io\Query;
 use React\Tests\Mysql\BaseTestCase;
 
 class ConnectionTest extends BaseTestCase
@@ -22,7 +23,7 @@ class ConnectionTest extends BaseTestCase
 
         $connection = new Connection($stream, $executor, $parser, $loop, null);
 
-        $connection->query('SELECT 1');
+        $connection->query(new Query('SELECT 1'));
 
         $this->assertTrue($connection->isBusy());
     }
@@ -57,7 +58,7 @@ class ConnectionTest extends BaseTestCase
         $loop->expects($this->never())->method('addTimer');
 
         $conn = new Connection($stream, $executor, $parser, $loop, null);
-        $conn->query('SELECT 1');
+        $conn->query(new Query('SELECT 1'));
     }
 
     public function testQueryWillReturnResolvedPromiseAndStartIdleTimerWhenQueryCommandEmitsSuccess()
@@ -81,7 +82,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $promise = $connection->query('SELECT 1');
+        $promise = $connection->query(new Query('SELECT 1'));
 
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf('React\Mysql\MysqlResult')));
 
@@ -110,7 +111,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $promise = $connection->query('SELECT 1');
+        $promise = $connection->query(new Query('SELECT 1'));
 
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf('React\Mysql\MysqlResult')));
 
@@ -139,7 +140,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $promise = $connection->query('SELECT 1');
+        $promise = $connection->query(new Query('SELECT 1'));
 
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf('React\Mysql\MysqlResult')));
 
@@ -166,7 +167,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $promise = $connection->query('SELECT 1');
+        $promise = $connection->query(new Query('SELECT 1'));
 
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf('React\Mysql\MysqlResult')));
 
@@ -195,7 +196,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $promise = $connection->query('SELECT 1');
+        $promise = $connection->query(new Query('SELECT 1'));
 
         $promise->then(null, $this->expectCallableOnce());
 
@@ -230,7 +231,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $connection->query('SELECT 1');
+        $connection->query(new Query('SELECT 1'));
 
         $this->assertNotNull($currentCommand);
         $currentCommand->emit('success');
@@ -269,7 +270,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $connection->query('SELECT 1');
+        $connection->query(new Query('SELECT 1'));
 
         $this->assertNotNull($currentCommand);
         $currentCommand->emit('success');
@@ -300,8 +301,8 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $connection->query('SELECT 1');
-        $connection->query('SELECT 2');
+        $connection->query(new Query('SELECT 1'));
+        $connection->query(new Query('SELECT 2'));
 
         $this->assertNotNull($currentCommand);
         $currentCommand->emit('success');
@@ -328,12 +329,12 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $connection->query('SELECT 1');
+        $connection->query(new Query('SELECT 1'));
 
         $this->assertNotNull($currentCommand);
         $currentCommand->emit('success');
 
-        $connection->query('SELECT 2');
+        $connection->query(new Query('SELECT 2'));
     }
 
     public function testQueryStreamWillEnqueueOneCommand()
@@ -350,7 +351,7 @@ class ConnectionTest extends BaseTestCase
         $loop->expects($this->never())->method('addTimer');
 
         $conn = new Connection($stream, $executor, $parser, $loop, null);
-        $conn->queryStream('SELECT 1');
+        $conn->queryStream(new Query('SELECT 1'));
     }
 
     public function testQueryStreamWillReturnStreamThatWillEmitEndEventAndStartIdleTimerWhenQueryCommandEmitsSuccess()
@@ -374,7 +375,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $stream = $connection->queryStream('SELECT 1');
+        $stream = $connection->queryStream(new Query('SELECT 1'));
 
         $stream->on('end', $this->expectCallableOnce());
         $stream->on('close', $this->expectCallableOnce());
@@ -404,7 +405,7 @@ class ConnectionTest extends BaseTestCase
 
         $this->assertNull($currentCommand);
 
-        $stream = $connection->queryStream('SELECT 1');
+        $stream = $connection->queryStream(new Query('SELECT 1'));
 
         $stream->on('error', $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
         $stream->on('close', $this->expectCallableOnce());
@@ -641,7 +642,7 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->quit();
-        $promise = $conn->query('SELECT 1');
+        $promise = $conn->query(new Query('SELECT 1'));
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -668,7 +669,7 @@ class ConnectionTest extends BaseTestCase
 
         $conn = new Connection($stream, $executor, $parser, $loop, null);
         $conn->close();
-        $promise = $conn->query('SELECT 1');
+        $promise = $conn->query(new Query('SELECT 1'));
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -697,7 +698,7 @@ class ConnectionTest extends BaseTestCase
         $conn->quit();
 
         try {
-            $conn->queryStream('SELECT 1');
+            $conn->queryStream(new Query('SELECT 1'));
         } catch (\RuntimeException $e) {
             $this->assertEquals('Connection closing (ENOTCONN)', $e->getMessage());
             $this->assertEquals(defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107, $e->getCode());

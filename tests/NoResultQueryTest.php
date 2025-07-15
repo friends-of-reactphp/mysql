@@ -3,6 +3,7 @@
 namespace React\Tests\Mysql;
 
 use React\EventLoop\Loop;
+use React\Mysql\Io\Query;
 use React\Mysql\MysqlClient;
 use React\Mysql\MysqlResult;
 
@@ -16,8 +17,8 @@ class NoResultQueryTest extends BaseTestCase
         $connection = $this->createConnection(Loop::get());
 
         // re-create test "book" table
-        $connection->query('DROP TABLE IF EXISTS book');
-        $connection->query($this->getDataTable());
+        $connection->query(new Query('DROP TABLE IF EXISTS book'));
+        $connection->query(new Query($this->getDataTable()));
 
         $connection->quit();
         Loop::run();
@@ -27,7 +28,7 @@ class NoResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query('update book set created=999 where id=999')->then(function (MysqlResult $command) {
+        $connection->query(new Query('update book set created=999 where id=999'))->then(function (MysqlResult $command) {
             $this->assertEquals(0, $command->affectedRows);
         });
 
@@ -39,7 +40,7 @@ class NoResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query("insert into book (`name`) values ('foo')")->then(function (MysqlResult $command) {
+        $connection->query(new Query("insert into book (`name`) values ('foo')"))->then(function (MysqlResult $command) {
             $this->assertEquals(1, $command->affectedRows);
             $this->assertEquals(1, $command->insertId);
         });
@@ -52,8 +53,8 @@ class NoResultQueryTest extends BaseTestCase
     {
         $connection = $this->createConnection(Loop::get());
 
-        $connection->query("insert into book (`name`) values ('foo')");
-        $connection->query('update book set created=999 where id=1')->then(function (MysqlResult $command) {
+        $connection->query(new Query("insert into book (`name`) values ('foo')"));
+        $connection->query(new Query('update book set created=999 where id=1'))->then(function (MysqlResult $command) {
             $this->assertEquals(1, $command->affectedRows);
         });
 
@@ -75,7 +76,7 @@ CREATE TABLE IF NOT EXISTS `book` (
     PRIMARY KEY (`id`)
 )';
 
-        $connection->query($sql)->then(function (MysqlResult $command) {
+        $connection->query(new Query($sql))->then(function (MysqlResult $command) {
             // 3 warnings on MySQL 8+, 1 warning on legacy MySQL 5
             $this->assertGreaterThanOrEqual(1, $command->warningCount);
         });
