@@ -32,6 +32,8 @@ jobs:
           - php: 8.4
             rdbms: mysql:8
           - php: 8.4
+            rdbms: mariadb:12
+          - php: 8.4
             rdbms: mariadb:11
           - php: 8.4
             rdbms: mariadb:10
