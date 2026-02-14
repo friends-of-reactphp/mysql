@@ -13,6 +13,7 @@ jobs:
         rdbms:
           - mysql:5
         php:
+          - 8.5
           - 8.4
           - 8.3
           - 8.2
@@ -27,14 +28,14 @@ jobs:
           - 5.5
           - 5.4
         include:
-          - php: 8.4
+          - php: 8.5
             rdbms: mysql:9
-          - php: 8.4
+          - php: 8.5
             rdbms: mysql:8
-          - php: 8.4
+          - php: 8.5
             rdbms: mariadb:10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
@@ -50,7 +51,7 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: cp "$(which composer)" composer.phar && ./composer.phar self-update --2.2 # downgrade Composer for HHVM
       - name: Run hhvm composer.phar install
         uses: docker://hhvm/hhvm:3.30-lts-latest

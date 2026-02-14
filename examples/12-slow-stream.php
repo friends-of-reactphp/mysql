@@ -13,7 +13,9 @@ $query = isset($argv[1]) ? $argv[1] : 'select * from book';
 $stream = $mysql->queryStream($query);
 
 $ref = new ReflectionProperty($mysql, 'connecting');
-$ref->setAccessible(true);
+if (PHP_VERSION_ID < 80100) {
+    $ref->setAccessible(true);
+}
 $promise = $ref->getValue($mysql);
 assert($promise instanceof React\Promise\PromiseInterface);
 
@@ -28,19 +30,25 @@ $promise->then(function (React\Mysql\Io\Connection $connection) {
     try {
         // accept private "stream" (instanceof React\Socket\ConnectionInterface)
         $ref = new ReflectionProperty($connection, 'stream');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $conn = $ref->getValue($connection);
         assert($conn instanceof React\Socket\ConnectionInterface);
 
         // access private "input" (instanceof React\Stream\DuplexStreamInterface)
         $ref = new ReflectionProperty($conn, 'input');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $stream = $ref->getValue($conn);
         assert($stream instanceof React\Stream\DuplexStreamInterface);
 
         // reduce private bufferSize to just a few bytes to slow things down
         $ref = new ReflectionProperty($stream, 'bufferSize');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($stream, 8);
     } catch (Exception $e) {
         echo 'Warning: Unable to reduce buffer size: ' . $e->getMessage() . PHP_EOL;
