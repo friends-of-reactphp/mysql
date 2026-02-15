@@ -32,6 +32,10 @@ jobs:
           - php: 8.4
             rdbms: mysql:8
           - php: 8.4
+            rdbms: mariadb:12
+          - php: 8.4
+            rdbms: mariadb:11
+          - php: 8.4
             rdbms: mariadb:10
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +47,20 @@ jobs:
       - run: composer install
       - run: docker run -d --name mysql --net=host -e MYSQL_RANDOM_ROOT_PASSWORD=yes -e MYSQL_DATABASE=test -e MYSQL_USER=test -e MYSQL_PASSWORD=test ${{ matrix.rdbms }}
       - run: bash tests/wait-for-mysql.sh
+        if: startsWith(matrix.rdbms, 'mysql:')
+      - run: |
+          MAX_RETRIES=20
+          until docker exec mysql healthcheck.sh --connect; do
+            ((MAX_RETRIES--))
+            if [ $MAX_RETRIES -le 0 ]; then
+              echo "MariaDB did not become healthy in time."
+              exit 1
+            fi
+            echo "MariaDB not healthy yet. Retries left: $MAX_RETRIES"
+            sleep 1
+          done
+          echo "MariaDB is healthy."
+        if: startsWith(matrix.rdbms, 'mariadb:')
       - run: vendor/bin/phpunit --coverage-text
         if: ${{ matrix.php >= 7.3 }}
       - run: vendor/bin/phpunit --coverage-text -c phpunit.xml.legacy
