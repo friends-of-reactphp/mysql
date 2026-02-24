@@ -29,6 +29,56 @@ class QueryTest extends BaseTestCase
         */
     }
 
+    public function testNamedParams()
+    {
+        $query = new Query('select * from test where id = :id and name = :name');
+        $sql   = $query->bindParamsFromArray([
+            'id' => 100,
+            'name' => 'test'
+        ])->getSql();
+        $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
+    }
+
+    public function testNamedParamsWithPrefix()
+    {
+        $query = new Query('select * from test where id = :id and name = :name');
+        $sql   = $query->bindParamsFromArray([
+            ':id' => 100,
+            ':name' => 'test'
+        ])->getSql();
+        $this->assertEquals("select * from test where id = 100 and name = 'test'", $sql);
+    }
+
+    public function testNamedParamsWithInClause()
+    {
+        $query = new Query('select * from test where id in (:in) and name = :name');
+        $sql   = $query->bindParamsFromArray([
+            'in' => [1, 2],
+            'name' => 'test'
+        ])->getSql();
+        $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
+    }
+
+    public function testMixedNamedParams()
+    {
+        $query = new Query('select * from test where id in (?) and name = :name');
+        $sql   = $query->bindParamsFromArray([
+            [1, 2],
+            'name' => 'test'
+        ])->getSql();
+        $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
+    }
+
+    public function testMixedNamedParamsWithInClause()
+    {
+        $query = new Query('select * from test where id in (:in) and name = ?');
+        $sql   = $query->bindParamsFromArray([
+            'in' => [1, 2],
+            'test'
+        ])->getSql();
+        $this->assertEquals("select * from test where id in (1,2) and name = 'test'", $sql);
+    }
+
     public function testGetSqlReturnsQuestionMarkReplacedWhenBound()
     {
         $query = new Query('select ?', ['hello']);
@@ -45,6 +95,16 @@ class QueryTest extends BaseTestCase
     {
         $query = new Query('select CONCAT(?, ?)', ['hello??', 'world??']);
         $this->assertEquals("select CONCAT('hello??', 'world??')", $query->getSql());
+    }
+
+    public function testGetSqlReturnsNamedParamsReplacedFromBoundWhenBound()
+    {
+        $query = new Query('select CONCAT(:param1, :param2)');
+        $sql   = $query->bindParamsFromArray([
+            'param1' => ':param2',
+            'param2' => 'world'
+        ])->getSql();
+        $this->assertEquals("select CONCAT(':param2', 'world')", $sql);
     }
 
     public function testGetSqlReturnsQuestionMarksAsIsWhenNotBound()
