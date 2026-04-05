@@ -2111,4 +2111,118 @@ class MysqlClientTest extends BaseTestCase
         $this->assertTrue($ret instanceof PromiseInterface);
         $ret->then($this->expectCallableNever(), $this->expectCallableOnce());
     }
+
+    public function testTransactionWillReturnResolvedPromiseWhenCallbackSucceeds()
+    {
+        $result = new MysqlResult();
+        $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
+        $connection->expects($this->exactly(3))->method('query')
+            ->willReturnOnConsecutiveCalls(
+                \React\Promise\resolve($result), // START TRANSACTION
+                \React\Promise\resolve($result), // INSERT
+                \React\Promise\resolve($result)  // COMMIT
+            );
+
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $mysql = new MysqlClient('localhost', null, $loop);
+
+        $ref = new \ReflectionProperty($mysql, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($mysql, $factory);
+
+        $promise = $mysql->transaction(function (MysqlClient $client) {
+            $client->query('INSERT INTO test (id) VALUES (1)');
+            return 'ok';
+        });
+
+        $promise->then($this->expectCallableOnceWith('ok'));
+    }
+
+    public function testTransactionWillReturnRejectedPromiseAndRollbackWhenCallbackThrows()
+    {
+        $result = new MysqlResult();
+        $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
+        $connection->expects($this->exactly(2))->method('query')
+            ->willReturnOnConsecutiveCalls(
+                \React\Promise\resolve($result), // START TRANSACTION
+                \React\Promise\resolve($result)  // ROLLBACK
+            );
+
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $mysql = new MysqlClient('localhost', null, $loop);
+
+        $ref = new \ReflectionProperty($mysql, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($mysql, $factory);
+
+        $promise = $mysql->transaction(function (MysqlClient $client) {
+            throw new \RuntimeException('Something failed');
+        });
+
+        $promise->then(null, $this->expectCallableOnce());
+    }
+
+    public function testTransactionWillReturnRejectedPromiseAndRollbackWhenCallbackReturnsRejectedPromise()
+    {
+        $result = new MysqlResult();
+        $connection = $this->getMockBuilder('React\Mysql\Io\Connection')->disableOriginalConstructor()->getMock();
+        $connection->expects($this->exactly(2))->method('query')
+            ->willReturnOnConsecutiveCalls(
+                \React\Promise\resolve($result), // START TRANSACTION
+                \React\Promise\resolve($result)  // ROLLBACK
+            );
+
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\resolve($connection));
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $mysql = new MysqlClient('localhost', null, $loop);
+
+        $ref = new \ReflectionProperty($mysql, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($mysql, $factory);
+
+        $promise = $mysql->transaction(function (MysqlClient $client) {
+            return \React\Promise\reject(new \RuntimeException('Async failure'));
+        });
+
+        $promise->then(null, $this->expectCallableOnce());
+    }
+
+    public function testTransactionWillReturnRejectedPromiseWhenConnectionIsClosed()
+    {
+        $mysql = new MysqlClient('localhost');
+        $mysql->close();
+
+        $promise = $mysql->transaction(function (MysqlClient $client) {
+            return 'ok';
+        });
+
+        $promise->then(null, $this->expectCallableOnce());
+    }
+
+    public function testTransactionWillReturnRejectedPromiseWhenCreateConnectionRejects()
+    {
+        $factory = $this->getMockBuilder('React\Mysql\Io\Factory')->disableOriginalConstructor()->getMock();
+        $factory->expects($this->once())->method('createConnection')->willReturn(\React\Promise\reject(new \RuntimeException()));
+        $loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+
+        $mysql = new MysqlClient('localhost', null, $loop);
+
+        $ref = new \ReflectionProperty($mysql, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($mysql, $factory);
+
+        $promise = $mysql->transaction(function (MysqlClient $client) {
+            return 'ok';
+        });
+
+        $promise->then(null, $this->expectCallableOnce());
+    }
 }

@@ -204,6 +204,77 @@ class MysqlClient extends EventEmitter
     }
 
     /**
+     * Performs multiple queries within an atomic transaction.
+     *
+     * This method returns a promise that will resolve with the return value
+     * of the callback on success or will reject with an `Exception` on error.
+     * The callback receives this client instance and may execute any number
+     * of queries. If any query fails or the callback throws an exception,
+     * the transaction will be rolled back automatically and the resulting
+     * promise will be rejected.
+     *
+     * ```php
+     * $mysql->transaction(function (MysqlClient $mysql) {
+     *     $mysql->query('INSERT INTO user (name) VALUES (?)', ['Alice']);
+     *     $mysql->query('INSERT INTO user (name) VALUES (?)', ['Bob']);
+     * });
+     * ```
+     *
+     * The callback may also return a value that will be used to resolve the
+     * resulting promise after the transaction is committed:
+     *
+     * ```php
+     * $mysql->transaction(function (MysqlClient $mysql) {
+     *     $mysql->query('INSERT INTO user (name) VALUES (?)', ['Alice']);
+     *     return 'done';
+     * })->then(function (string $value) {
+     *     echo $value . PHP_EOL; // "done"
+     * }, function (Exception $error) {
+     *     echo 'Error: ' . $error->getMessage() . PHP_EOL;
+     * });
+     * ```
+     *
+     * Note that any queries issued inside the callback will be queued behind
+     * the `START TRANSACTION` command and the `COMMIT` or `ROLLBACK` will
+     * be queued after the callback completes. The MySQL protocol is inherently
+     * sequential, so all commands are guaranteed to be executed in order on
+     * the same connection.
+     *
+     * @param callable(MysqlClient):mixed $callback
+     * @return PromiseInterface<mixed>
+     *     Resolves with the return value of $callback on success or rejects with an Exception on error.
+     */
+    public function transaction(callable $callback)
+    {
+        if ($this->closed || $this->quitting) {
+            return \React\Promise\reject(new Exception('Connection closed'));
+        }
+
+        return $this->query('START TRANSACTION')->then(function () use ($callback) {
+            try {
+                $result = $callback($this);
+            } catch (\Exception $e) {
+                return $this->query('ROLLBACK')->then(function () use ($e) {
+                    throw $e;
+                });
+            }
+
+            return \React\Promise\resolve($result)->then(
+                function ($value) {
+                    return $this->query('COMMIT')->then(function () use ($value) {
+                        return $value;
+                    });
+                },
+                function (\Exception $e) {
+                    return $this->query('ROLLBACK')->then(function () use ($e) {
+                        throw $e;
+                    });
+                }
+            );
+        });
+    }
+
+    /**
      * Performs an async query and streams the rows of the result set.
      *
      * This method returns a readable stream that will emit each row of the

@@ -25,6 +25,7 @@ It is written in pure PHP and does not require any extensions.
   * [MysqlClient](#mysqlclient)
     * [__construct()](#__construct)
     * [query()](#query)
+    * [transaction()](#transaction)
     * [queryStream()](#querystream)
     * [ping()](#ping)
     * [quit()](#quit)
@@ -255,6 +256,46 @@ The given `$sql` parameter MUST contain a single statement. Support
 for multiple statements is disabled for security reasons because it
 could allow for possible SQL injection attacks and this API is not
 suited for exposing multiple possible results.
+
+#### transaction()
+
+The `transaction(callable(MysqlClient):mixed $callback): PromiseInterface<mixed>` method can be used to
+perform multiple queries within an atomic transaction.
+
+This method returns a promise that will resolve with the return value of
+the callback on success or will reject with an `Exception` on error. The
+callback receives this client instance and may execute any number of
+queries. If any query fails or the callback throws an exception, the
+transaction will be rolled back automatically and the resulting promise
+will be rejected.
+
+```php
+$mysql->transaction(function (React\Mysql\MysqlClient $mysql) {
+    $mysql->query('INSERT INTO user (name) VALUES (?)', ['Alice']);
+    $mysql->query('INSERT INTO user (name) VALUES (?)', ['Bob']);
+});
+```
+
+The callback may also return a value that will be used to resolve the
+resulting promise after the transaction is committed:
+
+```php
+$mysql->transaction(function (React\Mysql\MysqlClient $mysql) {
+    $mysql->query('INSERT INTO user (name) VALUES (?)', ['Alice']);
+    return 'done';
+})->then(function (string $value) {
+    echo $value . PHP_EOL; // "done"
+}, function (Exception $error) {
+    // transaction was rolled back
+    echo 'Error: ' . $error->getMessage() . PHP_EOL;
+});
+```
+
+Note that any queries issued inside the callback will be queued behind
+the `START TRANSACTION` command and the `COMMIT` or `ROLLBACK` will be
+queued after the callback completes. The MySQL protocol is inherently
+sequential, so all commands are guaranteed to be executed in order on
+the same connection.
 
 #### queryStream()
 
