@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.0 (unreleased)
+
+*   Feature: Add `transaction()` method to execute multiple queries atomically.
+    (#216 by @jdickinsondev91-stack)
+
+    This method wraps a callback in a `START TRANSACTION` / `COMMIT` pair and
+    automatically issues a `ROLLBACK` if the callback throws or the returned
+    promise rejects.
+
+    ```php
+    $mysql->transaction(function (React\Mysql\MysqlClient $mysql) {
+        $mysql->query('INSERT INTO user (name) VALUES (?)', ['Alice']);
+        $mysql->query('INSERT INTO user (name) VALUES (?)', ['Bob']);
+    });
+    ```
+
 ## 0.6.0 (2023-11-10)
 
 *   Feature: Improve Promise v3 support and use template types.
