@@ -7,12 +7,13 @@ on:
 jobs:
   PHPUnit:
     name: PHPUnit (PHP ${{ matrix.php }} + ${{ matrix.rdbms }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         rdbms:
           - mysql:5
         php:
+          - 8.6
           - 8.5
           - 8.4
           - 8.3
@@ -28,11 +29,11 @@ jobs:
           - 5.5
           - 5.4
         include:
-          - php: 8.5
+          - php: 8.6
             rdbms: mysql:9
-          - php: 8.5
+          - php: 8.6
             rdbms: mysql:8
-          - php: 8.5
+          - php: 8.6
             rdbms: mariadb:10
     steps:
       - uses: actions/checkout@v7
@@ -48,7 +49,7 @@ jobs:
 
   PHPUnit-hhvm:
     name: PHPUnit (HHVM)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
