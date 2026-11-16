@@ -19,17 +19,23 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost');
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $factory = $ref->getValue($mysql);
 
         $ref = new \ReflectionProperty($factory, 'connector');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $connector = $ref->getValue($factory);
 
         $this->assertInstanceOf('React\Socket\ConnectorInterface', $connector);
 
         $ref = new \ReflectionProperty($factory, 'loop');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $loop = $ref->getValue($factory);
 
         $this->assertInstanceOf('React\EventLoop\LoopInterface', $loop);
@@ -43,16 +49,22 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', $connector, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $factory = $ref->getValue($mysql);
 
         $ref = new \ReflectionProperty($factory, 'connector');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
 
         $this->assertSame($connector, $ref->getValue($factory));
 
         $ref = new \ReflectionProperty($factory, 'loop');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
 
         $this->assertSame($loop, $ref->getValue($factory));
     }
@@ -146,7 +158,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('error', $this->expectCallableNever());
@@ -171,7 +185,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('error', $this->expectCallableNever());
@@ -195,7 +211,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('error', $this->expectCallableNever());
@@ -225,7 +243,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('close', $this->expectCallableNever());
@@ -248,7 +268,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->query('SELECT 1');
@@ -268,7 +290,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->query('SELECT 1');
@@ -289,7 +313,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->query('SELECT 1');
@@ -306,7 +332,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->query('SELECT 1');
@@ -326,7 +354,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->query('SELECT 1');
@@ -344,7 +374,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->query('SELECT 1');
@@ -367,7 +399,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->query('SELECT 1');
@@ -396,7 +430,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->query('SELECT 1');
@@ -426,7 +462,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->query('SELECT 1');
@@ -454,7 +492,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->query('SELECT 1');
@@ -486,7 +526,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql->on('close', $this->expectCallableNever());
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->query('SELECT 1');
@@ -511,7 +553,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->query('SELECT 1');
@@ -533,7 +577,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->query('SELECT 1');
@@ -558,7 +604,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->query('SELECT 1');
@@ -595,7 +643,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->query('SELECT 1');
@@ -618,7 +668,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $stream = $mysql->queryStream('SELECT 1');
@@ -638,7 +690,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $stream = $mysql->queryStream('SELECT 1');
@@ -659,7 +713,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->queryStream('SELECT 1');
@@ -688,7 +744,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->queryStream('SELECT 1');
@@ -719,7 +777,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $stream1 = $mysql->queryStream('SELECT 1');
@@ -747,7 +807,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $stream1 = $mysql->queryStream('SELECT 1');
@@ -782,7 +844,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->queryStream('SELECT 1');
@@ -811,7 +875,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->queryStream('SELECT 1');
@@ -844,7 +910,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql->on('close', $this->expectCallableNever());
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->queryStream('SELECT 1');
@@ -870,7 +938,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $stream1 = $mysql->queryStream('SELECT 1');
@@ -892,7 +962,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $stream1 = $mysql->queryStream('SELECT 1');
@@ -920,7 +992,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->ping();
@@ -940,7 +1014,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->ping();
@@ -960,7 +1036,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->ping();
@@ -977,7 +1055,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->ping();
@@ -997,7 +1077,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise = $mysql->ping();
@@ -1015,7 +1097,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->ping();
@@ -1038,7 +1122,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->ping();
@@ -1064,7 +1150,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->ping();
@@ -1091,7 +1179,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->ping();
@@ -1119,7 +1209,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->ping();
@@ -1151,7 +1243,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql->on('close', $this->expectCallableNever());
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->ping();
@@ -1176,7 +1270,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->ping();
@@ -1198,7 +1294,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->ping();
@@ -1223,7 +1321,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->ping();
@@ -1257,7 +1357,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $promise1 = $mysql->ping();
@@ -1285,7 +1387,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->query('SELECT 1');
@@ -1309,7 +1413,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->query('SELECT 1');
@@ -1335,7 +1441,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->query('SELECT 1');
@@ -1353,7 +1461,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->query('SELECT 1');
@@ -1372,7 +1482,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->queryStream('SELECT 1');
@@ -1395,7 +1507,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->queryStream('SELECT 1');
@@ -1420,7 +1534,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->queryStream('SELECT 1');
@@ -1444,7 +1560,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->queryStream('SELECT 1');
@@ -1467,7 +1585,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->ping();
@@ -1488,7 +1608,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1506,7 +1628,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping()->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
@@ -1526,7 +1650,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping()->then($this->expectCallableNever(), $this->expectCallableOnceWith($error));
@@ -1546,7 +1672,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->ping();
@@ -1568,7 +1696,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->ping();
@@ -1594,7 +1724,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $ret = $connection->ping();
@@ -1610,7 +1742,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('error', $this->expectCallableNever());
@@ -1632,7 +1766,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1652,7 +1788,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping()->then(null, $this->expectCallableOnce());
@@ -1681,7 +1819,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1702,7 +1842,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1732,7 +1874,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1764,7 +1908,9 @@ class MysqlClientTest extends BaseTestCase
         $mysql = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($mysql, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($mysql, $factory);
 
         $mysql->on('close', $this->expectCallableNever());
@@ -1785,7 +1931,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('error', $this->expectCallableNever());
@@ -1804,7 +1952,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping()->then(null, $this->expectCallableOnce());
@@ -1824,7 +1974,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1845,7 +1997,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('error', $this->expectCallableNever());
@@ -1872,7 +2026,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping()->then($this->expectCallableOnce(), $this->expectCallableNever());
@@ -1893,7 +2049,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1914,7 +2072,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1937,7 +2097,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->ping();
@@ -1958,7 +2120,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->on('error', $this->expectCallableNever());
@@ -1978,7 +2142,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->close();
@@ -1997,7 +2163,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $this->setExpectedException('InvalidArgumentException', 'Query param must be of type string|int|float|bool|null, array given');
@@ -2013,7 +2181,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->close();
@@ -2031,7 +2201,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->close();
@@ -2049,7 +2221,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $this->setExpectedException('InvalidArgumentException', 'Query param must be of type string|int|float|bool|null, stdClass given');
@@ -2065,7 +2239,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->close();
@@ -2083,7 +2259,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->close();
@@ -2102,7 +2280,9 @@ class MysqlClientTest extends BaseTestCase
         $connection = new MysqlClient('localhost', null, $loop);
 
         $ref = new \ReflectionProperty($connection, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($connection, $factory);
 
         $connection->close();

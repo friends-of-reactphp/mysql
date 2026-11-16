@@ -31,7 +31,9 @@ class ParserTest extends BaseTestCase
 
         // hack to inject command as current command
         $ref = new \ReflectionProperty($parser, 'currCommand');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, $command);
 
         $stream->close();
@@ -62,7 +64,9 @@ class ParserTest extends BaseTestCase
         $stream->write("\x49\0\0\0\x0a\x38\x2e\x34\x2e\x35\0\x5e\0\0\0\x08\x0c\x41\x44\x12\x5e\x69\x59\0\xff\xff\xff\x02\0\xff\xdf\x15\0\0\0\0\0\0\0\0\0\0\x3c\x2c\x5e\x54\x06\x04\x01\x61\x01\x20\x79\x1b\0\x63\x61\x63\x68\x69\x6e\x67\x5f\x73\x68\x61\x32\x5f\x70\x61\x73\x73\x77\x6f\x72\x64\0");
 
         $ref = new \ReflectionProperty($parser, 'authPlugin');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $this->assertEquals('caching_sha2_password', $ref->getValue($parser));
     }
 
@@ -100,11 +104,15 @@ class ParserTest extends BaseTestCase
         $parser->start();
 
         $ref = new \ReflectionProperty($parser, 'phase');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
 
         $ref = new \ReflectionProperty($parser, 'currCommand');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, $command);
 
         $stream->write("\x20\0\0\0" . "\xfe" . "caching_sha2_password" . "\0" . "scramble" . "\0");
@@ -127,11 +135,15 @@ class ParserTest extends BaseTestCase
         $parser->start();
 
         $ref = new \ReflectionProperty($parser, 'phase');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
 
         $ref = new \ReflectionProperty($parser, 'currCommand');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, $command);
 
         $stream->write("\x19\0\0\0" . "\xfe" . "sha256_password" . "\0" . "scramble" . "\0");
@@ -151,15 +163,21 @@ class ParserTest extends BaseTestCase
         $parser->start();
 
         $ref = new \ReflectionProperty($parser, 'debug');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, true);
 
         $ref = new \ReflectionProperty($parser, 'phase');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
 
         $ref = new \ReflectionProperty($parser, 'authPlugin');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, 'caching_sha2_password');
 
         $this->expectOutputRegex('/Fast auth success\n$/');
@@ -180,11 +198,15 @@ class ParserTest extends BaseTestCase
         $parser->start();
 
         $ref = new \ReflectionProperty($parser, 'phase');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
 
         $ref = new \ReflectionProperty($parser, 'authPlugin');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, 'caching_sha2_password');
 
         $stream->write("\x02\0\0\0" . "\x01\x04");
@@ -207,15 +229,21 @@ class ParserTest extends BaseTestCase
         $parser->start();
 
         $ref = new \ReflectionProperty($parser, 'phase');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
 
         $ref = new \ReflectionProperty($parser, 'authPlugin');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, 'caching_sha2_password');
 
         $ref = new \ReflectionProperty($parser, 'currCommand');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, $command);
 
         $stream->write("\x04\0\0\0" . "\x01---");
@@ -239,15 +267,21 @@ class ParserTest extends BaseTestCase
         $parser->start();
 
         $ref = new \ReflectionProperty($parser, 'phase');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, Parser::PHASE_AUTH_SENT);
 
         $ref = new \ReflectionProperty($parser, 'authPlugin');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, 'caching_sha2_password');
 
         $ref = new \ReflectionProperty($parser, 'currCommand');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, $command);
 
         $stream->write("\x04\0\0\0" . "\x01---");
@@ -352,11 +386,15 @@ class ParserTest extends BaseTestCase
         $this->assertEquals('Query execution was interrupted', $error->getMessage());
 
         $ref = new \ReflectionProperty($parser, 'rsState');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $this->assertEquals(0, $ref->getValue($parser));
 
         $ref = new \ReflectionProperty($parser, 'resultFields');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $this->assertEquals([], $ref->getValue($parser));
     }
 
@@ -380,7 +418,9 @@ class ParserTest extends BaseTestCase
 
         // hack to inject command as current command
         $ref = new \ReflectionProperty($parser, 'currCommand');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, $command);
 
         $stream->on('close', $this->expectCallableOnce());
@@ -413,7 +453,9 @@ class ParserTest extends BaseTestCase
 
         // hack to inject command as current command
         $ref = new \ReflectionProperty($parser, 'currCommand');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($parser, $command);
 
         $stream->on('close', $this->expectCallableOnce());
